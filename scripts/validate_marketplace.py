@@ -62,6 +62,8 @@ def check_sources(data):
                 results.append(f"{name}: local:{src} -> OK")
             else:
                 warnings.append(f"{name}: local:{src} -> MISSING")
+        else:
+            warnings.append(f"{name}: unknown source format: {src!r}")
 
     return results, warnings
 
