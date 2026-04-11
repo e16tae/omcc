@@ -26,7 +26,8 @@
         "name": "e16tae"
       },
       "category": "development",
-      "source": "./plugins/omcc-dev"
+      "source": "./plugins/omcc-dev",
+      "homepage": "https://github.com/e16tae/omcc"
     }
   ]
 }
