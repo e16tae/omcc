@@ -7,6 +7,7 @@
 ## 구조
 - `.claude-plugin/marketplace.json` — 마켓플레이스 매니페스트 (핵심)
 - `plugins/` — 자체 빌트인 플러그인
+- `scripts/` — CI 및 로컬 실행용 검증 스크립트
 - `tests/` — pytest 기반 마켓플레이스 검증 테스트
 - `pyproject.toml` — 프로젝트 설정 및 테스트 의존성
 - `.github/workflows/` — CI (검증 + 릴리스 자동화)
