@@ -147,7 +147,7 @@ def test_plugin_no_unexpected_top_level_entries(entry, plugin_dir):
     for key in ("skills", "commands", "agents"):
         val = pjson.get(key, key)  # default to standard directory name
         if isinstance(val, str):
-            allowed.add(val)
+            allowed.add(val.removeprefix("./"))
         elif isinstance(val, list):
             allowed.update(val)
 
