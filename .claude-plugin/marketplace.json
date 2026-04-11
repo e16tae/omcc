@@ -1,0 +1,22 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "omcc",
+  "description": "oh-my-claude-code: Curated Claude Code plugin marketplace",
+  "owner": {
+    "name": "e16tae"
+  },
+  "plugins": [
+    {
+      "name": "codex",
+      "description": "Use Codex from Claude Code to review code or delegate tasks",
+      "category": "development",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/openai/codex-plugin-cc.git",
+        "path": "plugins/codex",
+        "ref": "main"
+      },
+      "homepage": "https://github.com/openai/codex-plugin-cc"
+    }
+  ]
+}
