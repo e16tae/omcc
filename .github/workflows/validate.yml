@@ -6,10 +6,12 @@ on:
     paths:
       - '.claude-plugin/marketplace.json'
       - 'plugins/**'
+      - 'scripts/validate_marketplace.py'
   pull_request:
     paths:
       - '.claude-plugin/marketplace.json'
       - 'plugins/**'
+      - 'scripts/validate_marketplace.py'
 
 permissions:
   contents: read
@@ -22,47 +24,12 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Validate JSON syntax
-        run: python3 -m json.tool .claude-plugin/marketplace.json > /dev/null
-
-      - name: Validate required fields and sort order
-        run: |
-          python3 -c "
-          import json
-          with open('.claude-plugin/marketplace.json') as f:
-              data = json.load(f)
-          assert 'name' in data, 'Missing marketplace name'
-          assert 'owner' in data, 'Missing owner'
-          assert 'plugins' in data, 'Missing plugins array'
-          names = []
-          for i, p in enumerate(data['plugins']):
-              assert 'name' in p, f'Plugin {i}: missing name'
-              assert 'source' in p, f'Plugin {i}: missing source'
-              assert 'description' in p, f'Plugin {i}: missing description'
-              names.append(p['name'])
-          assert names == sorted(names), f'Plugins not sorted alphabetically: {names}'
-          print(f'Valid: {len(data[\"plugins\"])} plugin(s), sorted correctly')
-          "
+      - name: Validate marketplace structure
+        run: python3 scripts/validate_marketplace.py structure
 
       - name: Check plugin source accessibility
         continue-on-error: true
-        run: |
-          python3 -c "
-          import json, subprocess, os
-          with open('.claude-plugin/marketplace.json') as f:
-              data = json.load(f)
-          for p in data['plugins']:
-              src = p['source']
-              if isinstance(src, dict) and src.get('source') in ('url', 'git-subdir'):
-                  url = src['url']
-                  result = subprocess.run(['git', 'ls-remote', url, 'HEAD'], capture_output=True, timeout=10)
-                  status = 'OK' if result.returncode == 0 else 'UNREACHABLE'
-                  print(f'{p[\"name\"]}: {url} -> {status}')
-              elif isinstance(src, str) and src.startswith('./'):
-                  exists = os.path.isdir(src)
-                  status = 'OK' if exists else 'MISSING'
-                  print(f'{p[\"name\"]}: local:{src} -> {status}')
-          "
+        run: python3 scripts/validate_marketplace.py sources
 
   validate-plugins:
     runs-on: ubuntu-latest
