@@ -21,6 +21,28 @@ def test_local_plugins_discovered():
 
 
 # ---------------------------------------------------------------------------
+# parse_frontmatter unit tests
+# ---------------------------------------------------------------------------
+
+
+def test_parse_frontmatter_basic():
+    text = "---\nname: foo\ndescription: bar baz\n---\nBody content"
+    fm = parse_frontmatter(text)
+    assert fm == {"name": "foo", "description": "bar baz"}
+
+
+def test_parse_frontmatter_no_frontmatter():
+    assert parse_frontmatter("No frontmatter here") is None
+
+
+def test_parse_frontmatter_empty_value():
+    text = "---\nname: foo\ndescription:\n---\n"
+    fm = parse_frontmatter(text)
+    assert fm["name"] == "foo"
+    assert fm["description"] == ""
+
+
+# ---------------------------------------------------------------------------
 # plugin.json optional field validation
 # ---------------------------------------------------------------------------
 
@@ -137,6 +159,32 @@ def test_plugin_no_unexpected_top_level_entries(entry, plugin_dir):
     # .md files are documentation and always allowed at plugin root
     unexpected = {f for f in unexpected if not f.endswith(".md")}
     assert not unexpected, f"Unexpected entries at plugin root: {unexpected}"
+
+
+# ---------------------------------------------------------------------------
+# Cross-reference validation
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "entry,plugin_dir", LOCAL_PLUGIN_DIRS, ids=_plugin_dir_ids
+)
+def test_referenced_files_exist(entry, plugin_dir):
+    """Files referenced by orchestration (agent-taxonomy.md, orchestration.md) must exist."""
+    for ref_file in ("agent-taxonomy.md", "orchestration.md"):
+        ref_path = plugin_dir / ref_file
+        if not ref_path.exists():
+            # Only check if any command/skill references it
+            has_ref = False
+            for md in list((plugin_dir / "commands").glob("*.md")) + \
+                       list((plugin_dir / "skills").glob("*/SKILL.md")):
+                if ref_file in md.read_text(encoding="utf-8"):
+                    has_ref = True
+                    break
+            if has_ref:
+                pytest.fail(
+                    f"{entry['name']}: {ref_file} is referenced but does not exist"
+                )
 
 
 # ---------------------------------------------------------------------------

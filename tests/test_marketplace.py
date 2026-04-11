@@ -34,6 +34,13 @@ def test_marketplace_field_types(marketplace_data):
     assert isinstance(marketplace_data["plugins"], list)
 
 
+def test_marketplace_has_schema_version(marketplace_data):
+    assert "schemaVersion" in marketplace_data, "Missing schemaVersion field"
+    assert isinstance(marketplace_data["schemaVersion"], int), (
+        "schemaVersion must be an integer"
+    )
+
+
 # ---------------------------------------------------------------------------
 # Per-plugin required fields
 # ---------------------------------------------------------------------------
@@ -130,3 +137,21 @@ def test_git_subdir_source_fields(plugin):
 def test_url_source_fields(plugin):
     src = plugin["source"]
     assert "url" in src, f"Plugin {plugin['name']}: url source missing 'url'"
+
+
+# ---------------------------------------------------------------------------
+# Source URL security
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("plugin", ALL_PLUGINS, ids=_plugin_id)
+def test_source_urls_use_https(plugin):
+    """All remote source URLs must use HTTPS."""
+    src = plugin.get("source")
+    if isinstance(src, dict):
+        url = src.get("url", "")
+        if url:
+            assert url.startswith("https://"), (
+                f"Plugin {plugin['name']}: source URL must use HTTPS, "
+                f"got {url[:50]}"
+            )

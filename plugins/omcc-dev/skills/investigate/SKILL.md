@@ -51,3 +51,5 @@ Recommended fix: [approach, not implementation]
 ```
 
 Do NOT implement the fix in this skill. If the user wants to proceed with fixing, suggest using `/fix` for the full workflow.
+
+Note: `/fix` Phase 1 builds on this investigation workflow by spawning parallel agents and adding the strike-rule escalation path. This skill is the standalone, lightweight version.

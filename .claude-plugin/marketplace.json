@@ -1,5 +1,6 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "schemaVersion": 1,
   "name": "omcc",
   "description": "oh-my-claude-code: Curated Claude Code plugin marketplace",
   "owner": {
