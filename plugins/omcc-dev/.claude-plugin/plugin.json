@@ -1,0 +1,8 @@
+{
+  "name": "omcc-dev",
+  "version": "0.1.0",
+  "description": "Development workflow framework. Systematic bug fixing (/fix), feature development (/start), and code auditing (/audit) with multi-agent orchestration and cross-model verification.",
+  "author": {
+    "name": "e16tae"
+  }
+}
