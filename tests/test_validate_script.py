@@ -93,11 +93,11 @@ class TestRemoteSources:
         assert any("missing 'url'" in w for w in warnings)
 
 
-class TestUnrecognizedSources:
-    def test_unrecognized_dict_source_silently_skipped(self, repo_root):
-        """Unrecognized dict source types are currently skipped (no result, no warning)."""
+class TestNpmSources:
+    def test_npm_source_skipped(self, repo_root):
+        """npm sources are recognized and marked as SKIPPED (no network check)."""
         data = _make_data([{
-            "name": "weird",
+            "name": "npm-plugin",
             "source": {"source": "npm", "package": "foo"}
         }])
 
@@ -105,8 +105,11 @@ class TestUnrecognizedSources:
                           repo_root / ".claude-plugin" / "marketplace.json"):
             results, warnings = validate_marketplace.check_sources(data)
 
-        assert not results
-        # Note: after PR fix/marketplace-schema merges, this should assert warnings
+        assert any("SKIPPED" in r for r in results)
+        assert not warnings
+
+
+class TestUnrecognizedSources:
 
     def test_bare_string_without_dot_slash_skipped(self, repo_root):
         """String sources not starting with './' are currently skipped."""
