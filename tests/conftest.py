@@ -12,11 +12,8 @@ MARKETPLACE_PATH = ROOT_DIR / ".claude-plugin" / "marketplace.json"
 @lru_cache(maxsize=1)
 def load_marketplace():
     """Load marketplace data. Cached so the file is read at most once."""
-    try:
-        with open(MARKETPLACE_PATH) as f:
-            return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        return {"plugins": []}
+    with open(MARKETPLACE_PATH) as f:
+        return json.load(f)
 
 
 def get_plugins():
