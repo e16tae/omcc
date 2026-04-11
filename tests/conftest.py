@@ -48,6 +48,7 @@ def get_url_plugins():
     ]
 
 
+@lru_cache(maxsize=None)
 def load_plugin_json(source_path):
     """Load a local plugin's plugin.json given its source path."""
     path = ROOT_DIR / source_path / ".claude-plugin" / "plugin.json"
