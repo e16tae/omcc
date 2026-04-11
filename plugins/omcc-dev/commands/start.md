@@ -23,10 +23,12 @@ If the user says "just do it" or "your call", state your recommendation with rea
 
 ## Phase 2: Explore Codebase
 
-Launch 2 agents in parallel to understand the relevant codebase:
+Follow the Dynamic Agent Orchestration process (`orchestration.md`):
 
-- **architecture-mapper agent**: Map the structure, layers, and entry points related to this feature
-- **flow-tracer agent**: Trace the most relevant existing flow end-to-end
+1. **Task Profiling**: Analyze the feature's scope, related system layers, and complexity
+2. **Agent Composition**: Select from Analysis Agents in `agent-taxonomy.md`
+3. **Mission Briefing**: Give each agent a concrete mission specific to this feature
+4. Launch all selected agents in parallel (single message, multiple Agent calls)
 
 After agents return:
 1. Read the key files they identified
@@ -76,11 +78,12 @@ Execute the plan task by task:
 
 ## Phase 6: Review
 
-Launch 3 reviewer agents in parallel (single message, 3 Agent calls):
+Follow the Dynamic Agent Orchestration process (`orchestration.md`):
 
-- **Reviewer 1 (correctness)**: Bugs, edge cases, logic errors, missing error handling
-- **Reviewer 2 (simplicity)**: Unnecessary complexity, duplication, over-abstraction
-- **Reviewer 3 (conventions)**: Project pattern consistency, naming, style
+1. **Task Profiling**: Analyze the implementation's scope, layers touched, and risk areas
+2. **Agent Composition**: Select from Review Agents in `agent-taxonomy.md`
+3. **Mission Briefing**: Give each reviewer a concrete mission specific to this implementation
+4. Launch all selected reviewers in parallel (single message, multiple Agent calls)
 
 After agents return:
 1. Merge findings, remove duplicates, sort by severity

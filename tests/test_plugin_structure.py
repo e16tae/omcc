@@ -107,7 +107,10 @@ def test_agent_optional_field_types(plugin_name, agent_path):
 # Plugin directory structure validation
 # ---------------------------------------------------------------------------
 
-_ALLOWED_ENTRIES = {".claude-plugin", "commands", "skills", "agents", "CLAUDE.md"}
+_ALLOWED_ENTRIES = {
+    ".claude-plugin", "commands", "skills", "agents", "CLAUDE.md",
+    "agent-taxonomy.md", "orchestration.md",
+}
 
 
 @pytest.mark.parametrize(

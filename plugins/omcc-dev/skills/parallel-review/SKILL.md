@@ -17,19 +17,17 @@ Provide a structured multi-perspective review. Since this is auto-activated, wor
 2. If no uncommitted changes, ask the user what to review
 3. Determine if this is a small change (1-2 files) or large change (3+ files)
 
-### Step 2: Review from three perspectives
+### Step 2: Determine review perspectives
 
-For each perspective, evaluate the changes independently:
+Follow the Dynamic Agent Orchestration process (`orchestration.md`):
 
-**Correctness**: Are there bugs, edge cases, logic errors, missing error handling, or null risks? What inputs could produce wrong results?
-
-**Simplicity**: Is anything unnecessarily complex, duplicated, or over-abstracted? Could anything be simpler while achieving the same result?
-
-**Conventions**: Does the code match existing project patterns, naming, file organization, and error handling style? Check CLAUDE.md for project rules.
+1. **Task Profiling**: Analyze the scope of changes, layers touched, and risk areas
+2. **Agent Composition**: Select perspectives from Review Agents in `agent-taxonomy.md`
+3. Evaluate the changes independently from each selected perspective
 
 ### Step 3: Synthesize
 
-1. Merge findings from all three perspectives
+1. Merge findings from all perspectives
 2. Remove duplicates
 3. Sort by severity (CRITICAL first, SUGGESTION last)
 4. Present the consolidated review to the user

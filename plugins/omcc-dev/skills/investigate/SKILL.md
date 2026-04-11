@@ -22,11 +22,12 @@ Follow this lightweight investigation process:
 
 ### Step 2: Form hypotheses
 
-Before investigating, explicitly state 2-3 possible root causes:
+Follow the Dynamic Agent Orchestration process (`orchestration.md`):
 
-- **Hypothesis A** (code logic): Could this be a logic error, wrong condition, boundary issue, or type mismatch?
-- **Hypothesis B** (state/data): Could this be a race condition, stale cache, null reference, or data corruption?
-- **Hypothesis C** (environment): Could this be a config issue, dependency change, API contract violation, or environment mismatch?
+1. **Task Profiling**: Analyze the symptom characteristics, related code areas, and risk factors
+2. **Agent Composition**: Refer to Investigation Agents in `agent-taxonomy.md` and formulate hypotheses matching the bug's symptoms — fewer when the cause seems clear, more when ambiguous
+
+State each hypothesis explicitly.
 
 ### Step 3: Investigate and verify
 
@@ -35,7 +36,7 @@ Before investigating, explicitly state 2-3 possible root causes:
 3. Look for concrete evidence (not assumptions)
 4. If the hypothesis is refuted, move to the next one
 
-**3-strike rule**: If 3 hypotheses fail, stop and report to the user rather than guessing further.
+**Strike rule**: If all hypotheses fail, stop guessing and report to the user.
 
 ### Step 4: Report
 

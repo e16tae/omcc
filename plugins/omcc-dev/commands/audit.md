@@ -20,20 +20,24 @@ If $ARGUMENTS specifies the audit type, use it directly. Otherwise, ask the user
 
 ## Phase 2: Parallel Scan
 
-Launch reviewer agents in parallel based on audit type:
+Follow the Dynamic Agent Orchestration process (`orchestration.md`):
 
-### If "full" audit (4 agents):
+1. **Task Profiling**: Analyze the audit target — layers present, potential risk areas, codebase size and complexity
 
-Launch 4 reviewer agents in parallel (single message, 4 Agent calls):
+2. **Agent Composition**: Select from Review Agents in `agent-taxonomy.md` based on audit type
 
-- **Reviewer 1 (security)**: OWASP Top 10 — injection, auth, sensitive data exposure, XXE, access control. Also check for hardcoded secrets, unsafe dependencies.
-- **Reviewer 2 (performance)**: N+1 queries, unnecessary recomputation, memory leak patterns, large payloads, missing indexes.
-- **Reviewer 3 (code quality)**: Duplication, excessive complexity, unused code, inconsistent patterns.
-- **Reviewer 4 (tech debt)**: TODO/FIXME/HACK comments, deprecated API usage, missing test coverage areas.
+   ### If "full" audit:
+   Always include the baseline set: **security, performance, simplicity, conventions, debt**.
+   These cannot be excluded — "full" guarantees complete coverage of these categories.
+   Then use orchestration to determine if additional specialist perspectives
+   (correctness, concurrency, api-design, error-resilience, migration-safety) are warranted based on the codebase's characteristics.
 
-### If specific type (3 agents):
+   ### If specific type:
+   Decompose the chosen type into distinct sub-aspects and assign one agent per sub-aspect.
+   Example: "security" audit → separate missions for auth/authz, input validation, secrets management.
 
-Launch 3 reviewer agents focused on the chosen type, each examining a different aspect of that category.
+3. **Mission Briefing**: Give each agent a concrete audit mission specific to this codebase
+4. Launch all selected agents in parallel (single message, multiple Agent calls)
 
 ---
 
