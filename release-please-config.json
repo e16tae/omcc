@@ -1,7 +1,14 @@
 {
   "packages": {
     ".": {
-      "release-type": "python"
+      "release-type": "python",
+      "extra-files": [
+        {
+          "type": "json",
+          "path": "plugins/omcc-dev/.claude-plugin/plugin.json",
+          "jsonpath": "$.version"
+        }
+      ]
     }
   }
 }

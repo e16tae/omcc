@@ -29,7 +29,6 @@ jobs:
           fetch-depth: 1
 
       - name: Check plugin source accessibility
-        continue-on-error: true
         run: python3 scripts/validate_marketplace.py
 
   validate-plugins:
