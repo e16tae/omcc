@@ -60,7 +60,7 @@ _OPTIONAL_FIELD_TYPES = {
     "category": str,
     "homepage": str,
     "version": str,
-    "author": str,
+    "author": dict,
 }
 
 
