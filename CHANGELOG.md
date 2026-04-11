@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.2.1](https://github.com/e16tae/omcc/compare/v0.2.0...v0.2.1) (2026-04-11)
+
+
+### Bug Fixes
+
+* **marketplace:** sync omcc-dev version to 0.2.0 ([b9e573b](https://github.com/e16tae/omcc/commit/b9e573b90991330230b7eebd85cec265f7ea3bde))
+* **omcc-dev:** remove redundant component path declarations from manifest ([92a61bc](https://github.com/e16tae/omcc/commit/92a61bcd289ac03cda71d7f7dd0c7a0a962fce65))
+* **omcc-dev:** use proper path format for component declarations ([10dc949](https://github.com/e16tae/omcc/commit/10dc9497035903b4843e0728d991e222f0d4d2aa))
+
 ## [0.2.0](https://github.com/e16tae/omcc/compare/v0.1.0...v0.2.0) (2026-04-11)
 
 
