@@ -1,6 +1,6 @@
 ---
 name: explore
-description: Explores a codebase from multiple perspectives using parallel agents to build a structured understanding. Activates when the user asks to understand a codebase, map architecture, learn how a project works, or needs orientation in an unfamiliar repository. Triggered by phrases like "explain this codebase", "how is this project structured", "help me understand this code", "what does this project do", "map the architecture".
+description: Explores a codebase from multiple perspectives to build a structured understanding. Make sure to use this skill whenever the user mentions codebase understanding, project structure, architecture mapping, code orientation, onboarding, or asks how a project works — even if they don't explicitly request "exploration". Trigger phrases include "프로젝트 구조", "코드베이스 파악", "아키텍처", "프로젝트 이해", "구조 알려줘", "explain this codebase", "how is this structured", "map the architecture", "help me understand this code".
 ---
 
 # Codebase Exploration

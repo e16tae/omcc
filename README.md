@@ -24,6 +24,7 @@ Curated Claude Code plugin marketplace.
 | Plugin | Description | Source |
 |--------|-------------|--------|
 | codex | Use Codex from Claude Code to review code or delegate tasks | [openai/codex-plugin-cc](https://github.com/openai/codex-plugin-cc) |
+| omcc-dev | Development workflow framework with multi-agent orchestration | built-in |
 
 ## How Plugins Are Selected
 

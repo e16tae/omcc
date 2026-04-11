@@ -3,6 +3,16 @@
 이 규칙은 omcc-dev 플러그인이 활성화된 동안 Claude의 기본 행동을 보정한다.
 커맨드(/fix, /start, /audit)와 함께 동작하며, 일반 대화에서도 적용된다.
 
+## 사용 가능한 커맨드
+
+- `/omcc-dev:fix [버그 설명]` — 체계적 버그 수정 (다중 가설 병렬 조사)
+- `/omcc-dev:start [기능 설명]` — 기능 개발 (기획→탐색→계획→구현→리뷰)
+- `/omcc-dev:audit [범위]` — 코드 감사 (보안/성능/품질/부채 병렬 스캔)
+- `/omcc-dev:explore` — 코드베이스 구조 탐색
+- `/omcc-dev:investigate` — 문제 원인 조사
+- `/omcc-dev:parallel-review` — 다관점 코드 리뷰
+- `/omcc-dev:plan` — 작업 계획 수립
+
 ## 브레인스토밍 규칙
 
 새 기능이나 설계 결정 시, 코드를 작성하기 전에 반드시:

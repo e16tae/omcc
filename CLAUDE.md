@@ -6,7 +6,7 @@
 
 ## 구조
 - `.claude-plugin/marketplace.json` — 마켓플레이스 매니페스트 (핵심)
-- `plugins/` — 자체 빌트인 플러그인 (향후용)
+- `plugins/` — 자체 빌트인 플러그인
 - `.github/workflows/` — CI (검증 + 릴리스 자동화)
 
 ## marketplace.json 편집 규칙

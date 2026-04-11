@@ -1,6 +1,6 @@
 ---
 name: plan
-description: Decomposes work into structured, dependency-ordered tasks. Each task is sized to fit a single focused context. Activates when the user asks to plan work, break down a task, create a roadmap, or organize implementation steps. Triggered by "plan this", "how should I approach this", "break this down", "what are the steps", "create a plan".
+description: Decomposes work into structured, dependency-ordered tasks with clear completion criteria. Make sure to use this skill whenever the user asks to plan work, break down a task, figure out implementation steps, or organize a large change — even if they just say "how do I start" or "what should I do first". Trigger phrases include "계획", "어떻게 진행", "작업 분해", "순서", "단계", "plan this", "how should I approach this", "break this down", "what are the steps", "where do I start".
 ---
 
 # Structured Planning

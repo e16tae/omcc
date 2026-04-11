@@ -1,6 +1,6 @@
 ---
 name: parallel-review
-description: Reviews code changes from multiple perspectives using parallel reviewer agents. Each reviewer independently evaluates from a different angle (correctness, simplicity, conventions). Activates when the user asks for code review, quality check, or wants feedback on changes. Triggered by "review this", "check my code", "code review", "quality check", "what do you think of these changes".
+description: Reviews code changes from multiple independent perspectives (correctness, simplicity, conventions). Make sure to use this skill whenever the user asks for code review, quality feedback, or wants their changes checked — even if they just say "how does this look" or "any issues". Trigger phrases include "리뷰", "코드 검토", "확인해줘", "괜찮아?", "review this", "check my code", "code review", "quality check", "how does this look", "any issues with this".
 ---
 
 # Multi-Perspective Parallel Review

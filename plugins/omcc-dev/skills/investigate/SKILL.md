@@ -1,6 +1,6 @@
 ---
 name: investigate
-description: Systematically diagnoses bugs and problems through multi-hypothesis investigation. Activates when the user reports a bug, encounters an error, asks "why isn't this working", "what's causing this", "debug this", "find the root cause", or describes unexpected behavior. Do NOT jump to fixing — investigate first.
+description: Systematically diagnoses bugs and problems through multi-hypothesis investigation. Make sure to use this skill whenever the user reports a bug, encounters an error, or describes unexpected behavior — even if they just say "it's broken" or paste an error message. Trigger phrases include "왜 안 되지", "에러", "버그", "원인", "디버깅", "안 돼", "why isn't this working", "what's causing this", "debug this", "find the root cause", "it's broken", "error". Do NOT jump to fixing — investigate first.
 ---
 
 # Systematic Investigation
