@@ -34,6 +34,13 @@ def test_marketplace_field_types(marketplace_data):
     assert isinstance(marketplace_data["plugins"], list)
 
 
+def test_marketplace_has_schema_version(marketplace_data):
+    assert "schemaVersion" in marketplace_data, "Missing schemaVersion field"
+    assert isinstance(marketplace_data["schemaVersion"], int), (
+        "schemaVersion must be an integer"
+    )
+
+
 # ---------------------------------------------------------------------------
 # Per-plugin required fields
 # ---------------------------------------------------------------------------
