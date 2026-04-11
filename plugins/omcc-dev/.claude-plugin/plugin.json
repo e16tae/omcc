@@ -7,8 +7,5 @@
   "author": {
     "name": "e16tae"
   },
-  "homepage": "https://github.com/e16tae/omcc",
-  "commands": "./commands",
-  "skills": "./skills",
-  "agents": "./agents"
+  "homepage": "https://github.com/e16tae/omcc"
 }
