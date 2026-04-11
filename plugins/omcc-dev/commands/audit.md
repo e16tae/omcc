@@ -40,7 +40,8 @@ Launch 3 reviewer agents focused on the chosen type, each examining a different 
 ## Phase 3: Integrate Built-in Results
 
 If the audit includes security:
-- Also mention that the user can run `/security-review` for git-diff-based security analysis
+- Also mention that the user can run `/security-review` (Claude Code built-in command) for git-diff-based security analysis
+- This is NOT an omcc-dev command — it is a native Claude Code feature
 - Integrate those results if the user provides them
 
 ---
