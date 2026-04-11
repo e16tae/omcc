@@ -29,12 +29,8 @@ If the user says "just do it" or "your call", run the protocol but present only 
 
 ## Phase 2: Explore Codebase
 
-Follow the Dynamic Agent Orchestration process (`orchestration.md`):
-
-1. **Task Profiling**: Analyze the feature's scope, related system layers, and complexity
-2. **Agent Composition**: Select from Analysis Agents in `agent-taxonomy.md`
-3. **Mission Briefing**: Give each agent a concrete mission specific to this feature
-4. Launch all selected agents in parallel (single message, multiple Agent calls)
+Follow `orchestration.md`, targeting Analysis Agents for this feature's scope and layers.
+Launch all selected agents in parallel (single message, multiple Agent calls).
 
 After agents return:
 1. Read the key files they identified
@@ -72,10 +68,7 @@ After the plan is approved, offer cross-model verification:
 
 Execute the plan task by task:
 
-1. For each task, follow the TDD cycle when a test framework is available:
-   - RED: Write a failing test first
-   - GREEN: Minimal implementation to pass
-   - REFACTOR: Clean up while tests stay green
+1. For each task, follow the TDD cycle (see TDD Rules in `CLAUDE.md`)
 2. If no test framework, implement directly but verify each task manually
 3. Mark each task as completed in TodoWrite as you go
 4. If a task reveals the plan needs adjustment, pause and discuss with user
@@ -84,12 +77,8 @@ Execute the plan task by task:
 
 ## Phase 6: Review
 
-Follow the Dynamic Agent Orchestration process (`orchestration.md`):
-
-1. **Task Profiling**: Analyze the implementation's scope, layers touched, and risk areas
-2. **Agent Composition**: Select from Review Agents in `agent-taxonomy.md`
-3. **Mission Briefing**: Give each reviewer a concrete mission specific to this implementation
-4. Launch all selected reviewers in parallel (single message, multiple Agent calls)
+Follow `orchestration.md`, targeting Review Agents for this implementation's scope and risk areas.
+Launch all selected reviewers in parallel (single message, multiple Agent calls).
 
 After agents return:
 1. Merge findings, remove duplicates, sort by severity

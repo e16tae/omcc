@@ -22,10 +22,8 @@ Follow this lightweight investigation process:
 
 ### Step 2: Form hypotheses
 
-Follow the Dynamic Agent Orchestration process (`orchestration.md`):
-
-1. **Task Profiling**: Analyze the symptom characteristics, related code areas, and risk factors
-2. **Agent Composition**: Refer to Investigation Agents in `agent-taxonomy.md` and formulate hypotheses matching the bug's symptoms — fewer when the cause seems clear, more when ambiguous
+Follow `orchestration.md`, targeting Investigation Agents based on the symptom characteristics.
+Formulate hypotheses matching the bug's symptoms — fewer when the cause seems clear, more when ambiguous.
 
 State each hypothesis explicitly.
 
