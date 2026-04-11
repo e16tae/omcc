@@ -7,6 +7,8 @@
 ## 구조
 - `.claude-plugin/marketplace.json` — 마켓플레이스 매니페스트 (핵심)
 - `plugins/` — 자체 빌트인 플러그인
+- `tests/` — pytest 기반 마켓플레이스 검증 테스트
+- `pyproject.toml` — 프로젝트 설정 및 테스트 의존성
 - `.github/workflows/` — CI (검증 + 릴리스 자동화)
 
 ## marketplace.json 편집 규칙
@@ -14,7 +16,7 @@
 - plugins 배열은 name 기준 알파벳 오름차순 정렬
 - 플러그인 엔트리 필수 필드: name, description, source
 - 선택 필드: category, homepage, version, author
-- 검증: `python3 -m json.tool .claude-plugin/marketplace.json`
+- 검증: `uv run pytest` 또는 `python3 -m json.tool .claude-plugin/marketplace.json`
 
 ## 플러그인 추가 절차
 1. 소스 repo가 public이고 .claude-plugin/plugin.json 존재 확인
