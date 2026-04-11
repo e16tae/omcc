@@ -47,3 +47,19 @@ def test_plugin_name_matches_marketplace(entry, source_path):
         f"Name mismatch: marketplace says '{entry['name']}', "
         f"plugin.json says '{data['name']}'"
     )
+
+
+@pytest.mark.parametrize(
+    "entry,source_path", LOCAL_PLUGINS, ids=_local_ids(LOCAL_PLUGINS)
+)
+def test_plugin_version_matches_marketplace(entry, source_path):
+    """Local plugin version must match marketplace entry when both specify it."""
+    marketplace_version = entry.get("version")
+    if marketplace_version is None:
+        pytest.skip("marketplace entry has no version")
+    data = load_plugin_json(source_path)
+    assert data.get("version") == marketplace_version, (
+        f"Version mismatch for {entry['name']}: "
+        f"marketplace says '{marketplace_version}', "
+        f"plugin.json says '{data.get('version')}'"
+    )
