@@ -11,6 +11,7 @@ and hosts built-in plugins.
 - `tests/` — pytest-based marketplace validation tests
 - `pyproject.toml` — Project config and test dependencies
 - `.github/workflows/` — CI (validation + release automation)
+- `release-please-config.json` + `.release-please-manifest.json` — Release automation config
 
 ## marketplace.json Editing Rules
 - Always maintain valid JSON

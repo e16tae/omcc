@@ -24,10 +24,15 @@ Inline skills that do not spawn agents (explore, plan, etc.) may also reference 
 
 Before any new feature or design decision, always:
 1. Clarify "What problem are we solving?"
-2. Propose 2-3 approaches with tradeoffs
+2. Follow the Evidence-Based Choice Protocol (`choice-protocol.md`):
+   - Research authoritative sources before proposing options
+   - Compare 2+ approaches across five perspectives (Essence, Foundation, Standards, Best Practice, Practical Fit)
+   - Always provide a recommended option with confidence level and evidence
 3. Do not start implementation until the user confirms a direction
 
-Reason: Claude's default behavior is to code immediately. This rule forces a thinking step.
+Reason: Claude's default behavior is to code immediately without research. This rule forces
+evidence gathering, structured comparison, and an explicit recommendation so the user can make
+informed decisions even in unfamiliar domains.
 
 ## TDD Rules
 
@@ -48,4 +53,4 @@ When finishing a code transformation or bug fix:
 ## Language Convention
 
 All documentation in this project uses English. This includes CLAUDE.md, orchestration.md,
-agent-taxonomy.md, commands, skills, agents, and tests.
+agent-taxonomy.md, choice-protocol.md, commands, skills, agents, and tests.

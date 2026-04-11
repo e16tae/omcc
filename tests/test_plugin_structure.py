@@ -1,3 +1,5 @@
+import re
+
 import pytest
 
 from conftest import (
@@ -170,20 +172,20 @@ def test_plugin_no_unexpected_top_level_entries(entry, plugin_dir):
     "entry,plugin_dir", LOCAL_PLUGIN_DIRS, ids=_plugin_dir_ids
 )
 def test_referenced_files_exist(entry, plugin_dir):
-    """Files referenced by orchestration (agent-taxonomy.md, orchestration.md) must exist."""
-    for ref_file in ("agent-taxonomy.md", "orchestration.md"):
-        ref_path = plugin_dir / ref_file
-        if not ref_path.exists():
-            # Only check if any command/skill references it
-            has_ref = False
-            for md in list((plugin_dir / "commands").glob("*.md")) + \
-                       list((plugin_dir / "skills").glob("*/SKILL.md")):
-                if ref_file in md.read_text(encoding="utf-8"):
-                    has_ref = True
-                    break
-            if has_ref:
+    """Shared .md files referenced via backtick notation must exist in the plugin."""
+    ref_pattern = re.compile(r'`([a-zA-Z0-9_/.-]+\.md)`')
+    all_md = list(plugin_dir.rglob("*.md"))
+
+    for md_file in all_md:
+        content = md_file.read_text(encoding="utf-8")
+        for match in ref_pattern.finditer(content):
+            ref_name = match.group(1)
+            ref_path = plugin_dir / ref_name
+            if not ref_path.exists():
+                rel = md_file.relative_to(plugin_dir)
                 pytest.fail(
-                    f"{entry['name']}: {ref_file} is referenced but does not exist"
+                    f"{entry['name']}: {rel} references `{ref_name}` "
+                    f"but it does not exist"
                 )
 
 

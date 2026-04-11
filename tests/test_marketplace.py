@@ -68,6 +68,7 @@ _OPTIONAL_FIELD_TYPES = {
     "homepage": str,
     "version": str,
     "author": dict,
+    "license": str,
 }
 
 
