@@ -17,7 +17,7 @@
 - plugins 배열은 name 기준 알파벳 오름차순 정렬
 - 플러그인 엔트리 필수 필드: name, description, source
 - 선택 필드: category, homepage, version, author
-- 검증: `uv run pytest` 또는 `python3 -m json.tool .claude-plugin/marketplace.json`
+- 검증: `uv run --extra test pytest` 또는 `python3 -m json.tool .claude-plugin/marketplace.json`
 
 ## 플러그인 추가 절차
 1. 소스 repo가 public이고 .claude-plugin/plugin.json 존재 확인
