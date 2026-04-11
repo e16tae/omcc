@@ -1,143 +1,143 @@
 # Agent Taxonomy
 
-에이전트 오케스트레이션에서 선택 가능한 역할 풀.
-각 역할은 하나의 관점에 특화되어 있으며, orchestration.md의 프로세스에 따라 동적으로 선택된다.
+Pool of available roles for agent orchestration.
+Each role specializes in one perspective and is dynamically selected via the process in orchestration.md.
 
 ## Dispatch
 
-역할에는 두 종류가 있다:
+There are two kinds of roles:
 
-- **Primary role**: 전용 agent 정의 파일이 있으며, 해당 파일의 기본 지시에 따라 동작
-- **Derived role**: 다른 agent의 정의 파일을 재사용하되, 커스텀 미션으로 동작을 오버라이드
+- **Primary role**: Has a dedicated agent definition file and operates according to its default instructions
+- **Derived role**: Reuses another agent's definition file but overrides behavior with a custom mission
 
-Derived role을 사용할 때는, 매핑된 agent 정의 파일의 에이전트를 생성하고 프롬프트에 커스텀 미션을 포함한다. 해당 agent는 커스텀 미션이 있으면 기본 조사 대상 대신 미션을 따르도록 설계되어 있다.
+When using a derived role, spawn the agent from the mapped definition file and include the custom mission in the prompt. These agents are designed to follow the custom mission instead of their default investigation targets when one is provided.
 
 ---
 
 ## Analysis Agents
 
-탐색 및 이해 단계에서 사용. 코드베이스의 구조와 흐름을 파악한다.
+Used during exploration and understanding phases. Map the structure and flow of the codebase.
 
 ### architecture-mapper (primary)
 
-- **목적**: 코드베이스 구조, 레이어, 진입점, 핵심 추상화 매핑
-- **Agent 정의**: `agents/architecture-mapper.md`
-- **핵심 질문**: "이 시스템은 어떻게 조직되어 있는가?"
-- **적합한 상황**: 새 기능 추가 전 구조 파악, 아키텍처 변경 영향 분석
+- **Purpose**: Map codebase structure, layers, entry points, and key abstractions
+- **Agent definition**: `agents/architecture-mapper.md`
+- **Key question**: "How is this system organized?"
+- **Best for**: Understanding structure before adding features, analyzing architecture change impact
 
 ### flow-tracer (primary)
 
-- **목적**: 요청/데이터 흐름을 진입점부터 종단까지 추적
-- **Agent 정의**: `agents/flow-tracer.md`
-- **핵심 질문**: "데이터는 어디서 들어와서 어떻게 변환되어 어디에 저장되는가?"
-- **적합한 상황**: 기존 동작 이해, 버그의 영향 경로 추적, 성능 병목 위치 파악
+- **Purpose**: Trace request/data flows end-to-end from entry point to termination
+- **Agent definition**: `agents/flow-tracer.md`
+- **Key question**: "Where does data enter, how is it transformed, and where is it stored?"
+- **Best for**: Understanding existing behavior, tracing bug impact paths, identifying performance bottlenecks
 
-### dependency-analyzer (derived → architecture-mapper)
+### dependency-analyzer (derived -> architecture-mapper)
 
-- **목적**: 모듈 간 의존 관계와 변경 영향 반경 매핑
-- **Agent 정의**: `agents/architecture-mapper.md` + 커스텀 미션
-- **핵심 질문**: "이 변경이 어디까지 영향을 미치는가?"
-- **적합한 상황**: 리팩토링 범위 산정, 의존성 순환 탐지, breaking change 영향 분석
+- **Purpose**: Map module dependencies and change impact radius
+- **Agent definition**: `agents/architecture-mapper.md` + custom mission
+- **Key question**: "How far does this change's impact reach?"
+- **Best for**: Scoping refactoring, detecting dependency cycles, analyzing breaking change impact
 
-### pattern-detector (derived → flow-tracer)
+### pattern-detector (derived -> flow-tracer)
 
-- **목적**: 코드베이스의 반복 패턴, 안티패턴, 일관성 편차 식별
-- **Agent 정의**: `agents/flow-tracer.md` + 커스텀 미션
-- **핵심 질문**: "이 코드베이스에서 반복되는 패턴은 무엇이고, 어디서 벗어나는가?"
-- **적합한 상황**: 대규모 리팩토링 전 현황 파악, 코딩 컨벤션 감사
+- **Purpose**: Identify recurring patterns, anti-patterns, and consistency deviations in the codebase
+- **Agent definition**: `agents/flow-tracer.md` + custom mission
+- **Key question**: "What patterns repeat in this codebase, and where do they deviate?"
+- **Best for**: Pre-refactoring assessment, coding convention audits
 
 ---
 
 ## Review Agents
 
-검증 및 품질 보증 단계에서 사용. 모두 `agents/reviewer.md`를 사용하며, 할당된 관점에 따라 동작한다.
+Used during verification and quality assurance phases. All use `agents/reviewer.md` and operate according to the assigned perspective.
 
-**기본 후보**: correctness와 conventions는 대부분의 코드 변경에서 포함을 고려한다.
-**전문 역할**: 나머지는 태스크의 위험 영역에 해당할 때만 선택한다.
+**Default candidates**: correctness and conventions should be considered for inclusion in most code changes.
+**Specialist roles**: The rest are selected only when the task's risk areas apply.
 
 ### correctness
 
-- **초점**: 로직 오류, 엣지 케이스, null/undefined 위험, 타입 불일치
-- **핵심 질문**: "어떤 입력이나 상태에서 잘못된 결과를 만들 수 있는가?"
-- **적합한 상황**: 모든 코드 변경 (기본 포함 후보)
+- **Focus**: Logic errors, edge cases, null/undefined risks, type mismatches
+- **Key question**: "What inputs or states could produce wrong results?"
+- **Best for**: All code changes (default inclusion candidate)
 
 ### simplicity
 
-- **초점**: 불필요한 복잡성, 코드 중복, 과도한 추상화, 죽은 코드
-- **핵심 질문**: "같은 결과를 더 단순하게 달성할 수 있는가?"
-- **적합한 상황**: 새 기능 구현, 리팩토링
+- **Focus**: Unnecessary complexity, code duplication, excessive abstraction, dead code
+- **Key question**: "Can the same result be achieved more simply?"
+- **Best for**: New feature implementation, refactoring
 
 ### conventions
 
-- **초점**: 프로젝트 패턴 일관성, 네이밍, 파일 구조, 에러 처리 스타일
-- **핵심 질문**: "이것이 코드베이스의 나머지와 같은 방식으로 작동하는가?"
-- **적합한 상황**: 모든 코드 변경 (기본 포함 후보)
+- **Focus**: Project pattern consistency, naming, file structure, error handling style
+- **Key question**: "Does this work the same way as the rest of the codebase?"
+- **Best for**: All code changes (default inclusion candidate)
 
 ### security
 
-- **초점**: OWASP Top 10, 인증/인가, 비밀정보 노출, 인젝션, 암호화
-- **핵심 질문**: "이것이 어떻게 악용될 수 있는가?"
-- **적합한 상황**: auth/crypto 코드, 사용자 입력 처리, 외부 API 연동, 비밀정보 관리
+- **Focus**: OWASP Top 10, authentication/authorization, secret exposure, injection, cryptography
+- **Key question**: "How could this be exploited?"
+- **Best for**: Auth/crypto code, user input handling, external API integration, secret management
 
 ### performance
 
-- **초점**: N+1 쿼리, 불필요한 재계산, 메모리 누수, 대용량 페이로드, 인덱스 누락
-- **핵심 질문**: "10배/100배 규모에서 어떤 일이 벌어지는가?"
-- **적합한 상황**: DB 쿼리 변경, 루프/반복 처리, 캐싱 로직, 데이터 직렬화
+- **Focus**: N+1 queries, unnecessary recomputation, memory leaks, large payloads, missing indexes
+- **Key question**: "What happens at 10x/100x scale?"
+- **Best for**: DB query changes, loop/iteration processing, caching logic, data serialization
 
 ### api-design
 
-- **초점**: 인터페이스 일관성, 하위 호환성, 계약(contract) 준수, 버전 관리
-- **핵심 질문**: "이 API의 소비자가 깨지는가?"
-- **적합한 상황**: 공개 API/SDK 변경, 플러그인 인터페이스, 공유 라이브러리
+- **Focus**: Interface consistency, backward compatibility, contract compliance, versioning
+- **Key question**: "Will consumers of this API break?"
+- **Best for**: Public API/SDK changes, plugin interfaces, shared libraries
 
 ### migration-safety
 
-- **초점**: 스키마 변경 안전성, 데이터 보존, 롤백 가능성, 마이그레이션 순서
-- **핵심 질문**: "이것을 안전하게 롤백할 수 있는가?"
-- **적합한 상황**: DB 스키마 변경, 데이터 마이그레이션, 설정 포맷 변경
+- **Focus**: Schema change safety, data preservation, rollback feasibility, migration ordering
+- **Key question**: "Can this be safely rolled back?"
+- **Best for**: DB schema changes, data migrations, config format changes
 
 ### concurrency
 
-- **초점**: 레이스 컨디션, 데드락, 원자성, 공유 상태 접근
-- **핵심 질문**: "동시 접근 시 어떤 일이 벌어지는가?"
-- **적합한 상황**: 비동기 코드, 공유 자원 접근, 큐/워커 처리, 캐시 무효화
+- **Focus**: Race conditions, deadlocks, atomicity, shared state access
+- **Key question**: "What happens under concurrent access?"
+- **Best for**: Async code, shared resource access, queue/worker processing, cache invalidation
 
 ### error-resilience
 
-- **초점**: 장애 전파, 재시도 로직, 복구 경로, 부분 실패 처리
-- **핵심 질문**: "이것이 실패하면 어떤 일이 벌어지는가?"
-- **적합한 상황**: 외부 서비스 호출, 네트워크 의존 코드, 트랜잭션 처리, 파이프라인
+- **Focus**: Failure propagation, retry logic, recovery paths, partial failure handling
+- **Key question**: "What happens when this fails?"
+- **Best for**: External service calls, network-dependent code, transaction processing, pipelines
 
 ### debt
 
-- **초점**: TODO/FIXME/HACK 누적, 폐기 API 사용, 테스트 커버리지 공백, 기술 부채
-- **핵심 질문**: "이것이 어떤 유지보수 부담을 만드는가?"
-- **적합한 상황**: 감사(audit), 레거시 코드 접촉, 의존성 업데이트
+- **Focus**: TODO/FIXME/HACK accumulation, deprecated API usage, test coverage gaps, technical debt
+- **Key question**: "What maintenance burden does this create?"
+- **Best for**: Audits, legacy code changes, dependency updates
 
 ---
 
 ## Investigation Agents
 
-디버깅 및 원인 분석 단계에서 사용.
+Used during debugging and root cause analysis phases.
 
 ### hypothesis-tracer (primary)
 
-- **목적**: 특정 가설을 코드베이스에서 추적하여 지지/반박 증거 수집
-- **Agent 정의**: `agents/hypothesis-tracer.md`
-- **핵심 질문**: "이 가설이 맞다면 코드에서 어떤 증거가 보여야 하는가?"
-- **적합한 상황**: 구체적 원인 후보가 있을 때, 로직/조건 오류 추적
+- **Purpose**: Trace a specific hypothesis through the codebase to collect supporting/refuting evidence
+- **Agent definition**: `agents/hypothesis-tracer.md`
+- **Key question**: "If this hypothesis is correct, what evidence should be visible in the code?"
+- **Best for**: When a specific root cause candidate exists, tracing logic/condition errors
 
-### regression-hunter (derived → hypothesis-tracer)
+### regression-hunter (derived -> hypothesis-tracer)
 
-- **목적**: 최근 변경 이력에서 회귀를 유발한 커밋/변경 탐색
-- **Agent 정의**: `agents/hypothesis-tracer.md` + 커스텀 미션
-- **핵심 질문**: "어떤 최근 변경이 이 동작을 깨뜨렸는가?"
-- **적합한 상황**: "전에는 됐는데" 유형의 버그, 배포 후 장애
+- **Purpose**: Search recent change history for commits/changes that caused a regression
+- **Agent definition**: `agents/hypothesis-tracer.md` + custom mission
+- **Key question**: "Which recent change broke this behavior?"
+- **Best for**: "It worked before" type bugs, post-deployment incidents
 
-### state-analyzer (derived → hypothesis-tracer)
+### state-analyzer (derived -> hypothesis-tracer)
 
-- **목적**: 런타임 상태, 데이터 흐름 이상, 상태 전이 오류 분석
-- **Agent 정의**: `agents/hypothesis-tracer.md` + 커스텀 미션
-- **핵심 질문**: "런타임에서 상태가 어떻게 변하며, 어디서 예상과 어긋나는가?"
-- **적합한 상황**: 상태 관련 버그, 캐시 불일치, 데이터 손상, 간헐적 장애
+- **Purpose**: Analyze runtime state, data flow anomalies, and state transition errors
+- **Agent definition**: `agents/hypothesis-tracer.md` + custom mission
+- **Key question**: "How does state change at runtime, and where does it diverge from expectations?"
+- **Best for**: State-related bugs, cache inconsistency, data corruption, intermittent failures

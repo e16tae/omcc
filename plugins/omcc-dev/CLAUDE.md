@@ -1,46 +1,51 @@
-# omcc-dev 방법론 규칙
+# omcc-dev Methodology Rules
 
-이 규칙은 omcc-dev 플러그인이 활성화된 동안 Claude의 기본 행동을 보정한다.
-커맨드(/fix, /start, /audit)와 함께 동작하며, 일반 대화에서도 적용된다.
+These rules adjust Claude's default behavior while the omcc-dev plugin is active.
+They apply alongside commands (/fix, /start, /audit) and during general conversation.
 
-## 에이전트 오케스트레이션
+## Agent Orchestration
 
-에이전트를 생성(spawn)하는 모든 단계에서 `orchestration.md`의 Dynamic Agent Orchestration 프로세스를 따른다.
-사용 가능한 에이전트 역할은 `agent-taxonomy.md`에 정의되어 있다.
-정적 개수가 아닌 태스크 분석 기반의 동적 구성으로 최상의 결과를 추구한다.
-에이전트를 생성하지 않는 인라인 스킬(explore, plan 등)에서도 관점 선택 시 taxonomy를 참고할 수 있다.
+All stages that spawn agents must follow the Dynamic Agent Orchestration process in `orchestration.md`.
+Available agent roles are defined in `agent-taxonomy.md`.
+Pursue the best results through task-analysis-based dynamic composition, not static counts.
+Inline skills that do not spawn agents (explore, plan, etc.) may also reference the taxonomy for perspective selection.
 
-## 사용 가능한 커맨드
+## Available Commands
 
-- `/omcc-dev:fix [버그 설명]` — 체계적 버그 수정 (다중 가설 병렬 조사)
-- `/omcc-dev:start [기능 설명]` — 기능 개발 (기획→탐색→계획→구현→리뷰)
-- `/omcc-dev:audit [범위]` — 코드 감사 (보안/성능/품질/부채 병렬 스캔)
-- `/omcc-dev:explore` — 코드베이스 구조 탐색
-- `/omcc-dev:investigate` — 문제 원인 조사
-- `/omcc-dev:parallel-review` — 다관점 코드 리뷰
-- `/omcc-dev:plan` — 작업 계획 수립
+- `/omcc-dev:fix [bug description]` — Systematic bug fix (multi-hypothesis parallel investigation)
+- `/omcc-dev:start [feature description]` — Feature development (brainstorm > explore > plan > build > review)
+- `/omcc-dev:audit [scope]` — Code audit (security/performance/quality/debt parallel scan)
+- `/omcc-dev:explore` — Codebase structure exploration
+- `/omcc-dev:investigate` — Root cause investigation
+- `/omcc-dev:parallel-review` — Multi-perspective code review
+- `/omcc-dev:plan` — Work planning
 
-## 브레인스토밍 규칙
+## Brainstorming Rules
 
-새 기능이나 설계 결정 시, 코드를 작성하기 전에 반드시:
-1. "무엇을 해결하려는가?"를 먼저 명확화
-2. 2-3가지 접근 방식과 트레이드오프를 제시
-3. 사용자가 방향을 확정할 때까지 구현 시작 금지
+Before any new feature or design decision, always:
+1. Clarify "What problem are we solving?"
+2. Propose 2-3 approaches with tradeoffs
+3. Do not start implementation until the user confirms a direction
 
-이유: Claude의 기본 행동은 즉시 코딩. 이 규칙으로 사고 단계를 강제 삽입한다.
+Reason: Claude's default behavior is to code immediately. This rule forces a thinking step.
 
-## TDD 규칙
+## TDD Rules
 
-기능 구현 시 RED-GREEN-REFACTOR 순서를 따른다:
-1. RED: 실패하는 테스트를 먼저 작성하고 Bash로 실패를 확인
-2. GREEN: 테스트를 통과하는 최소한의 구현
-3. REFACTOR: 통과 상태를 유지하면서 코드 정리
+Follow the RED-GREEN-REFACTOR cycle for feature implementation:
+1. RED: Write a failing test first and confirm failure with Bash
+2. GREEN: Minimal implementation to pass the test
+3. REFACTOR: Clean up while keeping tests green
 
-테스트 프레임워크가 없는 프로젝트에서는 이 규칙을 건너뛰되, 사용자에게 알린다.
+Skip this rule in projects without a test framework, but inform the user.
 
-## 완료 검증 규칙
+## Completion Verification Rules
 
-코드 변환이나 버그 수정 완료 시:
-1. 전체 테스트 스위트를 실행한다 (있을 경우)
-2. 변환의 경우: Grep으로 구 패턴 잔존을 확인한다 (0건이어야 완료)
-3. 버그의 경우: Grep으로 동일 패턴이 다른 위치에도 있는지 탐색한다
+When finishing a code transformation or bug fix:
+1. Run the full test suite (if available)
+2. For transformations: Grep for the old pattern to confirm 0 remaining occurrences
+3. For bugs: Grep for the same pattern in other locations to check for similar issues
+
+## Language Convention
+
+All documentation in this project uses English. This includes CLAUDE.md, orchestration.md,
+agent-taxonomy.md, commands, skills, agents, and tests.

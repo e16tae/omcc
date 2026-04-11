@@ -1,164 +1,164 @@
 # Dynamic Agent Orchestration
 
-에이전트를 할당하는 모든 단계에서 이 프레임워크를 따른다.
-정적 개수가 아닌, 태스크 분석에 기반한 동적 구성으로 최상의 결과를 추구한다.
+Follow this framework at every stage that allocates agents.
+Pursue the best results through task-analysis-based dynamic composition, not static counts.
 
 ---
 
-## 원칙
+## Principles
 
-1. **품질 최우선**: 토큰 효율이 아닌 결과의 품질을 최적화한다
-2. **Opus + Max 추론**: 모든 에이전트는 opus 모델로 운용한다
-3. **태스크가 결정**: 에이전트 수에 사전 정의된 최소/최대는 없다. 태스크가 1명을 요구하면 1명, 7명을 요구하면 7명
-4. **미션 특화**: 일반적 관점 할당이 아닌, 이 태스크에 맞는 구체적 미션을 부여한다
-5. **중복 배제**: 여러 관점이 동일한 영역을 검토하지 않도록 미션 간 경계를 명확히 한다
+1. **Quality first**: Optimize for result quality, not token efficiency
+2. **Opus + Max reasoning**: All agents operate on the opus model
+3. **Task decides**: No predefined minimum/maximum agent count. If the task requires 1, use 1; if it requires 7, use 7
+4. **Mission-specific**: Assign concrete missions tailored to this task, not generic perspective labels
+5. **No overlap**: Clearly delineate mission boundaries so multiple perspectives do not review the same area
 
 ---
 
 ## Orchestration Process
 
-에이전트를 할당하기 전, 반드시 아래 3단계를 수행한다.
+Before allocating agents, always perform these 3 steps.
 
 ### Step 1: Task Profiling
 
-태스크를 다음 차원에서 분석하고, 결과를 아래 포맷으로 기록한다:
+Analyze the task along the following dimensions and record the result in this format:
 
 ```
 Task Profile:
-  범위: [파일 수], [LOC 추정]
-  레이어: [해당 레이어 나열]
-  위험: [해당 위험 영역 나열, 없으면 "없음"]
-  복잡도: [낮음 / 중간 / 높음]
+  Scope: [file count], [estimated LOC]
+  Layers: [list applicable layers]
+  Risks: [list applicable risk areas, or "none"]
+  Complexity: [low / medium / high]
 ```
 
-**분석 차원:**
+**Analysis dimensions:**
 
-- **범위**: 변경/대상 파일 수와 LOC, 관련 디렉토리와 모듈
-- **레이어**: UI / API / 비즈니스 로직 / 데이터 / 인프라 / 설정
-- **위험 영역**: 보안(auth, crypto, secrets) / 데이터(스키마, 마이그레이션) / 공개 인터페이스(API, SDK) / 동시성(공유 자원, 비동기) / 장애(외부 의존, 부분 실패)
-- **도메인 복잡도**: 이 변경이 요구하는 도메인 지식과 비즈니스 규칙의 복잡도
+- **Scope**: Number of files changed/targeted, LOC, related directories and modules
+- **Layers**: UI / API / business logic / data / infrastructure / configuration
+- **Risk areas**: Security (auth, crypto, secrets) / Data (schema, migration) / Public interfaces (API, SDK) / Concurrency (shared resources, async) / Failure (external dependencies, partial failure)
+- **Domain complexity**: Level of domain knowledge and business rule complexity this change requires
 
 ### Step 2: Agent Composition
 
-`agent-taxonomy.md`에서 역할을 선택한다.
+Select roles from `agent-taxonomy.md`.
 
-**선택 기준 — 각 역할에 대해 자문:**
+**Selection criteria — ask yourself for each role:**
 
-> "이 관점이 빠지면 이 태스크에서 놓칠 수 있는 **실질적 결함**이 있는가?"
+> "If this perspective is missing, could this task have a **real defect** that goes undetected?"
 
-- YES → 포함
-- NO → 제외
+- YES → include
+- NO → exclude
 
-> "이 관점이 이 태스크에서 다른 관점과 **중복되지 않는** 의미 있는 피드백을 줄 수 있는가?"
+> "Can this perspective provide meaningful feedback that **does not overlap** with other selected perspectives?"
 
-- YES → 포함
-- NO → 제외 (해당 없거나 다른 관점에 흡수)
+- YES → include
+- NO → exclude (not applicable or absorbed by another perspective)
 
-**중복 해결:**
-두 역할의 범위가 겹칠 때 (예: correctness와 concurrency가 모두 공유 상태 접근을 다룸):
-- 각각에 대해 중복되지 않는 구체적 미션을 작성할 수 있으면 → 둘 다 포함, 미션으로 경계 분리
-- 미션을 분리해도 실질적으로 같은 것을 보게 되면 → 더 넓은 역할 하나로 통합
+**Overlap resolution:**
+When two roles overlap in scope (e.g., correctness and concurrency both examining shared state access):
+- If you can write non-overlapping specific missions for each → include both, separate via mission boundaries
+- If separating missions still results in reviewing the same thing → merge into the broader role
 
-**주의사항:**
-- 단순 변경에 과잉 투입하지 않는다. README 오타 수정에 security reviewer는 불필요
-- 복잡한 변경에서 관점을 누락하지 않는다. auth 리팩토링에서 security를 빼면 안 됨
-- 태스크의 표면적 특성이 아닌 **실질적 위험**으로 판단한다. config 파일 변경이라도 보안에 영향을 줄 수 있음
+**Guidelines:**
+- Do not over-allocate for simple changes. A README typo fix does not need a security reviewer
+- Do not omit perspectives for complex changes. An auth refactoring must include security
+- Judge by **actual risk**, not surface-level characteristics. A config file change can affect security
 
 ### Step 3: Mission Briefing
 
-선택된 각 에이전트에게 **이 태스크에 특화된 구체적 미션**을 부여한다.
+Give each selected agent a **concrete mission specific to this task**.
 
-**나쁜 미션:**
-> "correctness 관점에서 리뷰해줘"
+**Bad mission:**
+> "Review from a correctness perspective"
 
-**좋은 미션:**
-> "이 인증 미들웨어 리팩토링에서 세션 상태 전이의 정합성을 검증해줘.
-> 특히 토큰 갱신 중 동시 요청이 들어올 때의 동작에 주목하고,
-> 기존 extractToken 함수가 제거되면서 에러 경로가 달라지는 부분을 확인해줘."
+**Good mission:**
+> "Verify session state transition correctness in this auth middleware refactoring.
+> Focus on behavior during concurrent requests while tokens are being refreshed,
+> and check how error paths change now that the extractToken function has been removed."
 
-**미션 작성 규칙:**
-1. 태스크의 구체적 맥락을 포함할 것
-2. 집중해야 할 특정 파일/함수/영역을 지정할 것
-3. agent-taxonomy.md의 핵심 질문을 이 태스크에 맞게 구체화할 것
-4. 다른 에이전트의 미션과 겹치지 않도록 경계를 명시할 것
+**Mission writing rules:**
+1. Include the specific context of this task
+2. Specify particular files/functions/areas to focus on
+3. Concretize the key question from agent-taxonomy.md for this task
+4. Explicitly state boundaries to avoid overlap with other agents' missions
 
 ---
 
-## 적용 예시
+## Examples
 
-### 예시 1: 탐색 — 다중 레이어 기능 추가 전 코드베이스 파악 (Analysis)
-
-```
-Task Profile:
-  범위: 새 기능이 3개 레이어에 걸침 (API + 비즈니스 로직 + 데이터)
-  레이어: API, 비즈니스 로직, 데이터
-  위험: 기존 코드와의 통합 지점 파악 필요
-  복잡도: 중간
-
-Agent Composition:
-  architecture-mapper × 1 — "API 레이어와 데이터 레이어의 연결 구조, 기존 엔드포인트 패턴 매핑"
-  flow-tracer × 1         — "가장 유사한 기존 기능의 요청 흐름을 추적하여 통합 패턴 파악"
-  dependency-analyzer × 1 — "새 기능이 터치할 모듈의 의존성 그래프와 영향 반경 분석"
-```
-
-### 예시 2: 조사 — 배포 후 간헐적 500 에러 (Investigation)
+### Example 1: Exploration — understanding codebase before multi-layer feature (Analysis)
 
 ```
 Task Profile:
-  범위: 에러 로그가 2개 서비스에서 발생
-  레이어: API + 데이터
-  위험: 동시성(커넥션 풀), 장애(외부 서비스 타임아웃)
-  복잡도: 높음 (간헐적 → 재현 어려움)
+  Scope: New feature spans 3 layers (API + business logic + data)
+  Layers: API, business logic, data
+  Risks: Need to identify integration points with existing code
+  Complexity: medium
 
 Agent Composition:
-  hypothesis-tracer × 1  — "DB 커넥션 풀 소진 가설: 커넥션 획득/반환 경로의 누수 지점 추적"
-  regression-hunter × 1  — "최근 배포 diff에서 커넥션 관리 또는 타임아웃 설정 변경 탐색"
-  state-analyzer × 1     — "요청 처리 중 상태 전이 분석, 특히 에러 경로에서의 리소스 정리 확인"
+  architecture-mapper x 1 — "Map the connection structure between API and data layers, existing endpoint patterns"
+  flow-tracer x 1         — "Trace the request flow of the most similar existing feature to understand integration patterns"
+  dependency-analyzer x 1 — "Analyze the dependency graph and impact radius of modules the new feature will touch"
 ```
 
-### 예시 3: 리뷰 — 단순 설정 수정 (Review, 1파일, 비로직)
+### Example 2: Investigation — intermittent 500 errors after deployment (Investigation)
 
 ```
 Task Profile:
-  범위: 1파일, 5 LOC
-  레이어: 설정
-  위험: 없음
-  복잡도: 낮음
+  Scope: Error logs appearing in 2 services
+  Layers: API + data
+  Risks: Concurrency (connection pool), failure (external service timeout)
+  Complexity: high (intermittent — hard to reproduce)
 
 Agent Composition:
-  conventions × 1 — "설정 파일 포맷과 키 네이밍이 기존 패턴과 일치하는지 확인"
+  hypothesis-tracer x 1  — "DB connection pool exhaustion hypothesis: trace leak points in connection acquire/release paths"
+  regression-hunter x 1  — "Search recent deployment diffs for connection management or timeout configuration changes"
+  state-analyzer x 1     — "Analyze state transitions during request processing, especially resource cleanup in error paths"
 ```
 
-### 예시 4: 리뷰 — 인증 미들웨어 리팩토링 (3파일, 보안 관련)
+### Example 3: Review — simple config edit (Review, 1 file, non-logic)
 
 ```
 Task Profile:
-  범위: 3파일, 150 LOC
-  레이어: API + 비즈니스 로직
-  위험: 보안(auth, 세션), 공개 인터페이스(미들웨어 계약)
-  복잡도: 중간
+  Scope: 1 file, 5 LOC
+  Layers: configuration
+  Risks: none
+  Complexity: low
 
 Agent Composition:
-  correctness × 1 — "세션 상태 전이 정합성, 토큰 갱신 로직의 엣지 케이스"
-  security × 1    — "토큰 처리, CSRF 방어, 세션 고정 공격 벡터"
-  api-design × 1  — "미들웨어 인터페이스의 하위호환, 소비자 코드 영향"
-  conventions × 1 — "미들웨어 패턴이 프로젝트 기존 미들웨어와 일관적인지"
-  concurrency × 1 — "동시 요청 시 세션 상태 경쟁 조건"
+  conventions x 1 — "Verify config file format and key naming matches existing patterns"
 ```
 
-### 예시 5: 리뷰 — DB 스키마 마이그레이션 + API 변경 (8파일, 다중 레이어)
+### Example 4: Review — auth middleware refactoring (3 files, security-related)
 
 ```
 Task Profile:
-  범위: 8파일, 300 LOC
-  레이어: API + 데이터 + 비즈니스 로직
-  위험: 데이터(스키마 변경), 공개 인터페이스(API), 장애(마이그레이션 실패)
-  복잡도: 높음
+  Scope: 3 files, 150 LOC
+  Layers: API + business logic
+  Risks: Security (auth, sessions), public interface (middleware contract)
+  Complexity: medium
 
 Agent Composition:
-  correctness × 1        — "마이그레이션 SQL의 로직 정합성, API 핸들러의 새 스키마 매핑"
-  migration-safety × 1   — "롤백 가능성, 기존 데이터 보존, 마이그레이션 순서"
-  performance × 1        — "새 인덱스 효율, 마이그레이션 중 락 영향, 쿼리 플랜 변화"
-  api-design × 1         — "응답 스키마 하위호환, 버전 전략, 클라이언트 영향"
-  error-resilience × 1   — "마이그레이션 실패 시 복구 경로, 부분 적용 상태 처리"
+  correctness x 1 — "Session state transition correctness, edge cases in token refresh logic"
+  security x 1    — "Token handling, CSRF defense, session fixation attack vectors"
+  api-design x 1  — "Middleware interface backward compatibility, consumer code impact"
+  conventions x 1 — "Whether middleware patterns are consistent with existing project middleware"
+  concurrency x 1 — "Session state race conditions under concurrent requests"
+```
+
+### Example 5: Review — DB schema migration + API change (8 files, multi-layer)
+
+```
+Task Profile:
+  Scope: 8 files, 300 LOC
+  Layers: API + data + business logic
+  Risks: Data (schema change), public interface (API), failure (migration failure)
+  Complexity: high
+
+Agent Composition:
+  correctness x 1        — "Migration SQL logic correctness, API handler mapping to new schema"
+  migration-safety x 1   — "Rollback feasibility, existing data preservation, migration ordering"
+  performance x 1        — "New index efficiency, lock impact during migration, query plan changes"
+  api-design x 1         — "Response schema backward compatibility, versioning strategy, client impact"
+  error-resilience x 1   — "Recovery path on migration failure, partial-apply state handling"
 ```

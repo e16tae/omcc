@@ -1,52 +1,54 @@
 # omcc (oh-my-claude-code)
 
-개인 Claude Code 플러그인 마켓플레이스.
-외부 플러그인을 큐레이팅하여 한 곳에서 설치 가능하게 하고,
-향후 자체 플러그인도 호스팅한다.
+Personal Claude Code plugin marketplace.
+Curates external plugins for one-stop installation,
+and hosts built-in plugins.
 
-## 구조
-- `.claude-plugin/marketplace.json` — 마켓플레이스 매니페스트 (핵심)
-- `plugins/` — 자체 빌트인 플러그인
-- `scripts/` — CI용 소스 접근성 검증 스크립트
-- `tests/` — pytest 기반 마켓플레이스 검증 테스트
-- `pyproject.toml` — 프로젝트 설정 및 테스트 의존성
-- `.github/workflows/` — CI (검증 + 릴리스 자동화)
+## Structure
+- `.claude-plugin/marketplace.json` — Marketplace manifest (core)
+- `plugins/` — Built-in plugins
+- `scripts/` — CI source accessibility validation scripts
+- `tests/` — pytest-based marketplace validation tests
+- `pyproject.toml` — Project config and test dependencies
+- `.github/workflows/` — CI (validation + release automation)
 
-## marketplace.json 편집 규칙
-- 항상 유효한 JSON 유지
-- plugins 배열은 name 기준 알파벳 오름차순 정렬
-- 플러그인 엔트리 필수 필드: name, description, source
-- 선택 필드: category, homepage, version, author
-- 검증: `uv run --extra test pytest -v`
+## marketplace.json Editing Rules
+- Always maintain valid JSON
+- plugins array sorted alphabetically by name
+- Plugin entry required fields: name, description, source
+- Optional fields: category, homepage, version, author, license
+- Validate: `uv run --extra test pytest -v`
 
-## 플러그인 추가 절차
-1. 소스 repo가 public이고 .claude-plugin/plugin.json 존재 확인
-2. 유지보수 활성 또는 명시적 안정 상태 확인
-3. OSI 승인 라이선스 확인
-4. 기존 플러그인과 기능 중복 없음 확인
-5. 로컬 테스트
-6. marketplace.json의 plugins 배열에 엔트리 추가 (알파벳 위치에 삽입)
+## Plugin Addition Procedure
+1. Verify source repo is public and .claude-plugin/plugin.json exists
+2. Verify active maintenance or explicitly stable status
+3. Verify OSI-approved license
+4. Verify no feature overlap with existing plugins
+5. Run local tests
+6. Add entry to marketplace.json plugins array (insert at alphabetical position)
 
-## Source Type 선택
-- git-subdir: 플러그인이 모노레포 서브디렉토리에 위치 시
-- url: 플러그인이 repo 루트에 위치 시
-- ./plugins/...: omcc 내 자체 플러그인
+## Source Type Selection
+- git-subdir: Plugin located in a monorepo subdirectory
+- github: Plugin in a GitHub repo (owner/repo shorthand)
+- url: Plugin at a git repo root
+- npm: Plugin distributed as npm package
+- ./plugins/...: Built-in plugin within omcc
 
 ## Commit Convention (Conventional Commits)
 
 `<type>(<scope>): <description>`
 
 Types: `feat`, `fix`, `docs`, `ci`, `refactor`, `chore`
-Scope: 플러그인 이름 또는 영역
+Scope: plugin name or area
 
-- 플러그인 추가: `feat(name): add ...`
-- 플러그인 수정: `fix(name): update ...`
-- 플러그인 제거: `feat(name)!: remove ...` (BREAKING CHANGE)
-- 문서/CI: `docs(...)`, `ci(...)`
+- Add plugin: `feat(name): add ...`
+- Update plugin: `fix(name): update ...`
+- Remove plugin: `feat(name)!: remove ...` (BREAKING CHANGE)
+- Docs/CI: `docs(...)`, `ci(...)`
 
 ## Versioning
 - SemVer (MAJOR.MINOR.PATCH)
-- MAJOR: breaking change (플러그인 제거/이름 변경)
-- MINOR: 플러그인 추가
-- PATCH: 설명 수정 등
-- release-please가 커밋 메시지 기반으로 자동 관리
+- MAJOR: breaking change (plugin removal/rename)
+- MINOR: plugin addition
+- PATCH: description edits, etc.
+- release-please manages versions automatically based on commit messages
