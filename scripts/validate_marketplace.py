@@ -54,6 +54,8 @@ def check_sources(data):
     results = []
     warnings = []
 
+    repo_root = MARKETPLACE_PATH.parent.parent.resolve()
+
     for plugin in data.get("plugins", []):
         name = plugin.get("name", "<unnamed>")
         src = plugin.get("source")
@@ -63,9 +65,12 @@ def check_sources(data):
             if not url:
                 warnings.append(f"{name}: missing 'url' in source")
                 continue
+            if not url.startswith("https://"):
+                warnings.append(f"{name}: {url} -> INVALID_SCHEME (https only)")
+                continue
             try:
                 result = subprocess.run(
-                    ["git", "ls-remote", url, "HEAD"],
+                    ["git", "ls-remote", "--", url, "HEAD"],
                     capture_output=True,
                     timeout=10,
                 )
@@ -76,7 +81,10 @@ def check_sources(data):
             except subprocess.TimeoutExpired:
                 warnings.append(f"{name}: {url} -> TIMEOUT")
         elif isinstance(src, str) and src.startswith("./"):
-            source_dir = MARKETPLACE_PATH.parent.parent / src
+            source_dir = (repo_root / src).resolve()
+            if not source_dir.is_relative_to(repo_root):
+                warnings.append(f"{name}: local:{src} -> PATH_TRAVERSAL")
+                continue
             if source_dir.is_dir():
                 results.append(f"{name}: local:{src} -> OK")
             else:
