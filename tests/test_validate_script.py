@@ -111,8 +111,8 @@ class TestNpmSources:
 
 class TestUnrecognizedSources:
 
-    def test_bare_string_without_dot_slash_skipped(self, repo_root):
-        """String sources not starting with './' are currently skipped."""
+    def test_bare_string_without_dot_slash_rejected(self, repo_root):
+        """String sources not starting with './' are rejected as unknown format."""
         data = _make_data([{
             "name": "weird",
             "source": "plugins/no-dot-slash"
@@ -123,3 +123,5 @@ class TestUnrecognizedSources:
             results, warnings = validate_marketplace.check_sources(data)
 
         assert not results
+        assert len(warnings) == 1
+        assert "unknown source format" in warnings[0]

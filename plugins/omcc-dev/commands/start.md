@@ -14,10 +14,16 @@ $ARGUMENTS
 Before writing any code:
 
 1. Clarify the goal: "What problem does this solve? What does success look like?"
-2. Propose 2-3 approaches with tradeoffs for each
-3. **Wait for user to choose a direction** — do not proceed without explicit approval
+2. Quick context scan: check project structure, tech stack, and key config files
+   to inform the Practical Fit perspective
+3. Follow the Evidence-Based Choice Protocol (`choice-protocol.md`):
+   - **Research**: Search official docs, standards, and community consensus before proposing options
+   - **Compare**: Evaluate 2+ approaches across the five perspectives (Essence, Foundation, Standards, Best Practice, Practical Fit)
+   - **Recommend**: Always provide a recommended option with confidence level, decisive factors, and conditions to choose differently
+4. **Wait for user to choose a direction** — do not proceed without explicit approval
 
-If the user says "just do it" or "your call", state your recommendation with reasoning and confirm.
+If the user says "just do it" or "your call", run the protocol but present only the recommendation
+(skip the interactive choice step) and confirm before proceeding.
 
 ---
 

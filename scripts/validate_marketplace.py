@@ -2,11 +2,12 @@
 """Check plugin source accessibility in marketplace.json."""
 
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
 
-from source_types import KNOWN_SOURCE_TYPES, classify_source, validate_local_path
+from source_types import classify_source, validate_local_path
 
 MARKETPLACE_PATH = Path(__file__).resolve().parent.parent / ".claude-plugin" / "marketplace.json"
 
@@ -42,7 +43,11 @@ def check_sources(data):
                 warnings.append(f"{name}: missing 'url' in source")
                 continue
             # github type uses owner/repo shorthand, not a full URL
-            if source_type != "github" and not url.startswith("https://"):
+            if source_type == "github":
+                if not re.match(r'^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$', url):
+                    warnings.append(f"{name}: {url} -> INVALID_GITHUB_SHORTHAND (expected owner/repo)")
+                    continue
+            elif not url.startswith("https://"):
                 warnings.append(f"{name}: {url} -> INVALID_SCHEME (https only)")
                 continue
             check_url = f"https://github.com/{url}.git" if source_type == "github" else url

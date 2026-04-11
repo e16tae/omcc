@@ -11,10 +11,14 @@ $ARGUMENTS
 
 ## Phase 1: Determine Scope
 
-If $ARGUMENTS specifies the audit type, use it directly. Otherwise, ask the user:
+If $ARGUMENTS specifies the audit type, use it directly. Otherwise, help the user decide:
 
 1. **Audit type**: security / performance / code quality / tech debt / full (all of the above)
 2. **Target scope**: entire codebase / specific directory or module
+
+When the user is unsure, gather minimal context first (e.g., recent git log, directory structure,
+project config) then explain what each audit type covers and recommend the most appropriate type
+and scope. If context is insufficient, default to "full". State the reasoning.
 
 ---
 

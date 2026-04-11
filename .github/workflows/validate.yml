@@ -6,14 +6,14 @@ on:
     paths:
       - '.claude-plugin/marketplace.json'
       - 'plugins/**'
-      - 'scripts/validate_marketplace.py'
+      - 'scripts/**'
       - 'tests/**'
       - 'pyproject.toml'
   pull_request:
     paths:
       - '.claude-plugin/marketplace.json'
       - 'plugins/**'
-      - 'scripts/validate_marketplace.py'
+      - 'scripts/**'
       - 'tests/**'
       - 'pyproject.toml'
 
