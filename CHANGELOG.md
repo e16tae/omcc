@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.0](https://github.com/e16tae/omcc/compare/v0.2.1...v0.3.0) (2026-04-11)
+
+
+### Features
+
+* **omcc-dev:** add evidence-based choice protocol and audit fixes ([ba638b6](https://github.com/e16tae/omcc/commit/ba638b6a397c93e16f01569ed5b352ec563232e6))
+* **omcc-dev:** add evidence-based choice protocol and audit fixes ([4199e98](https://github.com/e16tae/omcc/commit/4199e98f2219178c7e0d3c5b706fcf75016dccc4))
+
 ## [0.2.1](https://github.com/e16tae/omcc/compare/v0.2.0...v0.2.1) (2026-04-11)
 
 
