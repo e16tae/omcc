@@ -1,5 +1,6 @@
 import json
 import re
+import sys
 from functools import lru_cache
 from pathlib import Path
 
@@ -7,6 +8,10 @@ import pytest
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 MARKETPLACE_PATH = ROOT_DIR / ".claude-plugin" / "marketplace.json"
+
+# Import shared source classifier
+sys.path.insert(0, str(ROOT_DIR / "scripts"))
+from source_types import classify_source, is_local_source  # noqa: E402
 
 
 @lru_cache(maxsize=1)
@@ -26,26 +31,18 @@ def get_local_plugins():
     return [
         (p, p["source"])
         for p in get_plugins()
-        if isinstance(p.get("source"), str) and p["source"].startswith("./")
+        if is_local_source(p)
     ]
 
 
 def get_git_subdir_plugins():
     """Get git-subdir source plugins for parametrize."""
-    return [
-        p for p in get_plugins()
-        if isinstance(p.get("source"), dict)
-        and p["source"].get("source") == "git-subdir"
-    ]
+    return [p for p in get_plugins() if classify_source(p) == "git-subdir"]
 
 
 def get_url_plugins():
     """Get url source plugins for parametrize."""
-    return [
-        p for p in get_plugins()
-        if isinstance(p.get("source"), dict)
-        and p["source"].get("source") == "url"
-    ]
+    return [p for p in get_plugins() if classify_source(p) == "url"]
 
 
 @lru_cache(maxsize=None)
