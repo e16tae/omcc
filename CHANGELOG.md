@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.2.0](https://github.com/e16tae/omcc/compare/v0.1.0...v0.2.0) (2026-04-11)
+
+
+### Features
+
+* **omcc-dev:** add dynamic agent orchestration framework ([0267831](https://github.com/e16tae/omcc/commit/026783177a9f1e3f44285e9537ec36a39080e39a))
+* **omcc-dev:** add dynamic agent orchestration framework ([f4cf6dc](https://github.com/e16tae/omcc/commit/f4cf6dc9016ea35c1007841673d7c039f9881993))
+
+
+### Bug Fixes
+
+* **ci:** harden CI pipeline and version management ([e6f0f37](https://github.com/e16tae/omcc/commit/e6f0f371f8629373f4b46ad677967d47a5a9b6d8))
+* **ci:** harden CI pipeline and version management ([d2d6dbf](https://github.com/e16tae/omcc/commit/d2d6dbfc0c1f4deec05d9da21291e88e5dc34881))
+* **marketplace:** add schema version and improve source validation ([5130423](https://github.com/e16tae/omcc/commit/5130423feea511766ef70dfd593f031c1baed62f))
+* **marketplace:** add schema version and improve source validation ([628d47c](https://github.com/e16tae/omcc/commit/628d47c527ff36f15cda65b68a0c88cbbc38e3b0))
+* **tests:** update npm source test for merged classifier support ([25b59f8](https://github.com/e16tae/omcc/commit/25b59f87fe1eefef4f04562c2a9bd9e4b79dcb84))
+
 ## 0.1.0 (2026-04-11)
 
 
