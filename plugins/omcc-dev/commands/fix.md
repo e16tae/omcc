@@ -7,13 +7,11 @@ argument-hint: Bug description or issue number
 
 $ARGUMENTS
 
-## Core Principle
-
-**Do NOT modify code until root cause is confirmed.** Jumping to a fix without understanding the cause leads to symptom-patching, not real fixes.
-
 ---
 
 ## Phase 1: Investigate
+
+**Do NOT modify code until root cause is confirmed.** Jumping to a fix without understanding the cause leads to symptom-patching, not real fixes.
 
 Collect symptoms and trace the root cause before any code changes.
 
@@ -24,16 +22,21 @@ Collect symptoms and trace the root cause before any code changes.
    - Read the relevant code area
 
 2. **Form hypotheses**
-   State 3 distinct hypotheses about the root cause:
-   - Hypothesis A (code logic): condition error, boundary issue, type mismatch
-   - Hypothesis B (state/data): race condition, null reference, stale cache
-   - Hypothesis C (environment): config issue, dependency change, API contract
+   Analyze collected symptoms and formulate possible root cause hypotheses.
+
+   Follow the Dynamic Agent Orchestration process (`orchestration.md`):
+
+   **Task Profiling**: Analyze the bug's symptoms, related code areas, and risk factors — which layer, what type of defect could cause this, any recent changes involved
+
+   **Agent Composition**: Select from Investigation Agents in `agent-taxonomy.md`
+   - Choose the most appropriate agent type for each hypothesis
+   - Minimum 2 hypotheses from distinct failure categories (e.g., code logic vs state/data vs environment/config)
+   - More hypotheses when the cause is ambiguous; the minimum ensures diversified investigation even when the cause seems obvious
+
+   **Mission Briefing**: Give each agent a specific hypothesis and investigation scope
 
 3. **Parallel investigation**
-   Launch 3 hypothesis-tracer agents in parallel (single message, 3 Agent calls):
-   - Agent 1: Investigate hypothesis A
-   - Agent 2: Investigate hypothesis B
-   - Agent 3: Investigate hypothesis C
+   Launch all selected investigation agents in parallel (single message, multiple Agent calls).
 
    Each agent traces its assigned hypothesis and returns: verdict, confidence, evidence, verification method.
 
@@ -43,18 +46,18 @@ Collect symptoms and trace the root cause before any code changes.
    - If verified → proceed to Phase 3
    - If refuted → try next hypothesis
 
-5. **3-strike rule**
-   If 3 hypotheses are all refuted:
+5. **Strike rule**
+   If all hypotheses are refuted:
    - Stop investigating
    - Report findings to user
    - Suggest: "Would you like to escalate to Codex? (`/codex:rescue [description]`)"
 
 ---
 
-## Phase 2: Codex Escalation (only on 3-strike)
+## Phase 2: Codex Escalation (only on full strike)
 
 Only if Phase 1 exhausted all hypotheses:
-- Ask the user: "3 hypotheses were refuted. Want to delegate to Codex for a different perspective?"
+- Ask the user: "All hypotheses were refuted. Want to delegate to Codex for a different perspective?"
 - If yes → tell the user to run `/codex:rescue` with the bug description and findings so far
 - If no → continue manual investigation with user guidance
 

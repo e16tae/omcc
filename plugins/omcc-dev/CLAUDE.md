@@ -3,6 +3,13 @@
 이 규칙은 omcc-dev 플러그인이 활성화된 동안 Claude의 기본 행동을 보정한다.
 커맨드(/fix, /start, /audit)와 함께 동작하며, 일반 대화에서도 적용된다.
 
+## 에이전트 오케스트레이션
+
+에이전트를 생성(spawn)하는 모든 단계에서 `orchestration.md`의 Dynamic Agent Orchestration 프로세스를 따른다.
+사용 가능한 에이전트 역할은 `agent-taxonomy.md`에 정의되어 있다.
+정적 개수가 아닌 태스크 분석 기반의 동적 구성으로 최상의 결과를 추구한다.
+에이전트를 생성하지 않는 인라인 스킬(explore, plan 등)에서도 관점 선택 시 taxonomy를 참고할 수 있다.
+
 ## 사용 가능한 커맨드
 
 - `/omcc-dev:fix [버그 설명]` — 체계적 버그 수정 (다중 가설 병렬 조사)
