@@ -6,6 +6,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from source_types import KNOWN_SOURCE_TYPES, classify_source, validate_local_path
+
 MARKETPLACE_PATH = Path(__file__).resolve().parent.parent / ".claude-plugin" / "marketplace.json"
 
 
@@ -32,36 +34,40 @@ def check_sources(data):
     for plugin in data.get("plugins", []):
         name = plugin.get("name", "<unnamed>")
         src = plugin.get("source")
+        source_type = classify_source(plugin)
 
-        if isinstance(src, dict) and src.get("source") in ("url", "git-subdir"):
-            url = src.get("url")
+        if source_type in ("url", "git-subdir", "github"):
+            url = src.get("url") or src.get("repo")
             if not url:
                 warnings.append(f"{name}: missing 'url' in source")
                 continue
-            if not url.startswith("https://"):
+            # github type uses owner/repo shorthand, not a full URL
+            if source_type != "github" and not url.startswith("https://"):
                 warnings.append(f"{name}: {url} -> INVALID_SCHEME (https only)")
                 continue
+            check_url = f"https://github.com/{url}.git" if source_type == "github" else url
             try:
                 result = subprocess.run(
-                    ["git", "ls-remote", "--", url, "HEAD"],
+                    ["git", "ls-remote", "--", check_url, "HEAD"],
                     capture_output=True,
                     timeout=10,
                 )
                 if result.returncode == 0:
-                    results.append(f"{name}: {url} -> OK")
+                    results.append(f"{name}: {check_url} -> OK")
                 else:
-                    warnings.append(f"{name}: {url} -> UNREACHABLE")
+                    warnings.append(f"{name}: {check_url} -> UNREACHABLE")
             except subprocess.TimeoutExpired:
-                warnings.append(f"{name}: {url} -> TIMEOUT")
-        elif isinstance(src, str) and src.startswith("./"):
-            source_dir = (repo_root / src).resolve()
-            if not source_dir.is_relative_to(repo_root):
-                warnings.append(f"{name}: local:{src} -> PATH_TRAVERSAL")
-                continue
-            if source_dir.is_dir():
-                results.append(f"{name}: local:{src} -> OK")
+                warnings.append(f"{name}: {check_url} -> TIMEOUT")
+        elif source_type == "npm":
+            results.append(f"{name}: npm:{src.get('package', '?')} -> SKIPPED")
+        elif source_type == "local":
+            _, error = validate_local_path(src, repo_root)
+            if error:
+                warnings.append(f"{name}: local:{src} -> {error}")
             else:
-                warnings.append(f"{name}: local:{src} -> MISSING")
+                results.append(f"{name}: local:{src} -> OK")
+        else:
+            warnings.append(f"{name}: unknown source format: {src!r}")
 
     return results, warnings
 
