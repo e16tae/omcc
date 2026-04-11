@@ -24,24 +24,21 @@ and scope. If context is insufficient, default to "full". State the reasoning.
 
 ## Phase 2: Parallel Scan
 
-Follow the Dynamic Agent Orchestration process (`orchestration.md`):
+Follow `orchestration.md`, targeting Review Agents based on audit type.
 
-1. **Task Profiling**: Analyze the audit target — layers present, potential risk areas, codebase size and complexity
+### Agent selection rules for audits:
 
-2. **Agent Composition**: Select from Review Agents in `agent-taxonomy.md` based on audit type
+#### If "full" audit:
+Always include the baseline set: **security, performance, simplicity, conventions, debt**.
+These cannot be excluded — "full" guarantees complete coverage of these categories.
+Then use orchestration to determine if additional specialist perspectives
+(correctness, concurrency, api-design, error-resilience, migration-safety) are warranted based on the codebase's characteristics.
 
-   ### If "full" audit:
-   Always include the baseline set: **security, performance, simplicity, conventions, debt**.
-   These cannot be excluded — "full" guarantees complete coverage of these categories.
-   Then use orchestration to determine if additional specialist perspectives
-   (correctness, concurrency, api-design, error-resilience, migration-safety) are warranted based on the codebase's characteristics.
+#### If specific type:
+Decompose the chosen type into distinct sub-aspects and assign one agent per sub-aspect.
+Example: "security" audit → separate missions for auth/authz, input validation, secrets management.
 
-   ### If specific type:
-   Decompose the chosen type into distinct sub-aspects and assign one agent per sub-aspect.
-   Example: "security" audit → separate missions for auth/authz, input validation, secrets management.
-
-3. **Mission Briefing**: Give each agent a concrete audit mission specific to this codebase
-4. Launch all selected agents in parallel (single message, multiple Agent calls)
+Launch all selected agents in parallel (single message, multiple Agent calls).
 
 ---
 

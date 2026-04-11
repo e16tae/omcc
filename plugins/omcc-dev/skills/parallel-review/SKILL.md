@@ -19,11 +19,8 @@ Provide a structured multi-perspective review. Since this is auto-activated, wor
 
 ### Step 2: Determine review perspectives
 
-Follow the Dynamic Agent Orchestration process (`orchestration.md`):
-
-1. **Task Profiling**: Analyze the scope of changes, layers touched, and risk areas
-2. **Agent Composition**: Select perspectives from Review Agents in `agent-taxonomy.md`
-3. Evaluate the changes independently from each selected perspective
+Follow `orchestration.md`, targeting Review Agents based on the scope of changes and risk areas.
+Evaluate the changes independently from each selected perspective.
 
 ### Step 3: Synthesize
 
