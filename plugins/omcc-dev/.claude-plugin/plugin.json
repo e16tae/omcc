@@ -2,9 +2,13 @@
   "name": "omcc-dev",
   "version": "0.1.0",
   "description": "Development workflow framework with systematic bug fixing, feature development, and code auditing via multi-agent orchestration",
+  "license": "MIT",
   "category": "development",
   "author": {
     "name": "e16tae"
   },
-  "homepage": "https://github.com/e16tae/omcc"
+  "homepage": "https://github.com/e16tae/omcc",
+  "commands": "commands",
+  "skills": "skills",
+  "agents": "agents"
 }

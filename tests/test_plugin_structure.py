@@ -5,6 +5,8 @@ from conftest import (
     ALL_COMMANDS,
     ALL_SKILLS,
     LOCAL_PLUGIN_DIRS,
+    discover_commands,
+    discover_skills,
     load_plugin_json,
     parse_frontmatter,
 )
@@ -59,6 +61,8 @@ def test_plugin_json_optional_field_types(entry, plugin_dir):
         assert "name" in data["author"], "author must have 'name'"
     if "homepage" in data:
         assert isinstance(data["homepage"], str), "homepage should be str"
+    if "license" in data:
+        assert isinstance(data["license"], str), "license should be str"
 
 
 # ---------------------------------------------------------------------------
@@ -129,21 +133,31 @@ def test_agent_optional_field_types(plugin_name, agent_path):
 # Plugin directory structure validation
 # ---------------------------------------------------------------------------
 
-_ALLOWED_ENTRIES = {
-    ".claude-plugin", "commands", "skills", "agents", "CLAUDE.md",
-    "agent-taxonomy.md", "orchestration.md",
-}
+_STANDARD_ENTRIES = {".claude-plugin", "CLAUDE.md"}
 
 
 @pytest.mark.parametrize(
     "entry,plugin_dir", LOCAL_PLUGIN_DIRS, ids=_plugin_dir_ids
 )
 def test_plugin_no_unexpected_top_level_entries(entry, plugin_dir):
+    pjson = load_plugin_json(entry["source"])
+
+    # Build allowed set from plugin.json declared component paths
+    allowed = set(_STANDARD_ENTRIES)
+    for key in ("skills", "commands", "agents"):
+        val = pjson.get(key, key)  # default to standard directory name
+        if isinstance(val, str):
+            allowed.add(val)
+        elif isinstance(val, list):
+            allowed.update(val)
+
     actual = {
         p.name for p in plugin_dir.iterdir()
         if not p.name.startswith(".") or p.name == ".claude-plugin"
     }
-    unexpected = actual - _ALLOWED_ENTRIES
+    unexpected = actual - allowed
+    # .md files are documentation and always allowed at plugin root
+    unexpected = {f for f in unexpected if not f.endswith(".md")}
     assert not unexpected, f"Unexpected entries at plugin root: {unexpected}"
 
 
@@ -171,3 +185,27 @@ def test_referenced_files_exist(entry, plugin_dir):
                 pytest.fail(
                     f"{entry['name']}: {ref_file} is referenced but does not exist"
                 )
+
+
+# ---------------------------------------------------------------------------
+# CLAUDE.md command/skill list sync
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "entry,plugin_dir", LOCAL_PLUGIN_DIRS, ids=_plugin_dir_ids
+)
+def test_claude_md_lists_all_commands_and_skills(entry, plugin_dir):
+    """CLAUDE.md must mention every command and skill the plugin provides."""
+    claude_md_path = plugin_dir / "CLAUDE.md"
+    if not claude_md_path.exists():
+        pytest.skip("no CLAUDE.md")
+    claude_md = claude_md_path.read_text(encoding="utf-8")
+    for cmd in discover_commands(plugin_dir):
+        assert cmd.stem in claude_md, (
+            f"Command '{cmd.stem}' not mentioned in CLAUDE.md"
+        )
+    for skill in discover_skills(plugin_dir):
+        assert skill.parent.name in claude_md, (
+            f"Skill '{skill.parent.name}' not mentioned in CLAUDE.md"
+        )
