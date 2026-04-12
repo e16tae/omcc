@@ -98,9 +98,19 @@ Present items sequentially, one at a time, with a pause for user input between e
 ## Protocol Interaction Rule
 
 Presentation mode changes only the delivery format, not the decision-making process.
-When an individual item requires a choice between 2+ approaches, the Evidence-Based
-Choice Protocol (`choice-protocol.md`) still applies within that item. Existing
-protocols remain in force regardless of presentation mode.
+When an individual item contains or reveals a meaningful choice between 2+ approaches:
+
+1. **Recognize**: A choice exists when the item presents 2+ distinct remediation
+   paths, implementation strategies, or design alternatives — not when it merely
+   lists variations of the same approach.
+2. **Invoke inline**: Pause the current item's presentation and run the full
+   Evidence-Based Choice Protocol (`choice-protocol.md`) within that item —
+   Research, Compare across five perspectives, and Recommend.
+3. **Resume**: After the user decides, continue the interview from where it paused.
+
+This applies regardless of the originating content type (audit finding, review
+suggestion, plan task, etc.). The item's original format may be extended to
+accommodate the comparison.
 
 ---
 

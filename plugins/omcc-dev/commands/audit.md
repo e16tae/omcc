@@ -17,8 +17,9 @@ If $ARGUMENTS specifies the audit type, use it directly. Otherwise, help the use
 2. **Target scope**: entire codebase / specific directory or module
 
 When the user is unsure, gather minimal context first (e.g., recent git log, directory structure,
-project config) then explain what each audit type covers and recommend the most appropriate type
-and scope. If context is insufficient, default to "full". State the reasoning.
+project config) then follow the Evidence-Based Choice Protocol (`choice-protocol.md`) to compare
+audit types and recommend the most appropriate type and scope.
+If context is insufficient, default to "full". State the reasoning.
 
 ---
 
