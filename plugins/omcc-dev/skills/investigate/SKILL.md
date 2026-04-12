@@ -52,4 +52,59 @@ Recommended fix: [approach, not implementation]
 
 Do NOT implement the fix in this skill. If the user wants to proceed with fixing, suggest using `/fix` for the full workflow.
 
-Note: `/fix` Phase 1 builds on this investigation workflow by spawning parallel agents and adding the strike-rule escalation path. This skill is the standalone, lightweight version.
+Note: When auto-activated, this is a lightweight standalone version. The command-invoked
+mode below adds parallel agents, ensemble coordination, and the full strike rule.
+
+---
+
+## When invoked by command (/fix)
+
+Full investigation with agent spawning, ensemble parallel diagnosis, and escalation paths.
+
+**Do NOT modify code until root cause is confirmed.**
+
+### Step 1: Task Profile
+
+Build the Task Profile (`orchestration.md` Step 1), including Ensemble Affinity.
+
+### Step 2: Spawn investigation agents
+
+Follow `orchestration.md`, targeting Investigation Agents based on symptom characteristics.
+
+- Minimum 2 hypotheses from distinct failure categories
+  (e.g., code logic vs state/data vs environment/config)
+- More hypotheses when the cause is ambiguous
+- Each agent traces its assigned hypothesis and returns:
+  verdict, confidence, evidence, verification method
+
+Launch all agents in parallel (single message, multiple Agent calls).
+
+### Step 3: Ensemble parallel diagnosis (if Affinity MEDIUM or HIGH)
+
+Simultaneously with agent dispatch:
+- Launch Codex **investigate** ensemble point (background) per `ensemble-protocol.md`
+- Codex receives only the symptom description — not Claude's hypotheses (independence rule)
+
+### Step 4: Evaluate and synthesize
+
+1. Rank Claude agent results by confidence (HIGH > MEDIUM > LOW)
+2. If ensemble was launched:
+   - Collect Codex diagnosis result
+   - Synthesize per `ensemble-protocol.md`:
+     - Claude hypothesis and Codex diagnosis agree → high confidence, proceed
+     - Codex found a different root cause → treat as additional hypothesis, verify
+     - Both have low confidence → CONFLICT, present both with evidence
+3. Verify the top result with a targeted check. If verified → proceed. If refuted → try next.
+
+### Step 5: Present
+
+Follow the Presentation Mode Protocol (`presentation-protocol.md`) before presenting.
+
+### Full strike rule
+
+- If ensemble was launched: all Claude hypotheses AND Codex diagnosis are refuted →
+  stop and ask the user for additional context. Both models have been deployed —
+  the issue requires information not available in the codebase.
+- If ensemble was not launched: all Claude hypotheses are refuted →
+  stop and ask the user for additional context or suggest escalation to
+  Codex via `/codex:rescue`.

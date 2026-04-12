@@ -45,3 +45,36 @@ Evaluate the changes independently from each selected perspective.
 ## Looks Good
 - [what was done well]
 ```
+
+---
+
+## When invoked by command (/start)
+
+Full review with agent spawning and ensemble coordination.
+
+### Step 1: Spawn review agents
+
+Follow `orchestration.md`, targeting Review Agents based on the implementation's
+scope and risk areas.
+Launch all selected reviewers in parallel (single message, multiple Agent calls).
+
+### Step 2: Ensemble coordination (all affinity levels — including LOW)
+
+Simultaneously with agent dispatch:
+- Launch Codex **review** ensemble point (background) per `ensemble-protocol.md`
+  with `--scope working-tree`
+
+### Step 3: Synthesize
+
+After agents return:
+1. Collect Codex review result
+2. Deduplicate findings across all sources
+3. Unify severity ratings
+4. Label sources per `ensemble-protocol.md`
+
+### Step 4: Present
+
+Follow the Presentation Mode Protocol (`presentation-protocol.md`) before presenting.
+Present unified review report to user.
+
+Fix CRITICAL issues immediately. Discuss SUGGESTION items with user.
