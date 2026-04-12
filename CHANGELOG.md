@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1](https://github.com/e16tae/omcc/compare/v0.5.0...v0.5.1) (2026-04-12)
+
+
+### Bug Fixes
+
+* **omcc-dev:** split command files into phase routers to fix instruction saturation ([#29](https://github.com/e16tae/omcc/issues/29)) ([150beb4](https://github.com/e16tae/omcc/commit/150beb4c6c405454c443c18b31836c691f550596))
+
 ## [0.5.0](https://github.com/e16tae/omcc/compare/v0.4.1...v0.5.0) (2026-04-12)
 
 
