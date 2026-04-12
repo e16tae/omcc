@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/e16tae/omcc/compare/v0.4.0...v0.4.1) (2026-04-12)
+
+
+### Bug Fixes
+
+* **omcc-dev:** make choice protocol activation concrete and close audit gap ([#25](https://github.com/e16tae/omcc/issues/25)) ([c82df65](https://github.com/e16tae/omcc/commit/c82df655a46496783c5ddcd9ec2cba282089d762))
+
 ## [0.4.0](https://github.com/e16tae/omcc/compare/v0.3.0...v0.4.0) (2026-04-12)
 
 
