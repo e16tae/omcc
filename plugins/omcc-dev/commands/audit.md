@@ -65,6 +65,8 @@ After scan results are collected, offer:
 
 ## Phase 5: Generate Report
 
+Follow the Presentation Mode Protocol (`presentation-protocol.md`) before presenting.
+
 Synthesize all findings into a structured report:
 
 ```markdown

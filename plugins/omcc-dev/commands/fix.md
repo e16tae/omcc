@@ -19,7 +19,8 @@ Follow the investigate skill workflow (`skills/investigate/SKILL.md`) with these
   - Minimum 2 hypotheses from distinct failure categories (e.g., code logic vs state/data vs environment/config)
   - More hypotheses when the cause is ambiguous
   - Each agent traces its assigned hypothesis and returns: verdict, confidence, evidence, verification method
-- **Evaluate results**: Rank by confidence (HIGH > MEDIUM > LOW). Verify the top hypothesis with a targeted check. If verified → proceed to Phase 3. If refuted → try next.
+- **Evaluate results**: Rank by confidence (HIGH > MEDIUM > LOW). Verify the top hypothesis with a targeted check. If verified → proceed to presenting results. If refuted → try next.
+- **Present results**: Follow the Presentation Mode Protocol (`presentation-protocol.md`) before presenting confirmed investigation findings to the user.
 - **Strike rule**: If all hypotheses are refuted, stop and suggest Codex escalation: "Would you like to escalate to Codex? (`/codex:rescue [description]`)"
 
 ---

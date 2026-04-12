@@ -1,6 +1,6 @@
 ---
 name: plan
-description: Decomposes work into structured, dependency-ordered tasks with clear completion criteria. Make sure to use this skill whenever the user asks to plan work, break down a task, figure out implementation steps, or organize a large change — even if they just say "how do I start" or "what should I do first". Trigger phrases include "계획", "어떻게 진행", "작업 분해", "순서", "단계", "plan this", "how should I approach this", "break this down", "what are the steps", "where do I start".
+description: Decomposes work into structured, dependency-ordered tasks with clear completion criteria. Make sure to use this skill whenever the user asks to plan work, break down a task, figure out implementation steps, or organize a large change — even if they just say "how do I start" or "what should I do first". Trigger phrases include "plan this", "how should I approach this", "break this down", "what are the steps", "where do I start", "implementation plan", "task breakdown".
 ---
 
 # Structured Planning
@@ -31,6 +31,8 @@ Break the goal into tasks following these principles:
 3. Group independent tasks that can run in parallel
 
 ### Step 4: Present for approval
+
+Follow the Presentation Mode Protocol (`presentation-protocol.md`) before presenting.
 
 Output format:
 

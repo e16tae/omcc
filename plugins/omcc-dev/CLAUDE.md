@@ -34,6 +34,17 @@ Reason: Claude's default behavior is to code immediately without research. This 
 evidence gathering, structured comparison, and an explicit recommendation so the user can make
 informed decisions even in unfamiliar domains.
 
+## Presentation Mode Rules
+
+Before presenting multiple review items, findings, or decisions to the user, always follow
+the Presentation Mode Protocol (`presentation-protocol.md`): offer a choice between batch
+(all at once) and interview (one by one) presentation.
+
+Reason: Users process structured information differently depending on context. A quick config
+review may warrant batch output, while a complex design comparison benefits from item-by-item
+discussion. Offering the choice costs one line of interaction but significantly improves the
+user's ability to engage with the content.
+
 ## TDD Rules
 
 Follow the RED-GREEN-REFACTOR cycle for feature implementation:
@@ -53,4 +64,4 @@ When finishing a code transformation or bug fix:
 ## Language Convention
 
 All documentation in this project uses English. This includes CLAUDE.md, orchestration.md,
-agent-taxonomy.md, choice-protocol.md, commands, skills, agents, and tests.
+agent-taxonomy.md, choice-protocol.md, presentation-protocol.md, commands, skills, agents, and tests.

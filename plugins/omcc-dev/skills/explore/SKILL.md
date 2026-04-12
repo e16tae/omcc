@@ -1,6 +1,6 @@
 ---
 name: explore
-description: Explores a codebase from multiple perspectives to build a structured understanding. Make sure to use this skill whenever the user mentions codebase understanding, project structure, architecture mapping, code orientation, onboarding, or asks how a project works — even if they don't explicitly request "exploration". Trigger phrases include "프로젝트 구조", "코드베이스 파악", "아키텍처", "프로젝트 이해", "구조 알려줘", "explain this codebase", "how is this structured", "map the architecture", "help me understand this code".
+description: Explores a codebase from multiple perspectives to build a structured understanding. Make sure to use this skill whenever the user mentions codebase understanding, project structure, architecture mapping, code orientation, onboarding, or asks how a project works — even if they don't explicitly request "exploration". Trigger phrases include "explain this codebase", "how is this structured", "map the architecture", "help me understand this code", "project structure", "codebase overview".
 ---
 
 # Codebase Exploration
@@ -28,6 +28,8 @@ Explore the codebase addressing these three concerns:
 **Conventions**: What naming patterns are used? How are errors handled? What testing approach is used? What style/formatting conventions are followed?
 
 ### Step 3: Synthesize
+
+Follow the Presentation Mode Protocol (`presentation-protocol.md`) before presenting.
 
 Present a structured summary covering:
 - Architecture overview (2-3 sentences)

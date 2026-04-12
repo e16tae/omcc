@@ -73,6 +73,10 @@ in every decision — state which are most decisive for this particular choice a
 | 4 | **Best Practice** | Is it the canonical approach recommended by authoritative sources? |
 | 5 | **Practical Fit** | Is it the best choice for this project's specific constraints? |
 
+### Presentation mode
+
+Follow the Presentation Mode Protocol (`presentation-protocol.md`) before presenting the comparison.
+
 ### Comparison output
 
 For each option, present a structured breakdown:
