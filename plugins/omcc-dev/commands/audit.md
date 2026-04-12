@@ -11,15 +11,15 @@ $ARGUMENTS
 
 ## Phase 1: Determine Scope
 
-If $ARGUMENTS specifies the audit type, use it directly. Otherwise, help the user decide:
+If $ARGUMENTS specifies the audit type, use it directly. Otherwise:
 
-1. **Audit type**: security / performance / code quality / tech debt / full (all of the above)
-2. **Target scope**: entire codebase / specific directory or module
+1. Gather minimal context (recent git log, directory structure, project config)
+2. Follow the brainstorm skill's command-invoked mode (`skills/brainstorm/SKILL.md`)
+   to compare audit types and recommend the most appropriate type and scope
+3. If context is insufficient, default to "full". State the reasoning.
 
-When the user is unsure, gather minimal context first (e.g., recent git log, directory structure,
-project config) then follow the Evidence-Based Choice Protocol (`choice-protocol.md`) to compare
-audit types and recommend the most appropriate type and scope.
-If context is insufficient, default to "full". State the reasoning.
+**Audit types**: security / performance / code quality / tech debt / full (all of the above)
+**Target scope**: entire codebase / specific directory or module
 
 Build the Task Profile (`orchestration.md` Step 1), including Ensemble Affinity.
 
@@ -50,7 +50,8 @@ If ensemble active (Affinity MEDIUM or HIGH):
 ## Phase 3: Integrate Built-in Results
 
 If the audit includes security:
-- Also mention that the user can run `/security-review` (Claude Code built-in command) for git-diff-based security analysis
+- Mention that the user can run `/security-review` (Claude Code built-in command)
+  for git-diff-based security analysis
 - This is NOT an omcc-dev command — it is a native Claude Code feature
 - Integrate those results if the user provides them
 

@@ -19,6 +19,7 @@ Inline skills that do not spawn agents (explore, plan, etc.) may also reference 
 - `/omcc-dev:fix [bug description]` — Systematic bug fix (multi-hypothesis parallel investigation)
 - `/omcc-dev:start [feature description]` — Feature development (brainstorm > explore > plan > build > review)
 - `/omcc-dev:audit [scope]` — Code audit (security/performance/quality/debt parallel scan)
+- `/omcc-dev:brainstorm` — Evidence-based design decision evaluation
 - `/omcc-dev:explore` — Codebase structure exploration
 - `/omcc-dev:investigate` — Root cause investigation
 - `/omcc-dev:parallel-review` — Multi-perspective code review
@@ -30,17 +31,15 @@ Inline skills that do not spawn agents (explore, plan, etc.) may also reference 
 
 ## Brainstorming Rules
 
-Before any new feature or design decision, always:
-1. Clarify "What problem are we solving?"
-2. Follow the Evidence-Based Choice Protocol (`choice-protocol.md`):
-   - Research authoritative sources before proposing options
-   - Compare 2+ approaches across five perspectives (Essence, Foundation, Standards, Best Practice, Practical Fit)
-   - Always provide a recommended option with confidence level and evidence
-3. Do not start implementation until the user confirms a direction
+Before any new feature or design decision, always follow the brainstorm skill
+(`skills/brainstorm/SKILL.md`). This applies both when auto-activated and when
+invoked as part of a command.
 
-Reason: Claude's default behavior is to code immediately without research. This rule forces
-evidence gathering, structured comparison, and an explicit recommendation so the user can make
-informed decisions even in unfamiliar domains.
+Do not start implementation until the user confirms a direction.
+
+Reason: Claude's default behavior is to code immediately without research. The brainstorm
+skill forces evidence gathering, structured five-perspective comparison, and an explicit
+recommendation so the user can make informed decisions even in unfamiliar domains.
 
 ---
 
@@ -107,5 +106,5 @@ track that runs automatically when the workflow benefits from independent verifi
 ## Language Convention
 
 All documentation in this project uses English. This includes `CLAUDE.md`, `orchestration.md`,
-`agent-taxonomy.md`, `choice-protocol.md`, `presentation-protocol.md`, `ensemble-protocol.md`,
+`agent-taxonomy.md`, `presentation-protocol.md`, `ensemble-protocol.md`,
 `ensemble-affinity.md`, commands, skills, agents, and tests.

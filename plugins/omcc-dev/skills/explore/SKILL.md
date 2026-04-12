@@ -39,3 +39,33 @@ Present a structured summary covering:
 - Notable observations (tech debt, unusual patterns, strengths)
 
 If the user requests, generate an architecture document with Write or save key insights to Memory.
+
+---
+
+## When invoked by command (/start)
+
+Full exploration with agent spawning and ensemble coordination.
+
+### Step 1: Spawn analysis agents
+
+Follow `orchestration.md`, targeting Analysis Agents for the feature's scope and layers.
+Launch all selected agents in parallel (single message, multiple Agent calls).
+
+### Step 2: Ensemble coordination (if Affinity MEDIUM or HIGH)
+
+Simultaneously with agent dispatch:
+- Launch Codex **explore** ensemble point (background) per `ensemble-protocol.md`
+
+### Step 3: Synthesize
+
+After agents return:
+1. If ensemble was launched:
+   - Collect Codex explore result
+   - Merge Claude agent findings + Codex findings, label unique discoveries by source
+2. Read the key files identified by agents
+3. Summarize: existing patterns, reusable components, integration points
+
+### Step 4: Present
+
+Follow the Presentation Mode Protocol (`presentation-protocol.md`) before presenting.
+Present unified findings to user.

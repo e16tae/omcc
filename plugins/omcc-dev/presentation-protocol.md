@@ -104,7 +104,7 @@ When an individual item contains or reveals a meaningful choice between 2+ appro
    paths, implementation strategies, or design alternatives — not when it merely
    lists variations of the same approach.
 2. **Invoke inline**: Pause the current item's presentation and run the full
-   Evidence-Based Choice Protocol (`choice-protocol.md`) within that item —
+   brainstorm skill (`skills/brainstorm/SKILL.md`) within that item —
    Research, Compare across five perspectives, and Recommend.
 3. **Resume**: After the user decides, continue the interview from where it paused.
 

@@ -56,3 +56,29 @@ Estimated scope: [small / medium / large]
 
 Wait for the user to approve, modify, or reject the plan before proceeding.
 Register approved tasks with TodoWrite for progress tracking.
+
+---
+
+## When invoked by command (/start)
+
+Full planning with ensemble verification.
+
+### Step 1: Create the plan
+
+Follow the auto-activated steps (Understand → Decompose → Order) using context
+from the preceding brainstorm and explore phases.
+
+### Step 2: Ensemble verification (if Affinity MEDIUM or HIGH)
+
+1. Launch Codex **plan-verify** ensemble point (background) per `ensemble-protocol.md`
+   with Claude's draft plan as input
+2. Collect Codex verification result
+3. Synthesize: incorporate valid gaps, adjust ordering, flag disagreements
+
+### Step 3: Present for approval
+
+Follow the Presentation Mode Protocol (`presentation-protocol.md`) before presenting.
+Present the unified final plan to user for approval.
+
+**Wait for approval** before proceeding to implementation.
+Register approved tasks with TodoWrite for progress tracking.
