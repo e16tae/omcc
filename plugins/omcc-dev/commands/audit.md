@@ -21,25 +21,29 @@ project config) then follow the Evidence-Based Choice Protocol (`choice-protocol
 audit types and recommend the most appropriate type and scope.
 If context is insufficient, default to "full". State the reasoning.
 
+Build the Task Profile (`orchestration.md` Step 1), including Ensemble Affinity.
+
 ---
 
 ## Phase 2: Parallel Scan
 
 Follow `orchestration.md`, targeting Review Agents based on audit type.
 
-### Agent selection rules for audits:
+### Agent selection rules for audits
 
-#### If "full" audit:
-Always include the baseline set: **security, performance, simplicity, conventions, debt**.
+**Full audit**: Always include the baseline set: **security, performance, simplicity, conventions, debt**.
 These cannot be excluded — "full" guarantees complete coverage of these categories.
 Then use orchestration to determine if additional specialist perspectives
 (correctness, concurrency, api-design, error-resilience, migration-safety) are warranted based on the codebase's characteristics.
 
-#### If specific type:
-Decompose the chosen type into distinct sub-aspects and assign one agent per sub-aspect.
+**Specific type**: Decompose the chosen type into distinct sub-aspects and assign one agent per sub-aspect.
 Example: "security" audit → separate missions for auth/authz, input validation, secrets management.
 
 Launch all selected agents in parallel (single message, multiple Agent calls).
+
+If ensemble active (Affinity MEDIUM or HIGH):
+- Simultaneously launch Codex **audit-scan** ensemble point (background) per `ensemble-protocol.md`
+- Focus text is derived from the audit type per `ensemble-protocol.md` audit-scan definition
 
 ---
 
@@ -52,19 +56,19 @@ If the audit includes security:
 
 ---
 
-## Phase 4: Codex Cross-Audit (optional)
+## Phase 4: Generate Report
 
-After scan results are collected, offer:
+Collect Codex audit-scan result from Phase 2 background task (if ensemble was launched).
 
-"Want Codex to challenge the codebase design? (`/codex:adversarial-review`)"
+If ensemble active (Affinity MEDIUM or HIGH — launched in Phase 2):
+- Synthesize Claude agent findings + Codex adversarial-review findings per `ensemble-protocol.md`
+- Deduplicate by location
+- Unify severity ratings (elevate confidence when both sides agree)
+- Source-label all findings (Claude / Codex / Both)
 
-- If user accepts → they run `/codex:adversarial-review` and share results
-- If user declines → proceed to Phase 5
-- Do not run it automatically
-
----
-
-## Phase 5: Generate Report
+If ensemble not active (LOW affinity):
+- Launch Codex **audit-scan** ensemble point now (review-phase ensemble for LOW affinity)
+- Collect and synthesize into the report
 
 Follow the Presentation Mode Protocol (`presentation-protocol.md`) before presenting.
 
@@ -80,13 +84,13 @@ Synthesize all findings into a structured report:
 - Low: N issues
 
 ## Critical Issues
-| Location | Category | Description | Recommended Action |
-|----------|----------|-------------|-------------------|
-| file:line | security | [description] | [action] |
+| Location | Category | Source | Description | Recommended Action |
+|----------|----------|--------|-------------|-------------------|
+| file:line | security | [Both] | [description] | [action] |
 
 ## High Issues
-| Location | Category | Description | Recommended Action |
-|----------|----------|-------------|-------------------|
+| Location | Category | Source | Description | Recommended Action |
+|----------|----------|--------|-------------|-------------------|
 
 ## Medium Issues
 ...
