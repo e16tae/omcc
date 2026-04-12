@@ -1,6 +1,6 @@
 ---
 name: parallel-review
-description: Reviews code changes from multiple independent perspectives (correctness, simplicity, conventions). Make sure to use this skill whenever the user asks for code review, quality feedback, or wants their changes checked — even if they just say "how does this look" or "any issues". Trigger phrases include "리뷰", "코드 검토", "확인해줘", "괜찮아?", "review this", "check my code", "code review", "quality check", "how does this look", "any issues with this".
+description: Reviews code changes from multiple independent perspectives (correctness, simplicity, conventions). Make sure to use this skill whenever the user asks for code review, quality feedback, or wants their changes checked — even if they just say "how does this look" or "any issues". Trigger phrases include "review this", "check my code", "code review", "quality check", "how does this look", "any issues with this", "review my changes", "check for problems".
 ---
 
 # Multi-Perspective Parallel Review
@@ -27,7 +27,8 @@ Evaluate the changes independently from each selected perspective.
 1. Merge findings from all perspectives
 2. Remove duplicates
 3. Sort by severity (CRITICAL first, SUGGESTION last)
-4. Present the consolidated review to the user
+4. Follow the Presentation Mode Protocol (`presentation-protocol.md`) before presenting.
+5. Present the consolidated review to the user
 
 ### Output format
 

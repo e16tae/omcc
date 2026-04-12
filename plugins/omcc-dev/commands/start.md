@@ -35,7 +35,8 @@ Launch all selected agents in parallel (single message, multiple Agent calls).
 After agents return:
 1. Read the key files they identified
 2. Summarize: existing patterns, reusable components, integration points
-3. Present findings to user
+3. Follow the Presentation Mode Protocol (`presentation-protocol.md`) before presenting.
+4. Present findings to user
 
 ---
 
@@ -45,8 +46,9 @@ Create a structured implementation plan:
 
 1. Decompose into tasks — each independently executable with a clear completion criterion
 2. Order by dependencies
-3. Present the plan to user for approval
-4. **Wait for approval** before proceeding to implementation
+3. Follow the Presentation Mode Protocol (`presentation-protocol.md`) before presenting.
+4. Present the plan to user for approval
+5. **Wait for approval** before proceeding to implementation
 
 Use TodoWrite to register approved tasks for progress tracking.
 
@@ -82,8 +84,9 @@ Launch all selected reviewers in parallel (single message, multiple Agent calls)
 
 After agents return:
 1. Merge findings, remove duplicates, sort by severity
-2. Present consolidated review to user
-3. Fix CRITICAL issues; discuss SUGGESTION items with user
+2. Follow the Presentation Mode Protocol (`presentation-protocol.md`) before presenting.
+3. Present consolidated review to user
+4. Fix CRITICAL issues; discuss SUGGESTION items with user
 
 Then offer Codex review:
 

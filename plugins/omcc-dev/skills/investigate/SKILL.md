@@ -1,6 +1,6 @@
 ---
 name: investigate
-description: Systematically diagnoses bugs and problems through multi-hypothesis investigation. Make sure to use this skill whenever the user reports a bug, encounters an error, or describes unexpected behavior — even if they just say "it's broken" or paste an error message. Trigger phrases include "왜 안 되지", "에러", "버그", "원인", "디버깅", "안 돼", "why isn't this working", "what's causing this", "debug this", "find the root cause", "it's broken", "error". Do NOT jump to fixing — investigate first.
+description: Systematically diagnoses bugs and problems through multi-hypothesis investigation. Make sure to use this skill whenever the user reports a bug, encounters an error, or describes unexpected behavior — even if they just say "it's broken" or paste an error message. Trigger phrases include "why isn't this working", "what's causing this", "debug this", "find the root cause", "it's broken", "error", "unexpected behavior", "not working". Do NOT jump to fixing — investigate first.
 ---
 
 # Systematic Investigation
@@ -37,6 +37,8 @@ State each hypothesis explicitly.
 **Strike rule**: If all hypotheses fail, stop guessing and report to the user.
 
 ### Step 4: Report
+
+Follow the Presentation Mode Protocol (`presentation-protocol.md`) before presenting.
 
 Present findings in this format:
 
