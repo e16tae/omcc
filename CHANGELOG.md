@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/e16tae/omcc/compare/v0.4.1...v0.5.0) (2026-04-12)
+
+
+### Features
+
+* **omcc-dev:** add seamless ensemble protocol for Claude + Codex dual-model workflow ([#27](https://github.com/e16tae/omcc/issues/27)) ([f49da65](https://github.com/e16tae/omcc/commit/f49da65c867a1b0a577ac740fa394a95a7f24a7d))
+
 ## [0.4.1](https://github.com/e16tae/omcc/compare/v0.4.0...v0.4.1) (2026-04-12)
 
 
