@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/e16tae/omcc/compare/v0.3.0...v0.4.0) (2026-04-12)
+
+
+### Features
+
+* **omcc-dev:** add presentation mode protocol for batch/interview output ([#23](https://github.com/e16tae/omcc/issues/23)) ([c7c7800](https://github.com/e16tae/omcc/commit/c7c78003218f5741d207db03c383209509f0b4b7))
+
 ## [0.3.0](https://github.com/e16tae/omcc/compare/v0.2.1...v0.3.0) (2026-04-11)
 
 
