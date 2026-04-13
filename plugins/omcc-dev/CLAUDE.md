@@ -31,15 +31,23 @@ Inline skills that do not spawn agents (explore, plan, etc.) may also reference 
 
 ## Brainstorming Rules
 
-Before any new feature or design decision, always follow the brainstorm skill
-(`skills/brainstorm/SKILL.md`). This applies both when auto-activated and when
-invoked as part of a command.
+Before any new feature, design decision, or fix approach selection, always follow
+the brainstorm skill (`skills/brainstorm/SKILL.md`). This applies both when
+auto-activated and when invoked as part of a command.
+
+Design decisions include:
+- Architecture or technology choices
+- Convention or pattern selections (e.g., language, naming, file structure)
+- Fix approach when multiple remediation strategies exist
+- Any choice with 2+ viable alternatives that affects project structure or behavior
 
 Do not start implementation until the user confirms a direction.
 
 Reason: Claude's default behavior is to code immediately without research. The brainstorm
 skill forces evidence gathering, structured five-perspective comparison, and an explicit
 recommendation so the user can make informed decisions even in unfamiliar domains.
+This applies equally to new features and to fix/remediation decisions — any meaningful
+choice between alternatives must be presented before acting.
 
 ---
 

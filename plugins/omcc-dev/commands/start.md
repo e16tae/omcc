@@ -48,7 +48,23 @@ Follow the parallel-review skill's command-invoked mode (`skills/parallel-review
 
 ---
 
-## Phase 6: Commit
+## Phase 6: Resolve Findings
+
+If Phase 5 produced findings, address them before committing:
+
+1. For each finding, evaluate whether the fix approach involves a meaningful choice
+   between 2+ alternatives. If so, follow the brainstorm skill to compare approaches
+   and wait for user approval before applying.
+2. If the fix is straightforward (single clear approach), present the approach and
+   confirm with the user before applying.
+3. After each fix, verify (run relevant tests or grep for the fixed pattern).
+4. After all findings are resolved or explicitly deferred by the user, proceed to commit.
+
+Do not proceed to commit until the user confirms that findings are resolved.
+
+---
+
+## Phase 7: Commit
 
 Create a commit with this message format:
 

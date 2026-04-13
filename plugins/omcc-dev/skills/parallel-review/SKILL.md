@@ -75,6 +75,7 @@ After agents return:
 ### Step 4: Present
 
 Follow the Presentation Mode Protocol (`presentation-protocol.md`) before presenting.
-Present unified review report to user.
+Present unified review findings to user.
 
-Fix CRITICAL issues immediately. Discuss SUGGESTION items with user.
+Do not fix issues in this skill. Fixing is handled by the invoking command
+(e.g., /start Phase 6: Resolve Findings).

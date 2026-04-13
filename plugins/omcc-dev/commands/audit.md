@@ -57,7 +57,7 @@ If the audit includes security:
 
 ---
 
-## Phase 4: Generate Report
+## Phase 4: Present Findings
 
 Collect Codex audit-scan result from Phase 2 background task (if ensemble was launched).
 
@@ -69,38 +69,11 @@ If ensemble active (Affinity MEDIUM or HIGH — launched in Phase 2):
 
 If ensemble not active (LOW affinity):
 - Launch Codex **audit-scan** ensemble point now (review-phase ensemble for LOW affinity)
-- Collect and synthesize into the report
+- Collect and synthesize into findings
 
 Follow the Presentation Mode Protocol (`presentation-protocol.md`) before presenting.
 
-Synthesize all findings into a structured report:
+Present findings directly in conversation, organized by severity (Critical → High → Medium → Low),
+followed by positive observations. Do not generate a separate report file.
 
-```markdown
-# Audit Report — [date]
-
-## Summary
-- Critical: N issues
-- High: N issues
-- Medium: N issues
-- Low: N issues
-
-## Critical Issues
-| Location | Category | Source | Description | Recommended Action |
-|----------|----------|--------|-------------|-------------------|
-| file:line | security | [Both] | [description] | [action] |
-
-## High Issues
-| Location | Category | Source | Description | Recommended Action |
-|----------|----------|--------|-------------|-------------------|
-
-## Medium Issues
-...
-
-## Low Issues
-...
-
-## Positive Observations
-- [things done well]
-```
-
-Present the report to the user. Offer to write it to a file if they want a persistent record.
+If the user wants a persistent record, offer to write the findings to a file.
