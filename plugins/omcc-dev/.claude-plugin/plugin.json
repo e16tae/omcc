@@ -1,6 +1,6 @@
 {
   "name": "omcc-dev",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "description": "Development workflow framework with systematic bug fixing, feature development, and code auditing via multi-agent orchestration",
   "license": "MIT",
   "category": "development",
