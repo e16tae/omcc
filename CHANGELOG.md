@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.6.2](https://github.com/e16tae/omcc/compare/v0.6.1...v0.6.2) (2026-04-13)
+
+
+### Bug Fixes
+
+* **omcc-dev:** add Design Document, deliverable strategy, and Resolve & Converge to /start ([f136ab3](https://github.com/e16tae/omcc/commit/f136ab3ce88196eca5cc0396965874fcbc6c246e))
+* **omcc-dev:** resolve workflow contradictions, missing paths, and documentation inconsistencies ([0a50e5a](https://github.com/e16tae/omcc/commit/0a50e5a09fd26aa8f277374840915532d5a9ac9f))
+* **omcc-meeting:** fix command prefix, reclassify skills, and add input validation ([b61ba89](https://github.com/e16tae/omcc/commit/b61ba8937c7e019cf977745d1701689ae402b8c4))
+* **omcc:** add URL/version tests, README update, and release-please tracking ([5f3ffca](https://github.com/e16tae/omcc/commit/5f3ffcadd5f87c96dfe99db273c216d1c8ede185))
+* resolve audit findings across omcc-dev and omcc-meeting plugins ([f07c6b4](https://github.com/e16tae/omcc/commit/f07c6b4f5f21c41201e36982b9cadd12d9ce338a))
+
 ## [0.6.1](https://github.com/e16tae/omcc/compare/v0.6.0...v0.6.1) (2026-04-13)
 
 
