@@ -15,6 +15,17 @@ Follow the investigate skill's command-invoked mode (`skills/investigate/SKILL.m
 
 Do not proceed to Phase 2 until root cause is confirmed.
 
+### Post-investigation assessment
+
+After root cause is confirmed, evaluate the fix scope:
+
+1. If the investigation identifies **2+ viable fix approaches**, invoke the brainstorm
+   skill to compare approaches and wait for user approval before proceeding.
+2. If the confirmed root cause requires **changes to 5+ files or architectural restructuring**,
+   report this to the user and recommend transitioning to `/start`. Provide the root cause
+   analysis (cause, evidence, impact scope) as context for `/start`'s brainstorm phase.
+3. Otherwise, proceed to Phase 2 with the identified fix approach.
+
 ---
 
 ## Phase 2: Write Failing Test
@@ -28,9 +39,13 @@ Do not proceed to Phase 2 until root cause is confirmed.
 ## Phase 3: Fix and Verify
 
 1. Apply the minimal fix targeting the confirmed root cause
-2. Run the failing test — confirm it now PASSES
-3. Run the full test suite — confirm no regressions
-4. Ensemble fix verification (all affinity levels — including LOW):
+2. If Phase 2 was skipped (no test framework): verify the fix manually —
+   Grep for the old buggy pattern to confirm 0 remaining occurrences,
+   and run the affected code path to confirm correct behavior.
+   Otherwise: Run the failing test — confirm it now PASSES.
+3. If test suite available: Run the full test suite — confirm no regressions.
+   Otherwise: follow Completion Verification Rules in `CLAUDE.md`.
+4. Ensemble fix verification (all affinity levels):
    - Launch Codex **fix-verify** ensemble point (background) with `--scope working-tree`
    - Collect Codex review of the patch
    - Synthesize: merge Codex findings into fix verification

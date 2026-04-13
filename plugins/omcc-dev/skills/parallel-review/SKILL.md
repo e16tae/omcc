@@ -58,7 +58,7 @@ Follow `orchestration.md`, targeting Review Agents based on the implementation's
 scope and risk areas.
 Launch all selected reviewers in parallel (single message, multiple Agent calls).
 
-### Step 2: Ensemble coordination (all affinity levels — including LOW)
+### Step 2: Ensemble coordination
 
 Simultaneously with agent dispatch:
 - Launch Codex **review** ensemble point (background) per `ensemble-protocol.md`

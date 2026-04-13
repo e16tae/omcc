@@ -16,9 +16,9 @@ a command execution. Each command file specifies which phases invoke the ensembl
 and with which ensemble point type.
 
 Does NOT apply to:
-- Inline skills (`explore`, `plan`, `investigate`, `parallel-review`) when invoked
-  outside of a command — these run without ensemble unless the invoking command
-  has already activated it
+- Inline skills (`brainstorm`, `explore`, `plan`, `investigate`, `parallel-review`)
+  when invoked outside of a command — these run without ensemble unless the
+  invoking command has already activated it
 - Binary confirmations or progress updates
 - Internal orchestration decisions
 
@@ -312,10 +312,12 @@ as explicit input, because the task is to find gaps in that specific plan.
 
 ## Failure Handling
 
-### Codex unavailable or unauthenticated
+### Codex unavailable, not installed, or unauthenticated
 
-- **Detect**: codex-companion exits with auth error
-- **Action**: Log warning, proceed with Claude-only results
+- **Detect**: CODEX_HOME resolves to empty (plugin not installed), or
+  codex-companion exits with auth error
+- **Action**: If CODEX_HOME is empty, do not attempt to run codex-companion.mjs.
+  Log warning, proceed with Claude-only results.
 - **Present**: "Codex ensemble unavailable — results are Claude-only.
   Run `/codex:setup` to configure."
 
@@ -325,11 +327,14 @@ as explicit input, because the task is to find gaps in that specific plan.
 - **Action**: Log the error, proceed with Claude-only results
 - **Present**: "Codex analysis did not complete — results are Claude-only for this phase."
 
-### Codex returns malformed output
+### Codex returns malformed or incomplete output
 
-- **Detect**: output does not match expected structure
-- **Action**: Include raw output in synthesis attempt
+- **Detect**: output does not match expected structure, or is structurally valid
+  but missing expected sections (e.g., only 2 of 4 required fields present)
+- **Action**: Include available output in synthesis attempt. For missing sections,
+  record them as "Codex: not analyzed"
 - **Present**: "Codex output was partially parsed — some findings may be missing."
+  List which sections were present and which were absent.
 
 ### Graceful degradation principle
 

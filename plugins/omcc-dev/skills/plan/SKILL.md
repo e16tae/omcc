@@ -29,6 +29,8 @@ Break the goal into tasks following these principles:
 1. Identify which tasks block others
 2. Arrange in dependency order
 3. Group independent tasks that can run in parallel
+4. If all tasks are independent, present as a flat list without Phase groupings
+   and note that tasks can be executed in any order
 
 ### Step 4: Present for approval
 
@@ -55,6 +57,13 @@ Estimated scope: [small / medium / large]
 ```
 
 Wait for the user to approve, modify, or reject the plan before proceeding.
+
+If the user rejects the plan, ask what needs to change:
+- If the issue is task decomposition (plan-level): revise the plan using the same
+  explore data.
+- If the issue is the overall approach (brainstorm-level): return to Phase 1
+  (Brainstorm) with the rejection reason as new context.
+
 Register approved tasks with TodoWrite for progress tracking.
 
 ---
@@ -81,4 +90,11 @@ Follow the Presentation Mode Protocol (`presentation-protocol.md`) before presen
 Present the unified final plan to user for approval.
 
 **Wait for approval** before proceeding to implementation.
+
+If the user rejects the plan, ask what needs to change:
+- If the issue is task decomposition (plan-level): revise the plan using the same
+  explore data.
+- If the issue is the overall approach (brainstorm-level): return to Phase 1
+  (Brainstorm) with the rejection reason as new context.
+
 Register approved tasks with TodoWrite for progress tracking.
