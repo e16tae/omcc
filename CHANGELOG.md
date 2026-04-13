@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.0](https://github.com/e16tae/omcc/compare/v0.5.1...v0.6.0) (2026-04-13)
+
+
+### Features
+
+* **omcc-meeting:** add meeting documentation pipeline plugin ([d0aab3f](https://github.com/e16tae/omcc/commit/d0aab3fda6d77bf705fc2405d009c605bdc48cb1))
+* **omcc-meeting:** add meeting documentation pipeline plugin ([2ee0bb7](https://github.com/e16tae/omcc/commit/2ee0bb7b563902649429838780364f0875fc728b))
+
 ## [0.5.1](https://github.com/e16tae/omcc/compare/v0.5.0...v0.5.1) (2026-04-12)
 
 
