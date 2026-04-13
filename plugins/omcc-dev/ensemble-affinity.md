@@ -43,7 +43,7 @@ None of the above criteria apply.
 |----------|------------------------------------------------------------------------------------|
 | `/start` | Phase 1 (Brainstorm), Phase 2 (Explore), Phase 3 (Plan + Verify), Phase 5 (Review) |
 | `/fix`   | Phase 1 (Investigate), Phase 3 (Fix & Verify)                                      |
-| `/audit` | Phase 2 (Parallel Scan), Phase 4 (Report)                                          |
+| `/audit` | Phase 2 (Parallel Scan), Phase 4 (Present Findings)                                 |
 
 When the task warrants any ensemble at all, the cost of running Codex on all phases
 is negligible compared to the risk of missing something by skipping a phase.
@@ -54,7 +54,7 @@ is negligible compared to the risk of missing something by skipping a phase.
 |----------|--------------------------|
 | `/start` | Phase 5 (Review)         |
 | `/fix`   | Phase 3 (Fix & Verify)   |
-| `/audit` | Phase 4 (Report)         |
+| `/audit` | Phase 4 (Present Findings)|
 
 Even trivial changes benefit from an independent second review.
 Exploration and brainstorm ensemble would add latency without
@@ -65,9 +65,6 @@ meaningful value for simple tasks.
 ## Model and Effort Policy
 
 See `ensemble-protocol.md` Prompt Construction Rules.
-
-All ensemble invocations inherit the user's config.toml defaults.
-Do not pass `--model` or `--effort` flags.
 
 ---
 

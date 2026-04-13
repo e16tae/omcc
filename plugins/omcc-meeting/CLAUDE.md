@@ -1,20 +1,21 @@
 # omcc-meeting Methodology Rules
 
 These rules adjust Claude's default behavior while the omcc-meeting plugin is active.
-They apply alongside commands (/start, /correct) and during general conversation.
+They apply alongside commands (`/omcc-meeting:start`, `/omcc-meeting:correct`) and during general conversation.
 
 ---
 
-## Available Commands
+## Available Commands and Skills
 
-- `/meeting:start [transcript path or text]` — Full pipeline (analysis → interview → correction → minutes → report)
-- `/meeting:correct [transcript path or text]` — Transcript correction only (analysis → interview → correction)
-- `/meeting:minutes [corrected transcript path or text]` — Generate meeting minutes only
-- `/meeting:report [corrected transcript path or text]` — Generate meeting report only
+- `/omcc-meeting:start [transcript path or text]` — Full pipeline (analysis → interview → correction → minutes → report)
+- `/omcc-meeting:correct [transcript path or text]` — Transcript correction only (analysis → interview → correction)
+- `/omcc-meeting:minutes [corrected transcript path or text]` — Generate meeting minutes only (standalone skill)
+- `/omcc-meeting:report [corrected transcript path or text]` — Generate meeting report only (standalone skill)
+
+`/start` and `/correct` are commands that chain multiple skills in order.
+`/minutes` and `/report` are standalone skill invocations.
 
 ## Skill Mapping
-
-Each phase is implemented as an independent skill:
 
 | Skill | Phase | Role |
 |-------|-------|------|
@@ -23,9 +24,6 @@ Each phase is implemented as an independent skill:
 | transcript-correction | Phase 3 | Corrected transcript generation (apply interview results) |
 | minutes | Phase 4 | Meeting minutes generation (process-focused) |
 | report | Phase 5 | Meeting report generation (result-focused) |
-
-Commands (`start`, `correct`) chain skills in order.
-Skill commands (`minutes`, `report`) invoke the corresponding skill standalone.
 
 ---
 

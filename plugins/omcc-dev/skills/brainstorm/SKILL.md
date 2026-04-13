@@ -131,6 +131,12 @@ If the user says "just do it" or "your call", present only the recommendation
   preference-dependent, and recommend based on Practical Fit as the tiebreaker.
 - **Rapidly evolving domain**: Flag that the landscape is shifting, cite the date
   of sources, and note what to watch for that might change the recommendation.
+- **User rejects all options**: Ask what aspect was missing or unsatisfactory, then
+  return to Step 2 (Research) with the refined constraints. If rejected a second
+  time, offer to abort the workflow.
+- **Search returns no relevant results**: State "No search results found" for the
+  affected perspective. Base that perspective's assessment on internal knowledge and
+  label it explicitly as "internal knowledge — no external sources found."
 
 ---
 

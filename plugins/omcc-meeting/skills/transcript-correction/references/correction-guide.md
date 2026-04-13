@@ -8,10 +8,7 @@ This corrected transcript is the sole input for Phase 4 and Phase 5.
 
 ## Core Principles
 
-1. **Original unchanged** — Never modify the original file.
-2. **Confirmed items only** — Only apply Phase 2 confirmations. No autonomous LLM corrections.
-3. **Preserve order** — Maintain chronological utterance order.
-4. **Traceability** — Include correction summary in header.
+See Non-Destructive Principle in `CLAUDE.md` for the canonical definition.
 
 ---
 

@@ -94,6 +94,15 @@ Codex runs as an independent parallel track — it is not an "agent" in the agen
 Do not include Codex in the agent count or mission briefing. It receives its own prompt
 via `ensemble-protocol.md`.
 
+### Agent failure handling
+
+If any agent fails to return (timeout, error, or empty result):
+1. Notify the user which agent (perspective) failed
+2. Ask: retry, or proceed with available results?
+3. Follow the user's decision
+4. If proceeding without retry, note the missing perspective in the synthesis
+   output so the user knows coverage was incomplete
+
 ---
 
 ## Examples

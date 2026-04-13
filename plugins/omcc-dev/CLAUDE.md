@@ -89,21 +89,11 @@ When finishing a code transformation or bug fix:
 All commands that spawn agents must evaluate Ensemble Affinity (per `ensemble-affinity.md`)
 as part of the Task Profile.
 
-When Ensemble Affinity is MEDIUM or HIGH:
-- Launch Codex ensemble points automatically at designated phases
-- Follow `ensemble-protocol.md` for execution and synthesis
 - Never ask the user whether to invoke Codex — it is automatic
 - Never tell the user to run `/codex:*` commands manually
 
-When Ensemble Affinity is LOW:
-- Launch Codex ensemble at review phases only
-- Same protocol applies
-
-Model and effort are never specified in ensemble calls.
-The user's config.toml is authoritative.
-
-Codex failure never blocks the workflow. Degrade gracefully to Claude-only results
-with a notification.
+For execution, synthesis, failure handling, and prompt construction:
+follow `ensemble-protocol.md`.
 
 Reason: The user's dual-model workflow treats Claude and Codex as an ensemble.
 Codex is not a secondary tool to be manually invoked — it is a parallel analysis

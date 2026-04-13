@@ -13,9 +13,15 @@ in Phase 2 interview. Do not ask the user anything in this phase.
 ### Step 1: Input processing
 
 1. Accept transcript as file path or pasted text.
-2. Load the full transcript with line numbers.
-3. Detect and normalize speaker label format.
-4. Collect basic statistics: total lines, speaker count, total utterances.
+2. **Input validation**:
+   - If a file path is given and the file does not exist, inform the user and abort.
+   - If the file is empty or contains fewer than 5 lines, warn the user that the
+     input appears too short for meaningful analysis.
+   - If the content contains no speaker labels, warn the user that it may not be
+     a transcript and ask to confirm before proceeding.
+3. Load the full transcript with line numbers.
+4. Detect and normalize speaker label format.
+5. Collect basic statistics: total lines, speaker count, total utterances.
 
 ### Step 2: Five-area analysis
 

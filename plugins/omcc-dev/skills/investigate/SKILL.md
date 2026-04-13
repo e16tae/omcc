@@ -11,30 +11,30 @@ Diagnose the root cause of a bug or unexpected behavior through structured inves
 
 ## When auto-activated (without /fix command)
 
-Follow this lightweight investigation process:
-
-### Step 1: Collect symptoms
+### Step 1: Symptom assessment
 
 1. Identify the error message, stack trace, or unexpected behavior
 2. If possible, try to reproduce with Bash
 3. Check recent changes with `git log --oneline -10`
 4. Read the relevant code area
+5. **Determine**: Is this a genuine bug investigation or a simple question/misactivation?
+   - Simple question/misactivation → answer directly, skip remaining steps
+   - Genuine bug → proceed to Step 2
 
-### Step 2: Form hypotheses
+### Step 2: Full investigation
 
-Follow `orchestration.md`, targeting Investigation Agents based on the symptom characteristics.
-Formulate hypotheses matching the bug's symptoms — fewer when the cause seems clear, more when ambiguous.
+Same quality as command-invoked mode — the bug deserves the same investigation
+regardless of how the user phrased their request.
 
-State each hypothesis explicitly.
+1. Build the Task Profile (`orchestration.md` Step 1), including Ensemble Affinity
+2. Follow `orchestration.md`, targeting Investigation Agents based on symptom characteristics
+3. Launch agents in parallel for multi-hypothesis investigation
+4. If Ensemble Affinity is MEDIUM or HIGH: launch Codex **investigate** ensemble point
+   in parallel per `ensemble-protocol.md`
 
-### Step 3: Investigate and verify
+### Step 3: Evaluate and synthesize
 
-1. Start with the most likely hypothesis
-2. Trace the relevant code path
-3. Look for concrete evidence (not assumptions)
-4. If the hypothesis is refuted, move to the next one
-
-**Strike rule**: If all hypotheses fail, stop guessing and report to the user.
+Same as command-invoked Step 4 below (rank results, synthesize ensemble, verify top result).
 
 ### Step 4: Report
 
@@ -50,10 +50,12 @@ Impact scope: [how many files/features are affected]
 Recommended fix: [approach, not implementation]
 ```
 
-Do NOT implement the fix in this skill. If the user wants to proceed with fixing, suggest using `/fix` for the full workflow.
+Do NOT implement the fix in this skill. If the user wants to proceed with fixing,
+suggest using `/fix` for the full workflow.
 
-Note: When auto-activated, this is a lightweight standalone version. The command-invoked
-mode below adds parallel agents, ensemble coordination, and the full strike rule.
+### Strike rule
+
+Same as command-invoked full strike rule below.
 
 ---
 
@@ -106,5 +108,6 @@ Follow the Presentation Mode Protocol (`presentation-protocol.md`) before presen
   stop and ask the user for additional context. Both models have been deployed —
   the issue requires information not available in the codebase.
 - If ensemble was not launched: all Claude hypotheses are refuted →
-  stop and ask the user for additional context or suggest escalation to
-  Codex via `/codex:rescue`.
+  automatically launch Codex investigate ensemble point as a last-resort
+  independent diagnosis. If Codex also finds no root cause, stop and ask
+  the user for additional context.

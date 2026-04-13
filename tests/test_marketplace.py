@@ -156,3 +156,24 @@ def test_source_urls_use_https(plugin):
                 f"Plugin {plugin['name']}: source URL must use HTTPS, "
                 f"got {url[:50]}"
             )
+
+
+@pytest.mark.parametrize("plugin", ALL_PLUGINS, ids=_plugin_id)
+def test_homepage_urls_use_https(plugin):
+    """All homepage URLs must use HTTPS."""
+    homepage = plugin.get("homepage")
+    if homepage:
+        assert homepage.startswith("https://"), (
+            f"Plugin {plugin['name']}: homepage URL must use HTTPS, "
+            f"got {homepage[:50]}"
+        )
+
+
+def test_marketplace_has_schema_field(marketplace_data):
+    """$schema field must be present and use HTTPS."""
+    assert "$schema" in marketplace_data, "Missing $schema field"
+    schema = marketplace_data["$schema"]
+    assert isinstance(schema, str), "$schema must be a string"
+    assert schema.startswith("https://"), (
+        f"$schema URL must use HTTPS, got {schema[:50]}"
+    )

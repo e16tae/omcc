@@ -63,3 +63,18 @@ def test_plugin_version_matches_marketplace(entry, source_path):
         f"marketplace says '{marketplace_version}', "
         f"plugin.json says '{data.get('version')}'"
     )
+
+
+@pytest.mark.parametrize(
+    "entry,source_path", LOCAL_PLUGINS, ids=_local_ids(LOCAL_PLUGINS)
+)
+def test_plugin_version_is_valid_semver(entry, source_path):
+    """Local plugin version must be a valid semver string."""
+    import re
+
+    data = load_plugin_json(source_path)
+    version = data.get("version")
+    assert version is not None, f"Plugin {entry['name']}: plugin.json missing version"
+    assert re.match(r"^\d+\.\d+\.\d+", version), (
+        f"Plugin {entry['name']}: version '{version}' is not valid semver"
+    )
