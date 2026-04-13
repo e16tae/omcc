@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.1](https://github.com/e16tae/omcc/compare/v0.6.0...v0.6.1) (2026-04-13)
+
+
+### Bug Fixes
+
+* **omcc-dev:** add findings resolution workflow and clarify brainstorm scope ([cea24eb](https://github.com/e16tae/omcc/commit/cea24eb3d1b6e1aee923a8273ea58f1b36d50255))
+* **omcc-dev:** add findings resolution workflow and clarify brainstorm scope ([843a6ba](https://github.com/e16tae/omcc/commit/843a6bae0d5ff8647175c62b3fecd83327fc0daa))
+
 ## [0.6.0](https://github.com/e16tae/omcc/compare/v0.5.1...v0.6.0) (2026-04-13)
 
 
