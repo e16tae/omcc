@@ -84,17 +84,17 @@ between Phase 3 and Phase 4–5.
 
 ### Within-session handoff
 
-When running `/meeting:start` (full pipeline), conversation context flows naturally
+When running `/omcc-meeting:start` (full pipeline), conversation context flows naturally
 from Phase 3 to Phase 4–5.
 
 ### Cross-command handoff
 
-After generating a corrected transcript with `/meeting:correct`, pass the file path
-to `/meeting:minutes` or `/meeting:report` in another session.
+After generating a corrected transcript with `/omcc-meeting:correct`, pass the file path
+to `/omcc-meeting:minutes` or `/omcc-meeting:report` in another session.
 
 ### Uncorrected input handling
 
-When `/meeting:minutes` or `/meeting:report` receives an uncorrected transcript,
+When `/omcc-meeting:minutes` or `/omcc-meeting:report` receives an uncorrected transcript,
 proceed directly without correction. Correction is recommended but not enforced.
 
 ---
@@ -117,7 +117,7 @@ Each meeting is saved in its own directory:
 - `YYYY-MM-DD` is based on the meeting date. If unknown, use the processing date.
 - `meeting-name` is derived from the agenda or topic collected in Phase 2 (max 15 characters).
 - If the meeting name is unknown, use time-based fallback: `YYYY-MM-DD_HHMM`
-- For standalone `/meeting:minutes` or `/meeting:report`: derive from input file metadata,
+- For standalone `/omcc-meeting:minutes` or `/omcc-meeting:report`: derive from input file metadata,
   or default to `YYYY-MM-DD_meeting`.
 
 ### Directory name sanitization

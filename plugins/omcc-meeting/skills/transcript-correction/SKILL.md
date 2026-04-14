@@ -52,5 +52,5 @@ Detailed guidelines in `skills/transcript-correction/references/correction-guide
 
 Same procedure as auto-activated mode.
 Differences:
-- From `/meeting:start`: After saving, auto-proceeds to Phase 4 (minutes skill)
-- From `/meeting:correct`: After saving, pipeline ends with save path notification
+- From `/omcc-meeting:start`: After saving, auto-proceeds to Phase 4 (minutes skill)
+- From `/omcc-meeting:correct`: After saving, pipeline ends with save path notification

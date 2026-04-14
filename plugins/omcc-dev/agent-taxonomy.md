@@ -1,7 +1,7 @@
 # Agent Taxonomy
 
 Pool of available roles for agent orchestration.
-Each role specializes in one perspective and is dynamically selected via the process in orchestration.md.
+Each role specializes in one perspective and is dynamically selected via the process in `orchestration.md`.
 
 ## Dispatch
 

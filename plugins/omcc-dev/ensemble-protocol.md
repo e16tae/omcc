@@ -43,7 +43,9 @@ Every ensemble point follows three steps: Launch, Collect, Synthesize.
 
    ```
    Bash({
-     command: `CODEX_HOME=$(ls -1d ~/.claude/plugins/cache/omcc/codex/*/ 2>/dev/null | sort -V | tail -1) && \
+     command: `CODEX_HOME=$(ls -1d ~/.claude/plugins/cache/*/codex/*/ 2>/dev/null | sort -V | tail -1) && \
+       [ -n "$CODEX_HOME" ] && \
+       command -v node >/dev/null 2>&1 && \
        CLAUDE_PLUGIN_ROOT="$CODEX_HOME" \
        node "${CODEX_HOME}scripts/codex-companion.mjs" \
        <subcommand> --wait [args]`,

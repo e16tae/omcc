@@ -82,7 +82,7 @@ Execute the plan task by task:
 
 1. For each task, follow the TDD cycle (see TDD Rules in `CLAUDE.md`)
 2. If no test framework, implement directly but verify each task manually
-3. Mark each task as completed in TodoWrite as you go
+3. Mark each task as completed in TaskUpdate as you go
 4. If a task reveals the plan needs adjustment — see Plan Adjustment below
 
 ### Deliverable mode

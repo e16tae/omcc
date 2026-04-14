@@ -98,7 +98,7 @@ needed for Phase 4 and Phase 5 to run independently in another session.
 
 ## Uncorrected Input
 
-When `/meeting:minutes` or `/meeting:report` receives a raw (uncorrected) transcript:
+When `/omcc-meeting:minutes` or `/omcc-meeting:report` receives a raw (uncorrected) transcript:
 
 1. No header exists, so metadata is inferred from transcript content.
 2. Speaker labels are used as-is from the original.
