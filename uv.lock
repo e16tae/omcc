@@ -34,7 +34,7 @@ wheels = [
 
 [[package]]
 name = "omcc"
-version = "0.6.2"
+version = "0.6.3"
 source = { virtual = "." }
 
 [package.optional-dependencies]
