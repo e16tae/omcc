@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.3](https://github.com/e16tae/omcc/compare/v0.6.2...v0.6.3) (2026-04-14)
+
+
+### Bug Fixes
+
+* **omcc:** resolve plugin portability issues from audit ([a7b72b9](https://github.com/e16tae/omcc/commit/a7b72b93a777ce24c1e2498a96ca5a9edf952687))
+* **omcc:** resolve plugin portability issues from audit ([b674c61](https://github.com/e16tae/omcc/commit/b674c61791f158ff704c1adcf61c04d073e26ac4))
+
 ## [0.6.2](https://github.com/e16tae/omcc/compare/v0.6.1...v0.6.2) (2026-04-13)
 
 
