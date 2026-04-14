@@ -1,6 +1,6 @@
 {
   "name": "omcc-meeting",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Meeting documentation pipeline that transforms STT transcripts into polished minutes and reports via interactive interview-based correction",
   "license": "MIT",
   "category": "productivity",
