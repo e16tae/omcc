@@ -20,6 +20,16 @@
       "homepage": "https://github.com/openai/codex-plugin-cc"
     },
     {
+      "name": "omcc-designer",
+      "description": "Design consultation plugin that conducts interview-based creative direction, generates design briefs, and produces domain-specific specifications with AI image generation prompts",
+      "author": {
+        "name": "e16tae"
+      },
+      "category": "design",
+      "source": "./plugins/omcc-designer",
+      "homepage": "https://github.com/e16tae/omcc"
+    },
+    {
       "name": "omcc-dev",
       "description": "Development workflow framework with systematic bug fixing, feature development, and code auditing via multi-agent orchestration",
       "author": {
