@@ -1,5 +1,5 @@
 ---
-description: Systematic codebase audit — parallel scanning across categories with structured report
+description: Systematic codebase audit — parallel scanning across categories with remediation discussion
 argument-hint: Audit scope (e.g., "security", "performance", "full")
 ---
 
@@ -76,4 +76,48 @@ Follow the Presentation Mode Protocol (`presentation-protocol.md`) before presen
 Present findings directly in conversation, organized by severity (Critical → High → Medium → Low),
 followed by positive observations. Do not generate a separate report file.
 
-If the user wants a persistent record, offer to write the findings to a file.
+---
+
+## Phase 5: Remediation Discussion
+
+Walk through each actionable finding from Phase 4 for detailed analysis and direction decision.
+
+If all findings are positive observations with no actionable items, skip this phase
+and conclude the audit.
+
+Use the presentation mode already chosen for this audit invocation
+(per `presentation-protocol.md` timing rule — do not re-ask).
+
+### Per-finding analysis
+
+For each finding, provide:
+
+1. **Situation**: Explain the finding with concrete code references (file paths,
+   function names, data flows) sufficient for independent verification. Cover what
+   it means, why it occurs, and how far the impact reaches.
+
+2. **Scenarios**: Describe what happens under each viable remediation approach,
+   including a "do nothing" baseline. Focus on concrete consequences — specific
+   failure modes, degradation paths, or maintenance costs — not abstract risk levels.
+
+3. **Decision**: The user chooses one of:
+   - **Fix now** — address in a subsequent `/fix` or `/start` workflow
+   - **Defer** — direction is known but timing is not; record with a trigger condition
+   - **Accept risk** — acknowledge and document the rationale for acceptance
+   - **Investigate further** — direction itself is unknown; transition to `/omcc-dev:investigate`
+
+When a finding reveals 2+ meaningfully different remediation paths, the
+Protocol Interaction Rule (`presentation-protocol.md`) triggers the brainstorm skill
+inline — approach comparison, recommendation, and user choice are handled by that
+existing pipeline. Do not duplicate brainstorm output within this phase.
+
+### After all findings reviewed
+
+Synthesize the decisions made during the discussion:
+
+- Summary table: finding × decision (fix now / defer / accept / investigate)
+- Count by decision type
+- If any findings are marked "fix now": list them and offer to transition
+  to the appropriate workflow (`/fix` for defects, `/start` for enhancements)
+- If any findings are marked "investigate further": list them and offer to
+  transition to `/omcc-dev:investigate`
