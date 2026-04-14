@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.8.0](https://github.com/e16tae/omcc/compare/v0.7.0...v0.8.0) (2026-04-14)
+
+
+### Features
+
+* **omcc-designer:** add design consultation plugin ([6ca1a40](https://github.com/e16tae/omcc/commit/6ca1a40df6575b6a01488f8f6e6982a86a2f99c6))
+* **omcc-designer:** add design consultation plugin with interview-based creative direction ([620a35e](https://github.com/e16tae/omcc/commit/620a35e277e2bea7f127e244e2d5e50bc97564ea))
+
 ## [0.7.0](https://github.com/e16tae/omcc/compare/v0.6.3...v0.7.0) (2026-04-14)
 
 

@@ -1,6 +1,6 @@
 {
   "name": "omcc-designer",
-  "version": "0.1.0",
+  "version": "0.8.0",
   "description": "Design consultation plugin that conducts interview-based creative direction, generates design briefs, and produces domain-specific specifications with AI image generation prompts",
   "license": "MIT",
   "category": "design",
