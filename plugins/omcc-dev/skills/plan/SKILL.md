@@ -64,7 +64,7 @@ If the user rejects the plan, ask what needs to change:
 - If the issue is the overall approach (brainstorm-level): return to Phase 1
   (Brainstorm) with the rejection reason as new context.
 
-Register approved tasks with TodoWrite for progress tracking.
+Register approved tasks with TaskCreate for progress tracking.
 
 ---
 
@@ -97,4 +97,4 @@ If the user rejects the plan, ask what needs to change:
 - If the issue is the overall approach (brainstorm-level): return to Phase 1
   (Brainstorm) with the rejection reason as new context.
 
-Register approved tasks with TodoWrite for progress tracking.
+Register approved tasks with TaskCreate for progress tracking.

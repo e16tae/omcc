@@ -105,4 +105,4 @@ track that runs automatically when the workflow benefits from independent verifi
 
 All documentation in this project uses English. This includes `CLAUDE.md`, `orchestration.md`,
 `agent-taxonomy.md`, `presentation-protocol.md`, `ensemble-protocol.md`,
-`ensemble-affinity.md`, commands, skills, agents, and tests.
+`ensemble-affinity.md`, commands, skills, and agents.

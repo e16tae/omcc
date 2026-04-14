@@ -81,7 +81,7 @@ Give each selected agent a **concrete mission specific to this task**.
 **Mission writing rules:**
 1. Include the specific context of this task
 2. Specify particular files/functions/areas to focus on
-3. Concretize the key question from agent-taxonomy.md for this task
+3. Concretize the key question from `agent-taxonomy.md` for this task
 4. Explicitly state boundaries to avoid overlap with other agents' missions
 
 **Ensemble parallel track:**
