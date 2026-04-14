@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.7.0](https://github.com/e16tae/omcc/compare/v0.6.3...v0.7.0) (2026-04-14)
+
+
+### Features
+
+* **omcc-dev:** add audit remediation discussion phase ([60684ae](https://github.com/e16tae/omcc/commit/60684ae3ec527c57ccd240e5ea36912f03fd496a))
+* **omcc-dev:** replace audit save-to-file offer with remediation discussion phase ([44ffe17](https://github.com/e16tae/omcc/commit/44ffe173cc97d9943cad6c0134e67fdda2a14c8f))
+
 ## [0.6.3](https://github.com/e16tae/omcc/compare/v0.6.2...v0.6.3) (2026-04-14)
 
 
