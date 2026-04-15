@@ -33,7 +33,9 @@ If the input type cannot be determined, ask the user to clarify.
 ### Step 2: Extract across five areas
 
 Follow the extraction guide (`skills/design-extraction/references/extraction-guide.md`)
-to produce structured extraction data aligned with the standard analysis areas:
+to produce structured extraction data. The first three areas align with
+analysis output; areas 4 and 5 are extraction-specific (replacing
+analysis's "Medium estimation" and "Complexity assessment"):
 
 1. **Project context**: Text content visible (headline, body, CTA), inferred purpose,
    apparent audience, key messages conveyed

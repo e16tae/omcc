@@ -49,14 +49,17 @@ Present the analysis to the user with:
 
 ---
 
-## When invoked by command (/start, /poster)
+## When invoked by command (/start, /poster, /plan)
 
 Same procedure as auto-activated mode.
 Difference: Results are kept internally and not presented to the user.
-Instead, convert analysis results into Phase 2 interview input
-and auto-proceed to Phase 2 (design-interview skill).
+Instead, convert analysis results into the next phase's input and auto-proceed.
 
-The interview skill receives:
+The next phase depends on the invoking command:
+- **/start, /poster**: Proceed to Phase 2 (design-interview skill)
+- **/plan**: Proceed to design-planning skill (scope confirmation)
+
+The receiving skill gets:
 - Structured analysis data (all five areas)
 - Confidence levels per area
 - Recommended question density per area

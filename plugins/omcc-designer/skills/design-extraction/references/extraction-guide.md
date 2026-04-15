@@ -270,8 +270,9 @@ Based on dimensions, content, and format:
 
 ## Extraction Output
 
-The extraction produces data aligned with the standard analysis output format
-(five areas matching design-analysis output) for seamless interview handoff:
+The extraction produces data in five areas for seamless interview handoff.
+The first three areas (Project context, Brand context, Visual direction) align
+with design-analysis output. Areas 4-5 are extraction-specific:
 
 - **Project context**: Extracted text elements, inferred purpose and audience — each with confidence level
 - **Brand context**: Hex colors with roles, identified fonts, logo description, personality — each with confidence

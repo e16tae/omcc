@@ -51,7 +51,10 @@ Run the quality checklist from
 
 ---
 
-## When invoked by command (/start, /poster)
+## When invoked by command (/start, /poster, /formalize)
 
 Same procedure as auto-activated mode.
-Difference: Auto-proceeds to Phase 4 (domain skill) after saving.
+
+The next step depends on the invoking command:
+- **/start, /poster**: Auto-proceeds to Phase 4 (domain skill) after saving.
+- **/formalize**: The brief is the final output. Pipeline ends after saving.

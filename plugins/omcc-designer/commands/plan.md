@@ -22,7 +22,7 @@ Focus on multi-medium detection (Analysis Area 4) and deliverable identification
 
 Follow the design-planning skill's command-invoked mode (`skills/design-planning/SKILL.md`).
 
-Proceed through Step A (scope confirmation) > Step B (shared design decisions) > Step C (sequencing and dependencies).
+Proceed through Step 2 (scope confirmation) > Step 3 (shared design decisions) > Step 4 (sequencing and dependencies).
 Get user confirmation at each step before proceeding.
 
 ---
