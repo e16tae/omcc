@@ -14,7 +14,7 @@ Inline skills that do not spawn agents (explore, plan, etc.) may also reference 
 
 ---
 
-## Available Commands
+## Available Commands and Skills
 
 - `/omcc-dev:fix [bug description]` — Systematic bug fix (multi-hypothesis parallel investigation)
 - `/omcc-dev:start [feature description]` — Feature development (brainstorm > explore > plan > build > review)
@@ -86,14 +86,13 @@ When finishing a code transformation or bug fix:
 
 ## Ensemble Rules
 
-All commands that spawn agents must evaluate Ensemble Affinity (per `ensemble-affinity.md`)
-as part of the Task Profile.
+- Never ask the user whether to invoke Codex — it is automatic when the task
+  warrants it per `ensemble-affinity.md`.
+- Never tell the user to run `/codex:*` commands manually — the ensemble is
+  part of the workflow, not a user-invoked tool.
 
-- Never ask the user whether to invoke Codex — it is automatic
-- Never tell the user to run `/codex:*` commands manually
-
-For execution, synthesis, failure handling, and prompt construction:
-follow `ensemble-protocol.md`.
+See `ensemble-affinity.md` for scope evaluation and `ensemble-protocol.md` for
+execution, synthesis, failure handling, and prompt construction.
 
 Reason: The user's dual-model workflow treats Claude and Codex as an ensemble.
 Codex is not a secondary tool to be manually invoked — it is a parallel analysis
