@@ -230,19 +230,25 @@ def _extract_h3_section(text: str, heading: str) -> str | None:
     return m.group(1).strip() if m else None
 
 
-def _extract_bullet_rules(section: str) -> list[str]:
-    """Return only bullet-list lines from a section, stripping prose.
+def _normalize_section_for_sync_check(text: str) -> str:
+    """Normalize an Output File Rules subsection for cross-plugin comparison.
 
-    The prose lines around rules (intro sentences, etc.) contain domain-specific
-    wording like 'project name' vs 'meeting name' which legitimately differs
-    per plugin. The bullet rules themselves define the shared behavior that
-    must stay in sync.
+    Plugins that produce output share the same filesystem-level behavior
+    (sanitization, overwrite policy, directory creation) but describe it in
+    domain-specific prose (e.g., 'project name' vs 'meeting name'). Normalize
+    that vocabulary to a placeholder and strip the trailing `---` separator
+    so cross-plugin equality captures substantive rule changes without false
+    positives for terminology differences.
     """
-    return [
-        line.strip()
-        for line in section.splitlines()
-        if line.strip().startswith("-")
-    ]
+    # Canonicalize domain-specific name references
+    normalized = re.sub(r"\b(project|meeting)\s+name\b", "NAME", text)
+    # Remove trailing horizontal-rule separator (between subsections)
+    normalized = re.sub(r"\n?---\s*$", "", normalized)
+    # Strip per-line trailing whitespace and collapse trailing blank lines
+    lines = [line.rstrip() for line in normalized.splitlines()]
+    while lines and not lines[-1]:
+        lines.pop()
+    return "\n".join(lines).strip()
 
 
 # Plugins that produce output files and therefore have Output File Rules.
@@ -273,7 +279,7 @@ def test_output_file_rules_subsections_match_across_plugins(subsection):
     divergence — users would get different filesystem sanitization depending
     on which plugin produced their output.
     """
-    rules_by_plugin = {}
+    text_by_plugin = {}
     for plugin_dir in _OUTPUT_FILE_PLUGIN_DIRS:
         claude_md = (plugin_dir / "CLAUDE.md").read_text(encoding="utf-8")
         section = _extract_h3_section(claude_md, subsection)
@@ -282,12 +288,34 @@ def test_output_file_rules_subsections_match_across_plugins(subsection):
                 f"{plugin_dir.name} CLAUDE.md missing subsection: "
                 f"'### {subsection}'"
             )
-        rules_by_plugin[plugin_dir.name] = _extract_bullet_rules(section)
+        text_by_plugin[plugin_dir.name] = _normalize_section_for_sync_check(section)
 
-    distinct = {tuple(rules) for rules in rules_by_plugin.values()}
+    distinct = set(text_by_plugin.values())
     if len(distinct) > 1:
-        plugins = list(rules_by_plugin.keys())
+        plugins = list(text_by_plugin.keys())
         pytest.fail(
-            f"Bullet rules under '### {subsection}' differ between plugins "
-            f"{plugins}. These rules must stay in sync."
+            f"Content of '### {subsection}' differs between plugins "
+            f"{plugins}. These sections must stay in sync."
         )
+
+
+def test_output_filename_naming_convention_consistent():
+    """Snake_case filename convention must be stated in every Output File Rules plugin.
+
+    The convention lives in the `### Filenames` subsection, which is excluded
+    from the bulk drift test (the actual filename list legitimately differs per
+    plugin). Check specifically for the naming convention statement so drift on
+    this one rule is caught even when the surrounding subsection varies.
+    """
+    expected_phrase = "multi-word filenames use"
+    missing = []
+    for plugin_dir in _OUTPUT_FILE_PLUGIN_DIRS:
+        claude_md = (plugin_dir / "CLAUDE.md").read_text(encoding="utf-8")
+        section = _extract_h3_section(claude_md, "Filenames")
+        if section is None or expected_phrase not in section:
+            missing.append(plugin_dir.name)
+    assert not missing, (
+        "Output File Rules > Filenames must state the snake_case naming "
+        f"convention (expected phrase containing '{expected_phrase}'). "
+        f"Missing in: {missing}"
+    )
