@@ -21,7 +21,7 @@
     },
     {
       "name": "omcc-designer",
-      "description": "Design consultation plugin that conducts interview-based creative direction, generates design briefs, and produces domain-specific specifications with AI image generation prompts",
+      "description": "Design consultation plugin with interview-based creative direction, design briefs, domain-specific specifications, existing design formalization, design planning, and quality auditing",
       "author": {
         "name": "e16tae"
       },
