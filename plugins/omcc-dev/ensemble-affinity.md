@@ -62,13 +62,8 @@ meaningful value for simple tasks.
 
 ---
 
-## Model and Effort Policy
+## Related
 
-See `ensemble-protocol.md` Prompt Construction Rules.
-
----
-
-## Independence Rule
-
-See `ensemble-protocol.md` Independence Rule for the canonical definition
-and its single exception (Plan Verification).
+- Model and Effort Policy: `ensemble-protocol.md` Prompt Construction Rules.
+- Independence Rule: `ensemble-protocol.md` Independence Rule (canonical
+  definition and single exception for Plan Verification).
