@@ -163,6 +163,9 @@ Before using a project name as a directory component, apply these rules:
 ### Filenames
 
 - Filenames within the directory are fixed: design_brief.md, poster_spec.md, design_plan.md
+- **Naming convention**: multi-word filenames use `snake_case` (lowercase with
+  underscore separator). Single-word filenames stay lowercase. Apply this rule
+  when introducing new output file types.
 - Do not use `_2`, `_3` suffixes. Separate projects by directory.
 
 ### Overwrite protection

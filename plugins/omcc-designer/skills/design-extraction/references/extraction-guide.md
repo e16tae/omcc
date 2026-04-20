@@ -270,9 +270,16 @@ Based on dimensions, content, and format:
 
 ## Extraction Output
 
-The extraction produces data in five areas for seamless interview handoff.
-The first three areas (Project context, Brand context, Visual direction) align
-with design-analysis output. Areas 4-5 are extraction-specific:
+The extraction produces data in five areas for seamless interview handoff:
+
+- **Areas 1–3**: identical semantics to design-analysis output (Project context,
+  Brand context, Visual direction). The interview consumes them unchanged.
+- **Area 4 (Medium identification)**: renamed from analysis's "Medium estimation"
+  to reflect observation (not inference) on visual input; same semantic role.
+- **Area 5 (Layout & content structure)**: replaces analysis's "Complexity
+  assessment" with concrete layout data (grid, zones, hierarchy). Interview
+  depth is driven by per-area confidence levels, so the separate complexity
+  axis is unnecessary for extraction.
 
 - **Project context**: Extracted text elements, inferred purpose and audience — each with confidence level
 - **Brand context**: Hex colors with roles, identified fonts, logo description, personality — each with confidence

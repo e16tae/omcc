@@ -50,9 +50,10 @@ If ensemble active (Affinity MEDIUM or HIGH):
 ## Phase 3: Integrate Built-in Results
 
 If the audit includes security:
-- Mention that the user can run `/security-review` (Claude Code built-in command)
-  for git-diff-based security analysis
-- This is NOT an omcc-dev command — it is a native Claude Code feature
+- Phrase the suggestion so it degrades gracefully if the command is absent:
+  "If `/security-review` is available in your Claude Code setup, it provides
+  git-diff-based security analysis as a complement to this audit."
+  (`/security-review` is a native Claude Code feature, not an omcc-dev command.)
 - Integrate those results if the user provides them
 
 ---
