@@ -1,6 +1,6 @@
 import pytest
 
-from conftest import LOCAL_PLUGINS, _local_ids, load_plugin_json
+from conftest import LOCAL_PLUGINS, ROOT_DIR, _local_ids, load_plugin_json
 
 # ---------------------------------------------------------------------------
 # plugin.json validation for local plugins
@@ -53,7 +53,13 @@ def test_plugin_name_matches_marketplace(entry, source_path):
     "entry,source_path", LOCAL_PLUGINS, ids=_local_ids(LOCAL_PLUGINS)
 )
 def test_plugin_version_matches_marketplace(entry, source_path):
-    """Local plugin version must match marketplace entry when both specify it."""
+    """Local plugin version must match marketplace entry when both specify it.
+
+    This test currently skips for all built-in plugins because their marketplace
+    entries intentionally omit `version` (release-please manages versions via
+    pyproject.toml + plugin.json, not marketplace.json). The test remains active
+    so external or future plugin entries that do include a version are covered.
+    """
     marketplace_version = entry.get("version")
     if marketplace_version is None:
         pytest.skip("marketplace entry has no version")
@@ -62,6 +68,39 @@ def test_plugin_version_matches_marketplace(entry, source_path):
         f"Version mismatch for {entry['name']}: "
         f"marketplace says '{marketplace_version}', "
         f"plugin.json says '{data.get('version')}'"
+    )
+
+
+def test_local_plugin_versions_match_project_version():
+    """All built-in plugin.json versions must match pyproject.toml version.
+
+    release-please synchronously bumps pyproject.toml and every built-in
+    plugin.json as part of each release. Drift between them signals a partial
+    release application or an out-of-band manual edit — neither is a valid
+    state. This is the invariant that actually protects built-in plugins
+    (the marketplace-based check skips because built-in marketplace entries
+    intentionally omit version).
+    """
+    import re
+
+    pyproject_text = (ROOT_DIR / "pyproject.toml").read_text(encoding="utf-8")
+    match = re.search(
+        r'^version\s*=\s*"([^"]+)"', pyproject_text, re.MULTILINE
+    )
+    assert match, "pyproject.toml is missing a top-level version field"
+    project_version = match.group(1)
+
+    mismatches = []
+    for plugin, source_path in LOCAL_PLUGINS:
+        plugin_version = load_plugin_json(source_path).get("version")
+        if plugin_version != project_version:
+            mismatches.append(
+                f"{plugin['name']}: plugin.json={plugin_version!r} "
+                f"vs pyproject.toml={project_version!r}"
+            )
+    assert not mismatches, (
+        "Built-in plugin versions out of sync with pyproject.toml:\n  "
+        + "\n  ".join(mismatches)
     )
 
 
