@@ -45,6 +45,7 @@ Every ensemble point follows three steps: Launch, Collect, Synthesize.
    Bash({
      command: `CODEX_HOME=$(ls -1d ~/.claude/plugins/cache/*/codex/*/ 2>/dev/null | sort -V | tail -1) && \
        [ -n "$CODEX_HOME" ] && \
+       [ -f "${CODEX_HOME}scripts/codex-companion.mjs" ] && \
        command -v node >/dev/null 2>&1 && \
        CLAUDE_PLUGIN_ROOT="$CODEX_HOME" \
        node "${CODEX_HOME}scripts/codex-companion.mjs" \
@@ -52,6 +53,11 @@ Every ensemble point follows three steps: Launch, Collect, Synthesize.
      run_in_background: true
    })
    ```
+
+   The `[ -f ... ]` check verifies the codex-companion.mjs file exists at the
+   discovered path before executing it. This guards against a stale or
+   incompletely-installed cache entry whose directory matches the glob but
+   doesn't contain the actual script.
 
 5. Claude proceeds immediately to its own parallel analysis
 
