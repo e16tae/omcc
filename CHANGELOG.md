@@ -1,5 +1,34 @@
 # Changelog
 
+## [0.9.0](https://github.com/e16tae/omcc/compare/v0.8.0...v0.9.0) (2026-04-20)
+
+
+### Features
+
+* **omcc-designer:** add audit command with design-evaluation skill ([8cae62b](https://github.com/e16tae/omcc/commit/8cae62ba1d68becc6edf854285c66d3b1bfac5e7))
+* **omcc-designer:** add formalize command with design-extraction skill ([fe33969](https://github.com/e16tae/omcc/commit/fe33969fa72bdd63cf09a0f2e1d9ef009dea1284))
+* **omcc-designer:** add formalize, plan, audit commands ([e6ec125](https://github.com/e16tae/omcc/commit/e6ec1253d078c19ff4f2a1596fbaab0cec1deea4))
+* **omcc-designer:** add plan command with design-planning skill ([ef29afd](https://github.com/e16tae/omcc/commit/ef29afd78bf727ee864e39df4465927d5359bb6f))
+* **omcc-designer:** integrate new commands into CLAUDE.md and update existing skills ([2fc5c9b](https://github.com/e16tae/omcc/commit/2fc5c9b8eea221c029150120e0e9d1896189a4ba))
+
+
+### Bug Fixes
+
+* **omcc-designer:** correct Skill Mapping accuracy and add prompt injection guards ([5a74e9a](https://github.com/e16tae/omcc/commit/5a74e9a64eac48766d901b0d0875cc0eb99b4327))
+* **omcc-designer:** sync marketplace description with plugin.json ([7ec132e](https://github.com/e16tae/omcc/commit/7ec132e8ddbf9eb3ca432af5d7ed245d3abf66a3))
+* **omcc-dev:** harden codex discovery and clean up ensemble rules ([328de17](https://github.com/e16tae/omcc/commit/328de1732eabee24d1adee542a841ad4e1272865))
+* **omcc-dev:** verify codex-companion.mjs exists before invoking ([8f42c01](https://github.com/e16tae/omcc/commit/8f42c01cf22b7c761991606f04c70b639096b677))
+* **omcc-meeting:** add prompt injection guards to user-content skills ([244fd69](https://github.com/e16tae/omcc/commit/244fd69f14bd13dbe55e28a8d85df2d948dc7121))
+* **omcc-meeting:** consistency fixes for skill guards, headings, and dedup ([27f999c](https://github.com/e16tae/omcc/commit/27f999c8650d61677b3af5daa4943bb34705768a))
+* **omcc-meeting:** deduplicate Minutes vs Report comparison table ([6d61482](https://github.com/e16tae/omcc/commit/6d6148227638ef374fc3e93ed4905f8c30e45942))
+* **omcc-meeting:** downgrade Skill Mapping to H3 subsection ([f394d8f](https://github.com/e16tae/omcc/commit/f394d8f4dc4a5ea3f08946f5b6aec45202b6091a))
+* **omcc-meeting:** include /correct in skill auto-activation guards ([7deec60](https://github.com/e16tae/omcc/commit/7deec601a55dcbd13b4738357d8166eb7c147e5f))
+
+
+### Documentation
+
+* **readme:** add omcc-designer to plugin table ([9443de0](https://github.com/e16tae/omcc/commit/9443de0bde8fe8d4f57ed4ca8e9ab692d035bffb))
+
 ## [0.8.0](https://github.com/e16tae/omcc/compare/v0.7.0...v0.8.0) (2026-04-14)
 
 
