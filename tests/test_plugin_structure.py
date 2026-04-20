@@ -1,4 +1,5 @@
 import re
+from pathlib import Path
 
 import pytest
 
@@ -7,6 +8,7 @@ from conftest import (
     ALL_COMMANDS,
     ALL_SKILLS,
     LOCAL_PLUGIN_DIRS,
+    ROOT_DIR,
     discover_commands,
     discover_skills,
     load_plugin_json,
@@ -210,4 +212,82 @@ def test_claude_md_lists_all_commands_and_skills(entry, plugin_dir):
     for skill in discover_skills(plugin_dir):
         assert skill.parent.name in claude_md, (
             f"Skill '{skill.parent.name}' not mentioned in CLAUDE.md"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Cross-plugin Output File Rules drift prevention
+# ---------------------------------------------------------------------------
+
+
+def _extract_h3_section(text: str, heading: str) -> str | None:
+    """Return the text of an H3 section (### heading ... until next H2/H3/EOF)."""
+    pattern = re.compile(
+        rf"^###\s+{re.escape(heading)}\s*\n(.*?)(?=^#{{2,3}}\s|\Z)",
+        re.DOTALL | re.MULTILINE,
+    )
+    m = pattern.search(text)
+    return m.group(1).strip() if m else None
+
+
+def _extract_bullet_rules(section: str) -> list[str]:
+    """Return only bullet-list lines from a section, stripping prose.
+
+    The prose lines around rules (intro sentences, etc.) contain domain-specific
+    wording like 'project name' vs 'meeting name' which legitimately differs
+    per plugin. The bullet rules themselves define the shared behavior that
+    must stay in sync.
+    """
+    return [
+        line.strip()
+        for line in section.splitlines()
+        if line.strip().startswith("-")
+    ]
+
+
+# Plugins that produce output files and therefore have Output File Rules.
+# Filename lists vary per plugin, but the sanitization and policy subsections
+# must stay in sync to prevent silent behavioral drift.
+_OUTPUT_FILE_PLUGIN_DIRS = [
+    ROOT_DIR / "plugins" / "omcc-designer",
+    ROOT_DIR / "plugins" / "omcc-meeting",
+]
+
+# Subsections that should be byte-identical across plugins that produce output.
+# Plugin-specific content (Directory structure, Directory naming with project
+# vs meeting terminology, Filenames) is intentionally excluded.
+_SYNCED_OUTPUT_SUBSECTIONS = [
+    "Directory name sanitization",
+    "Overwrite protection",
+    "Other",
+]
+
+
+@pytest.mark.parametrize("subsection", _SYNCED_OUTPUT_SUBSECTIONS)
+def test_output_file_rules_subsections_match_across_plugins(subsection):
+    """Output File Rules subsections that define shared behavior must not drift.
+
+    The sanitization rules, overwrite policy, and encoding/directory-creation
+    rules apply identically regardless of plugin domain. Allowing the two
+    copies (omcc-designer and omcc-meeting) to drift invites silent behavioral
+    divergence — users would get different filesystem sanitization depending
+    on which plugin produced their output.
+    """
+    rules_by_plugin = {}
+    for plugin_dir in _OUTPUT_FILE_PLUGIN_DIRS:
+        claude_md = (plugin_dir / "CLAUDE.md").read_text(encoding="utf-8")
+        section = _extract_h3_section(claude_md, subsection)
+        if section is None:
+            pytest.fail(
+                f"{plugin_dir.name} CLAUDE.md missing subsection: "
+                f"'### {subsection}'"
+            )
+        rules_by_plugin[plugin_dir.name] = _extract_bullet_rules(section)
+
+    distinct = {tuple(rules) for rules in rules_by_plugin.values()}
+    if len(distinct) > 1:
+        plugins = list(rules_by_plugin.keys())
+        pytest.fail(
+            f"Bullet rules under '### {subsection}' differ between plugins "
+            f"{plugins}. These rules must stay in sync."
         )
