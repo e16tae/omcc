@@ -42,9 +42,16 @@ If the input type cannot be determined, ask the user to clarify.
 ### Step 2: Extract across five areas
 
 Follow the extraction guide (`skills/design-extraction/references/extraction-guide.md`)
-to produce structured extraction data. The first three areas align with
-analysis output; areas 4 and 5 are extraction-specific (replacing
-analysis's "Medium estimation" and "Complexity assessment"):
+to produce structured extraction data. Mapping to design-analysis output:
+
+- Areas 1–3 (Project context, Brand context, Visual direction): same
+  name and semantics as analysis — interview handles them identically.
+- Area 4 (Medium identification): same semantic role as analysis's
+  "Medium estimation" but renamed to reflect observation (not inference)
+  on visual input.
+- Area 5 (Layout & content structure): replaces analysis's "Complexity
+  assessment" entirely. Extraction yields concrete layout data; confidence
+  levels already drive interview depth, so complexity scoring is redundant.
 
 1. **Project context**: Text content visible (headline, body, CTA), inferred purpose,
    apparent audience, key messages conveyed
