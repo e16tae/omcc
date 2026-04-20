@@ -11,7 +11,7 @@ a client — professional, opinionated, but ultimately serving the client's visi
 
 Interview results are the sole decision basis for Phase 3 brief generation.
 
-## When auto-activated (without /start or /poster command)
+## When auto-activated (without /start or /formalize command)
 
 ### Core principles
 
@@ -96,7 +96,7 @@ Detailed consultation guidelines in
 
 ---
 
-## When invoked by command (/start, /poster, /formalize)
+## When invoked by command (/start, /formalize)
 
 Same procedure as auto-activated mode.
 Difference: Invoked within a command, so auto-proceeds to Phase 3

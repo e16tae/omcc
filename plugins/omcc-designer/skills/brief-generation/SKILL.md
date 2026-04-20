@@ -9,7 +9,7 @@ Convert Phase 2 interview results into a formal design brief following
 the `design-brief-spec.md` format. The brief is the sole handoff artifact
 for Phase 4 and must be self-contained for cross-session use.
 
-## When auto-activated (without /start or /poster command)
+## When auto-activated (without /start or /formalize command)
 
 ### Step 1: Assemble confirmed decisions
 
@@ -51,10 +51,10 @@ Run the quality checklist from
 
 ---
 
-## When invoked by command (/start, /poster, /formalize)
+## When invoked by command (/start, /formalize)
 
 Same procedure as auto-activated mode.
 
 The next step depends on the invoking command:
-- **/start, /poster**: Auto-proceeds to Phase 4 (domain skill) after saving.
+- **/start**: Auto-proceeds to Phase 4 (domain skill) after saving.
 - **/formalize**: The brief is the final output. Pipeline ends after saving.

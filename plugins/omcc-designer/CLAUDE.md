@@ -15,12 +15,12 @@ They apply alongside commands and during general conversation.
 
 ### Skill Mapping
 
-| Skill | Used by | Role |
+| Skill | Directly invoked by | Role |
 |-------|---------|------|
-| design-analysis | start, poster, plan | Automatic analysis of design request |
-| design-extraction | formalize, audit | Extract design elements from existing visuals |
-| design-interview | start, poster, formalize | Interactive design consultation (5-step) |
-| brief-generation | start, poster, formalize | Design brief artifact generation |
+| design-analysis | start, plan | Automatic analysis of design request |
+| design-extraction | formalize | Extract design elements from existing visuals |
+| design-interview | start, formalize | Interactive design consultation (5-step) |
+| brief-generation | start, formalize | Design brief artifact generation |
 | design-planning | plan | Design strategy and deliverable roadmap |
 | design-evaluation | audit | Multi-perspective design quality evaluation |
 | poster | start, poster | Poster design specification and AI prompt generation |
