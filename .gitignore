@@ -15,3 +15,6 @@ dist/
 build/
 .env
 .env.local
+
+# Plugin output (design briefs, meeting minutes, etc. generated during local testing)
+output/
