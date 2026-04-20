@@ -131,6 +131,9 @@ Before using a meeting name as a directory component, apply these rules:
 ### Filenames
 
 - Filenames within the directory are fixed: corrected_transcript.md, minutes.md, report.md
+- **Naming convention**: multi-word filenames use `snake_case` (lowercase with
+  underscore separator). Single-word filenames stay lowercase. Apply this rule
+  when introducing new output file types.
 - Do not use `_2`, `_3` suffixes. Separate meetings by directory.
 
 ### Overwrite protection
