@@ -9,6 +9,8 @@ on:
       - 'scripts/**'
       - 'tests/**'
       - 'pyproject.toml'
+      - 'uv.lock'
+      - 'README.md'
   pull_request:
     paths:
       - '.claude-plugin/marketplace.json'
@@ -16,6 +18,8 @@ on:
       - 'scripts/**'
       - 'tests/**'
       - 'pyproject.toml'
+      - 'uv.lock'
+      - 'README.md'
 
 permissions:
   contents: read
@@ -32,6 +36,9 @@ jobs:
         run: python3 scripts/validate_marketplace.py
 
       - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
+
+      - name: Verify uv.lock is in sync with pyproject.toml
+        run: uv lock --check
 
       - name: Validate marketplace and plugins
         run: uv run --extra test pytest -v
