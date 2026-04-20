@@ -25,7 +25,11 @@ Inline skills that do not spawn agents (explore, plan, etc.) may also reference 
 - `/omcc-dev:parallel-review` — Multi-perspective code review
 - `/omcc-dev:plan` — Work planning
 
-`/fix`, `/start`, and `/audit` support automatic Codex ensemble (see Ensemble Rules).
+`/fix`, `/start`, and `/audit` are commands that chain multiple skills in order,
+and they support automatic Codex ensemble (see Ensemble Rules). The remaining
+entries (`brainstorm`, `explore`, `investigate`, `parallel-review`, `plan`) are
+standalone skill invocations — Claude Code resolves them via the
+`plugin-name:skill-name` namespace to the corresponding `skills/<name>/SKILL.md`.
 
 ---
 
