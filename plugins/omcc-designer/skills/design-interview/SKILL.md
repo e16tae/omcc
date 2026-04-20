@@ -11,7 +11,7 @@ a client — professional, opinionated, but ultimately serving the client's visi
 
 Interview results are the sole decision basis for Phase 3 brief generation.
 
-## When auto-activated (without /start or /poster command)
+## When auto-activated (without /start or /formalize command)
 
 ### Core principles
 
@@ -96,8 +96,24 @@ Detailed consultation guidelines in
 
 ---
 
-## When invoked by command (/start, /poster)
+## When invoked by command (/start, /formalize)
 
 Same procedure as auto-activated mode.
 Difference: Invoked within a command, so auto-proceeds to Phase 3
 (brief-generation skill) after completion.
+
+### Confirmation mode (/formalize)
+
+When invoked by `/formalize`, the interview receives extraction data
+(observed facts from an existing design) instead of analysis data
+(inferred estimates from a text description). Adjust behavior:
+
+- **High confidence extractions** (colors, layout, style): Present as
+  observations. "I extracted these colors: [hex values]. Are these correct?"
+- **Low confidence extractions** (purpose, audience): Use the standard
+  designer-recommends-first approach.
+- **Unextractable fields** (title, client, deadline): Collect with
+  standard exploration questions.
+
+The design-extraction SKILL.md and CLAUDE.md Interview Protocol Rules
+govern the full confirmation-mode behavior.
