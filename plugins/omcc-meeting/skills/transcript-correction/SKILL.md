@@ -9,7 +9,7 @@ Apply confirmed corrections from Phase 2 interview to the original transcript.
 The corrected transcript is the sole input for Phase 4 (minutes) and Phase 5 (report),
 serving as the handoff artifact.
 
-## When auto-activated (without /start command)
+## When auto-activated (without /start or /correct command)
 
 ### Core principles
 

@@ -7,14 +7,9 @@ A non-attendee should grasp "what was decided and what's next" within 1–2 minu
 
 ## Minutes vs Report
 
-| | Minutes (Phase 4) | Report (Phase 5) |
-|---|---|---|
-| Focus | Process | Results |
-| Audience | All attendees | Non-attendees, decision-makers |
-| Discussion | Per-speaker detail | Omitted |
-| Summary | None | 2–3 sentences |
-| Risk | None | Separate section |
-| Length | Unlimited | 1–2 pages |
+See the comparison table in `skills/minutes/references/minutes-guide.md`
+("Minutes vs Report" section). The table is maintained there to avoid drift
+between the two guides.
 
 ---
 

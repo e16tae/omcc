@@ -15,7 +15,7 @@ They apply alongside commands (`/omcc-meeting:start`, `/omcc-meeting:correct`) a
 `/start` and `/correct` are commands that chain multiple skills in order.
 `/minutes` and `/report` are standalone skill invocations.
 
-## Skill Mapping
+### Skill Mapping
 
 | Skill | Phase | Role |
 |-------|-------|------|
