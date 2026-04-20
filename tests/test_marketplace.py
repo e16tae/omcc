@@ -11,6 +11,7 @@ from conftest import (
     URL_PLUGINS,
     _local_ids,
     _plugin_id,
+    load_plugin_json,
 )
 
 # ---------------------------------------------------------------------------
@@ -176,4 +177,55 @@ def test_marketplace_has_schema_field(marketplace_data):
     assert isinstance(schema, str), "$schema must be a string"
     assert schema.startswith("https://"), (
         f"$schema URL must use HTTPS, got {schema[:50]}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Documentation consistency (README + plugin.json sync with marketplace.json)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "plugin,source_path", LOCAL_PLUGINS, ids=_local_ids(LOCAL_PLUGINS)
+)
+def test_local_plugin_description_matches_plugin_json(plugin, source_path):
+    """Built-in plugin's marketplace description must match its plugin.json description.
+
+    Reason: marketplace.json and plugin.json are the two sources of the same information
+    for built-in plugins. Drift between them means users see stale information during
+    installation while the plugin itself reports its actual capabilities.
+    """
+    plugin_json = load_plugin_json(source_path)
+    assert plugin["description"] == plugin_json["description"], (
+        f"Plugin {plugin['name']}: marketplace.json and plugin.json descriptions "
+        f"are out of sync. Update both manually to match."
+    )
+
+
+def test_readme_lists_all_local_plugins():
+    """README.md plugin table must include every built-in (local) plugin.
+
+    Reason: README is the primary discovery surface for new users. If built-in
+    plugins are missing from the table, users cannot find them through the repo.
+    """
+    import re
+    readme_path = ROOT_DIR / "README.md"
+    readme_text = readme_path.read_text()
+    missing = []
+    for plugin in ALL_PLUGINS:
+        src = plugin.get("source")
+        is_local = isinstance(src, str) and src.startswith("./plugins/")
+        if not is_local:
+            continue
+        # Match plugin name inside a markdown table row (line starting with |
+        # and containing the name bounded by word boundaries). This tolerates
+        # reformatting such as markdown links or reordered columns.
+        pattern = re.compile(
+            rf"^\|.*\b{re.escape(plugin['name'])}\b.*\|",
+            re.MULTILINE,
+        )
+        if not pattern.search(readme_text):
+            missing.append(plugin["name"])
+    assert not missing, (
+        f"README.md plugin table is missing built-in plugins: {missing}"
     )
