@@ -8,7 +8,7 @@ description: "Conducts a 4-step interactive interview (Step A–D) based on Phas
 Confirm and correct issues identified in Phase 1 through a 4-step interactive interview.
 Interview results are the sole correction basis for Phase 3.
 
-## When auto-activated (without /start command)
+## When auto-activated (without /start or /correct command)
 
 ### Core principles
 
