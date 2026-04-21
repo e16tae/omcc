@@ -7,13 +7,21 @@ argument-hint: Brief file path or design request description
 
 $ARGUMENTS
 
+Use `TaskCreate` and `TaskUpdate` to track progress.
+
 ---
 
 ## Poster Design
 
 Follow the poster skill's command-invoked mode (`skills/poster/SKILL.md`).
 
-The poster skill handles input detection, brief validation, and full pipeline
-fallback internally. This command simply delegates to the skill.
+The poster skill handles input detection, brief validation, and full-pipeline
+fallback internally. This command simply delegates.
 
-Output the pipeline completion message and offer modification assistance.
+---
+
+## Completion
+
+After the poster spec is saved, output: "✓ Poster specification complete."
+with the poster_spec.md path. Offer to adjust layout, swap AI-tool prompts,
+or regenerate specific zones.

@@ -7,6 +7,9 @@ argument-hint: Design request description (e.g., "conference poster for a tech e
 
 $ARGUMENTS
 
+Use `TaskCreate` to register each phase and `TaskUpdate` to mark progress as
+the pipeline advances.
+
 ---
 
 ## Phase 1: Design Analysis
@@ -30,20 +33,26 @@ Get user confirmation after interview completion before proceeding to Phase 3.
 
 Follow the brief-generation skill's command-invoked mode (`skills/brief-generation/SKILL.md`).
 
-Save the design brief to ./output/YYYY-MM-DD_project-name/design_brief.md.
+Save the design brief to ./output/YYYY-MM-DD_project-name/design_brief.md
+(directory naming and sanitization per `skills/brief-generation/references/output-file-rules.md`).
 
 ---
 
 ## Phase 4: Domain-Specific Output
 
-### Medium gate
+Read the brief's Target medium field, then check via Glob whether
+`skills/<medium>/SKILL.md` exists in this plugin.
 
-Check the brief's Target medium field:
-- **poster**: Follow the poster skill's command-invoked mode (`skills/poster/SKILL.md`).
-  Save poster specification to ./output/YYYY-MM-DD_project-name/poster_spec.md.
-- **brochure / infographic / frontend**: These domains are not yet implemented.
-  Inform the user: "The [medium] domain skill is not available yet. The design brief
-  has been saved and can be used when the domain skill is added."
-  Save the brief only and end the pipeline.
+- If it exists: follow that skill's command-invoked mode, save the output to
+  `./output/YYYY-MM-DD_project-name/<medium>_spec.md` per output-file-rules.
+- If it does not exist: inform the user that the <medium> domain skill is not
+  yet available, the design brief has been saved and can be used when the
+  skill is added. End the pipeline.
 
-Output the pipeline completion message and offer modification assistance.
+---
+
+## Completion
+
+Output: "✓ Design pipeline complete." with the saved file paths (brief and
+any domain output). Offer to revise the brief, regenerate the domain output,
+or start another project.

@@ -79,7 +79,7 @@ Source column must reference the specific interview step (Step A-E).
 
 1. `YYYY-MM-DD`: Current date (creation date, not deadline)
 2. `project-name`: From Step A project title
-3. Apply sanitization rules from `CLAUDE.md` Output File Rules
+3. Apply sanitization rules from `skills/brief-generation/references/output-file-rules.md` (same directory as this guide)
 
 ### Overwrite protection
 

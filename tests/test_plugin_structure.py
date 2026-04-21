@@ -63,6 +63,10 @@ def test_plugin_json_optional_field_types(entry, plugin_dir):
         assert isinstance(data["homepage"], str), "homepage should be str"
     if "license" in data:
         assert isinstance(data["license"], str), "license should be str"
+    if "keywords" in data:
+        assert isinstance(data["keywords"], list), "keywords should be list"
+        for kw in data["keywords"]:
+            assert isinstance(kw, str) and kw, "each keyword must be non-empty str"
 
 
 # ---------------------------------------------------------------------------

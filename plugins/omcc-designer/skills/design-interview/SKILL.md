@@ -15,10 +15,14 @@ Interview results are the sole decision basis for Phase 3 brief generation.
 
 ### Core principles
 
-Follow the Interview Protocol Rules in `CLAUDE.md`:
-Designer presents first, one step at a time, cumulative reflection,
-minimize user burden, contradiction detection, "don't know" acceptance,
-content overload detection.
+Follow `skills/design-interview/references/interview-protocol.md` — designer
+presents first, one step at a time, cumulative reflection, minimize user
+burden, contradiction detection, "don't know" acceptance, content overload
+detection.
+
+Interview outcomes feed the brief only when confirmed; see
+`skills/design-interview/references/confirmed-decision-principle.md` for the
+estimation-vs-decision semantics that govern Phase 3.
 
 ### Designer persona
 
@@ -115,5 +119,16 @@ When invoked by `/formalize`, the interview receives extraction data
 - **Unextractable fields** (title, client, deadline): Collect with
   standard exploration questions.
 
-The design-extraction SKILL.md and CLAUDE.md Interview Protocol Rules
-govern the full confirmation-mode behavior.
+The design-extraction SKILL.md and
+`skills/design-interview/references/interview-protocol.md` govern the full
+confirmation-mode behavior.
+
+---
+
+## Interruption handling
+
+If the session is interrupted during the interview, restart from Phase 1
+(design-analysis or design-extraction). Phase 1 is automatic and fast, and
+the interview maintains cumulative state that is difficult to serialize
+mid-step; restarting from scratch is better for consultation quality than
+attempting to resume a partial state.

@@ -13,7 +13,9 @@ brief > domain output). It produces findings and remediation recommendations,
 not design artifacts.
 
 Evaluation findings are estimations, not decisions — remediation direction
-is chosen by the user.
+is chosen by the user. See
+`skills/design-interview/references/confirmed-decision-principle.md` for the
+estimation-vs-decision semantics that also govern audit findings.
 
 ## Security note
 
@@ -78,6 +80,9 @@ Present findings to the user with:
 - Positive observations
 - Overall assessment (professional opinion on design quality)
 
+**Output language**: Write findings, suggestions, and remediation discussion
+in the same language the user used for the request.
+
 ---
 
 ## When invoked by command (/audit)
@@ -86,9 +91,14 @@ Same evaluation procedure as auto-activated mode, with these additions:
 
 ### Scope selection
 
-If the audit command specifies a scope (e.g., "accessibility", "typography"),
-evaluate only the specified perspective(s). If no scope is specified,
-evaluate all six perspectives (full audit).
+If the invocation specifies a scope, use it directly. If not:
+
+1. Analyze the input to understand what kind of design is being audited.
+2. Recommend the most appropriate scope based on the design type and context.
+3. If context is insufficient, default to "full" and state the reasoning.
+
+**Available evaluation scopes**: brand consistency / visual hierarchy /
+accessibility / typography / color system / layout / full (all six).
 
 ### Structured remediation
 
