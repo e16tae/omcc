@@ -13,8 +13,11 @@ serving as the handoff artifact.
 
 ### Core principles
 
-Follow the Non-Destructive Principle in `CLAUDE.md`:
-Original unchanged, confirmed items only, preserve order, traceability.
+1. **Never modify the original transcript.** The corrected transcript is always a separate file.
+2. **Only apply user-confirmed corrections.** Do not autonomously add corrections beyond what was confirmed in Phase 2.
+3. **Preserve utterance order (chronological).** Even during speaker merges and sentence boundary reconstruction, maintain the original timeline.
+
+Reason: If content changes without user awareness, document trustworthiness is compromised.
 
 ### Step 1: Apply corrections
 
@@ -41,7 +44,7 @@ Run the quality checklist in `skills/transcript-correction/references/correction
 
 ### Step 5: Save file
 
-Save per output file rules in `CLAUDE.md`:
+Save per `output-file-rules.md` to:
 ./output/YYYY-MM-DD_meeting-name/corrected_transcript.md
 
 Detailed guidelines in `skills/transcript-correction/references/correction-guide.md`.

@@ -7,6 +7,9 @@ argument-hint: Transcript file path or pasted text
 
 $ARGUMENTS
 
+Use `TaskCreate` to register each phase and `TaskUpdate` to mark progress as the
+pipeline advances.
+
 ---
 
 ## Phase 1: Initial Transcript Analysis

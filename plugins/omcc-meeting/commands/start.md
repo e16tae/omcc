@@ -7,6 +7,10 @@ argument-hint: Transcript file path or pasted text
 
 $ARGUMENTS
 
+Use `TaskCreate` to register each phase and `TaskUpdate` to mark progress as the
+pipeline advances. This gives the user visibility into pipeline position,
+especially during chunked long-transcript runs.
+
 ---
 
 ## Phase 1: Initial Transcript Analysis
@@ -34,20 +38,19 @@ Save the corrected transcript to ./output/YYYY-MM-DD_meeting-name/corrected_tran
 
 ---
 
-## Phase 4: Meeting Minutes Generation
+## Phase 4-5: Minutes + Report Generation (parallel)
 
-Follow the minutes skill's command-invoked mode (`skills/minutes/SKILL.md`).
+minutes and report are independent — both read the corrected transcript from Phase 3
+directly, and neither references the other. Invoke both skills in the same tool-call
+batch and write both files in parallel:
+- ./output/YYYY-MM-DD_meeting-name/minutes.md
+- ./output/YYYY-MM-DD_meeting-name/report.md
 
-Use the corrected transcript from Phase 3 as input.
-Save meeting minutes to ./output/YYYY-MM-DD_meeting-name/minutes.md.
+Follow each skill's command-invoked mode:
+- `skills/minutes/SKILL.md`
+- `skills/report/SKILL.md`
 
----
+File locations follow `output-file-rules.md`.
 
-## Phase 5: Meeting Report Generation
-
-Follow the report skill's command-invoked mode (`skills/report/SKILL.md`).
-
-Use the corrected transcript from Phase 3 as input (independent of minutes).
-Save meeting report to ./output/YYYY-MM-DD_meeting-name/report.md.
-
-Output the pipeline completion message and offer modification assistance.
+After both files are saved, output the pipeline completion message and offer
+modification assistance.

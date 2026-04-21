@@ -107,3 +107,30 @@ Likelihood grades: high (3+ criteria), medium (2 criteria), low (1 criterion, no
 ### Priority
 
 1. Low-confidence domain → 2. High-likelihood duplicate speakers → 3. Unclear term candidates → 4. Agenda mismatches → 5. Boundary anomalies
+
+---
+
+## Long Transcript Handling
+
+For very long transcripts (60+ minute meetings) that risk context degradation
+when analyzed in one pass:
+
+### Chunking procedure
+
+1. Split the transcript into chunks by agenda boundaries or time segments.
+2. Include 5-line overlap at chunk boundaries to prevent context loss.
+3. Per chunk, run domain estimation first (term extraction depends on it), then the remaining four analyses in parallel. Chunks themselves are independent, so multiple chunks can proceed simultaneously.
+4. Merge per-chunk analyses into a unified Phase 1 result:
+   - Domain: take the highest-confidence estimation (or multi-domain if chunks disagree)
+   - Speakers: union across chunks, then re-run duplicate detection on the merged list
+   - Terms, boundaries, agenda: concatenate with chunk origin preserved
+
+### Interview (Phase 2)
+
+Phase 2 remains sequential — the user cannot interview multiple chunks in parallel.
+Walk the user through the merged Phase 1 result chunk by chunk when needed.
+
+### Correction (Phase 3)
+
+Apply confirmed corrections per chunk, then integrate into a single
+corrected_transcript.md. Phase 4 and Phase 5 then operate on the unified file.
