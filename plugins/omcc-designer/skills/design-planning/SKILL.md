@@ -33,9 +33,9 @@ Use the design-analysis skill's approach to understand the project:
 
 ### Step 2: Scope confirmation
 
-Present the identified deliverables with rationale.
-Follow the Interview Protocol Rules in `CLAUDE.md`:
-Designer presents first, one step at a time, minimize user burden.
+Present the identified deliverables with rationale. Follow
+`skills/design-interview/references/interview-protocol.md` — designer
+presents first, one step at a time, minimize user burden.
 
 1. For each deliverable, explain why it is needed and what it accomplishes
 2. Ask: "Does this capture everything you need? Anything to add or remove?"
@@ -77,9 +77,14 @@ Produce a structured roadmap document:
 
 ### Step 6: Present and save
 
-1. Present the roadmap summary to the user
-2. Save to ./output/YYYY-MM-DD_project-name/design_plan.md
-3. Offer to transition to `/omcc-designer:start` for the first deliverable
+1. Present the roadmap summary to the user.
+2. Save to ./output/YYYY-MM-DD_project-name/design_plan.md — directory naming
+   and sanitization per
+   `skills/brief-generation/references/output-file-rules.md`.
+3. Offer to transition to `/omcc-designer:start` for the first deliverable.
+
+**Output language**: Write the design plan file in the same language the
+user used for the request.
 
 ### Plan-to-start handoff
 

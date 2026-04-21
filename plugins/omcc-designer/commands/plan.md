@@ -7,33 +7,23 @@ argument-hint: Project description (e.g., "product launch for our new SaaS platf
 
 $ARGUMENTS
 
----
-
-## Phase 1: Project Analysis
-
-Follow the design-analysis skill's command-invoked mode (`skills/design-analysis/SKILL.md`).
-
-Analysis results are kept internally and not exposed to the user.
-Focus on multi-medium detection (Analysis Area 4) and deliverable identification.
+Use `TaskCreate` and `TaskUpdate` to track progress.
 
 ---
 
-## Phase 2: Planning Consultation
+## Planning Pipeline
 
 Follow the design-planning skill's command-invoked mode (`skills/design-planning/SKILL.md`).
 
-Proceed through Step 2 (scope confirmation) > Step 3 (shared design decisions) > Step 4 (sequencing and dependencies).
-Get user confirmation at each step before proceeding.
+The skill handles analysis (internal), scope confirmation, shared design
+decisions, sequencing, and roadmap generation — all as a single, self-contained
+pipeline. Save path per `skills/brief-generation/references/output-file-rules.md`.
 
 ---
 
-## Phase 3: Roadmap Generation
+## Completion
 
-Follow the design-planning skill's roadmap generation process.
-
-Save the design plan to ./output/YYYY-MM-DD_project-name/design_plan.md.
-
----
-
-Output the pipeline completion message and offer to transition
-to `/omcc-designer:start` for the first deliverable.
+After design_plan.md is saved, output: "✓ Design strategy complete." with
+the plan file path and a summary of the deliverable list. Offer to transition
+to `/omcc-designer:start` for the first deliverable (using the plan's shared
+design decisions as pre-confirmed context).

@@ -66,6 +66,14 @@ If the user rejects the plan, ask what needs to change:
 
 Register approved tasks with TaskCreate for progress tracking.
 
+### Native Plan mode compatibility
+
+Claude Code's native Plan mode (`EnterPlanMode` / `ExitPlanMode`) enforces
+read-only operation during research/planning. Users who want hard enforcement
+in addition to this skill's approval gates can enter Plan mode manually
+before invoking the skill; the skill itself does not change session mode
+state, since mode is a user-controlled layer.
+
 ---
 
 ## When invoked by command (/start)

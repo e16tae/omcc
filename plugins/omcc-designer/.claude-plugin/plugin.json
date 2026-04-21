@@ -4,6 +4,14 @@
   "description": "Design consultation plugin with interview-based creative direction, design briefs, domain-specific specifications, existing design formalization, design planning, and quality auditing",
   "license": "MIT",
   "category": "design",
+  "keywords": [
+    "design",
+    "poster",
+    "brief",
+    "figma",
+    "consultation",
+    "brand"
+  ],
   "author": {
     "name": "e16tae"
   },

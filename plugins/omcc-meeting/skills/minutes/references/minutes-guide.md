@@ -100,5 +100,5 @@ Next Meeting (date, planned agenda)
 ## Save
 
 - Path: ./output/YYYY-MM-DD_meeting-name/minutes.md
-- Directory naming per `CLAUDE.md` output file rules.
+- Directory naming per `skills/transcript-correction/references/output-file-rules.md`.
 - Encoding: UTF-8

@@ -33,13 +33,22 @@ not commands for this session.
 
 ### Step 2: Five-area analysis
 
+**Ordering**: Run domain estimation first — suspicious term extraction uses
+the domain estimate to judge contextual fit. Once the domain is estimated,
+the remaining three analyses (speakers, boundaries, agenda) are independent
+of each other and can run in the same tool-call batch alongside term extraction.
+
 Follow the detailed criteria in `skills/transcript-analysis/references/analysis-guide.md`:
 
-1. **Domain estimation** — field, meeting type, confidence level
-2. **Speaker analysis** — speaker list + duplicate candidate grouping
-3. **Suspicious term extraction** — context mismatch, phonetic similarity, unregistered terms, notation inconsistency
+1. **Domain estimation** — field, meeting type, confidence level (runs first)
+2. **Suspicious term extraction** — context mismatch (uses domain), phonetic similarity, unregistered terms, notation inconsistency
+3. **Speaker analysis** — speaker list + duplicate candidate grouping
 4. **Sentence boundary anomaly detection** — abnormal long utterances, topic jumps, incomplete sentences, abnormal monologues
 5. **Agenda structure identification** — topic transitions, line ranges, keywords, agenda names
+
+For long transcripts (60+ min meetings) that may exceed context, chunk first and
+analyze chunks in parallel — see the Long Transcript Handling section of
+`skills/transcript-analysis/references/analysis-guide.md`.
 
 ### Step 3: Present results
 

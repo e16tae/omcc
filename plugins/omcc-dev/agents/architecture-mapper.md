@@ -1,6 +1,6 @@
 ---
 name: architecture-mapper
-description: Maps codebase structure, layers, entry points, and key abstractions
+description: Maps codebase structure, layers, entry points, and key abstractions. Use when you need a high-level mental model of how a codebase is organized before making architectural changes or onboarding.
 model: opus
 tools: Read, Glob, Grep
 color: blue

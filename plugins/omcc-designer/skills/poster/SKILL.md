@@ -19,24 +19,36 @@ Determine whether the input is a brief file path or a raw design request:
 
 ### Brief mode
 
-1. Read the brief file
-2. Validate per `design-brief-spec.md` validation rules
-3. **Medium gate**: Verify the brief's Target medium includes "poster".
-   If not: inform the user that the brief targets a different medium,
-   the brief has been saved, and offer to re-run the interview for poster.
-4. **Confirmed field check**: Before using any brief field, verify it is not
-   tagged `[unconfirmed]`. Unconfirmed fields must not be used in poster
-   generation. If a required field is unconfirmed, ask the user to confirm
-   it before proceeding.
-5. If validation passes: proceed to Step 1 (Layout structure)
-6. If validation fails: inform the user of specific issues and offer to
-   run the full pipeline
+1. Read the brief file.
+2. Validate per `skills/brief-generation/references/design-brief-spec.md` —
+   completeness, medium match (must include "poster"), and staleness. If the
+   brief's Target medium does not include "poster", inform the user and offer
+   to re-run the interview for poster.
+3. **Confirmed field check**: Before using any brief field, verify it is not
+   tagged `[unconfirmed]` — see
+   `skills/design-interview/references/confirmed-decision-principle.md`. If a
+   required field is unconfirmed, ask the user to confirm it before proceeding.
+4. If validation passes: proceed to Step 1 (Layout structure).
+5. If validation fails: inform the user of specific issues and offer to run
+   the full pipeline.
 
 ### Raw request mode
 
-A design consultation is required before poster generation.
-Inform the user and offer to run `/omcc-designer:start` for the full pipeline.
-Direct generation from raw input is not permitted per `CLAUDE.md`.
+No brief was provided — direct generation from raw input is not permitted
+because `skills/design-interview/references/confirmed-decision-principle.md`
+requires user-confirmed decisions before encoding. Run the full pipeline
+before producing the poster spec:
+
+1. Invoke the design-analysis skill on the raw request to produce the
+   Phase 1 analysis.
+2. Invoke the design-interview skill to confirm design decisions.
+3. Invoke the brief-generation skill to produce the brief at the standard
+   output path per
+   `skills/brief-generation/references/output-file-rules.md`.
+4. Continue with Steps 1-4 below using the generated brief.
+
+If the user declines the interview, save no files and end; poster generation
+cannot proceed without confirmed decisions.
 
 ### Step 1: Layout structure
 
@@ -81,10 +93,32 @@ Follow vision and prompt construction rules in
 
 ### Step 4: Output assembly and save
 
-1. Combine all three layers into the poster spec document
-2. Run the quality checklist
-3. Save to ./output/YYYY-MM-DD_project-name/poster_spec.md
-4. Present the spec to the user with a summary
+Design outputs that include AI image generation prompts must separate three layers:
+
+1. **Layout specification**: grid structure, visual hierarchy, zones, dimensions,
+   bleed/safe area. This is the structural blueprint.
+2. **Typography specification**: font selections, sizes, weights, placement
+   coordinates, color assignments. This is applied by the human designer.
+3. **Image generation prompts**: per-zone prompts for AI tools, with
+   tool-specific variants when the brief specifies them.
+
+AI image generators cannot reliably render text. Mixing typography into image
+prompts degrades output quality. Separating the three layers lets the human
+apply text precisely while AI handles visual/photographic elements.
+
+Then:
+
+1. Combine all three layers into the poster spec document.
+2. Run the quality checklist.
+3. Save to ./output/YYYY-MM-DD_project-name/poster_spec.md — directory naming
+   and sanitization per
+   `skills/brief-generation/references/output-file-rules.md`.
+4. Present the spec to the user with a summary.
+
+**Output language**: Write the poster spec file (layout/typography text
+labels and prose portions) in the user's request language. AI image
+generation prompts follow each tool's expected prompt language (commonly
+English) per `skills/poster/references/poster-guide.md`.
 
 ---
 

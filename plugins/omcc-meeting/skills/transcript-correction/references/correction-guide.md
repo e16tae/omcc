@@ -8,7 +8,8 @@ This corrected transcript is the sole input for Phase 4 and Phase 5.
 
 ## Core Principles
 
-See Non-Destructive Principle in `CLAUDE.md` for the canonical definition.
+See the Non-Destructive Principle in `skills/transcript-correction/SKILL.md`
+for the canonical definition.
 
 ---
 
@@ -98,5 +99,5 @@ supplementary info, and correction summary.
 ## Save
 
 - Path: ./output/YYYY-MM-DD_meeting-name/corrected_transcript.md
-- Directory naming per `CLAUDE.md` output file rules.
+- Directory naming per `skills/transcript-correction/references/output-file-rules.md`.
 - Encoding: UTF-8

@@ -7,6 +7,8 @@ argument-hint: Image path, Figma URL, or PDF path (e.g., "./poster.png" or "figm
 
 $ARGUMENTS
 
+Use `TaskCreate` to register each phase and `TaskUpdate` to mark progress.
+
 ---
 
 ## Phase 1: Design Extraction
@@ -35,8 +37,14 @@ Get user confirmation after interview completion before proceeding to Phase 3.
 
 Follow the brief-generation skill's command-invoked mode (`skills/brief-generation/SKILL.md`).
 
-Save the design brief to ./output/YYYY-MM-DD_project-name/design_brief.md.
+Save the design brief to ./output/YYYY-MM-DD_project-name/design_brief.md
+(directory naming and sanitization per `skills/brief-generation/references/output-file-rules.md`).
+The brief is the final output of the formalize pipeline.
 
 ---
 
-Output the pipeline completion message and offer modification assistance.
+## Completion
+
+Output: "✓ Brief formalized from the provided input." with the
+design_brief.md path. Suggest the next step: run `/omcc-designer:poster`
+(or another domain command) with this brief as input.

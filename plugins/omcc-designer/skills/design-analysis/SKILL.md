@@ -1,6 +1,6 @@
 ---
 name: design-analysis
-description: "Automatically analyzes a user's design request to identify purpose, audience, key messages, brand context, and visual direction. Produces structured analysis with confidence levels that feed the design interview. Use this skill when the user submits a design request or describes what they need designed."
+description: "Automatically analyzes a user's design request to identify purpose, audience, key messages, brand context, and visual direction. Produces structured analysis with confidence levels that feed the design interview. Use this skill when the user submits a design request or describes what they need designed. Trigger phrases include 'I need a poster for', 'design something for', 'help me design', 'analyze my design request'."
 ---
 
 # Phase 1: Design Analysis

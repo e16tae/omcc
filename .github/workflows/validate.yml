@@ -11,6 +11,7 @@ on:
       - 'pyproject.toml'
       - 'uv.lock'
       - 'README.md'
+      - 'CLAUDE.md'
   pull_request:
     paths:
       - '.claude-plugin/marketplace.json'
@@ -20,6 +21,7 @@ on:
       - 'pyproject.toml'
       - 'uv.lock'
       - 'README.md'
+      - 'CLAUDE.md'
 
 permissions:
   contents: read

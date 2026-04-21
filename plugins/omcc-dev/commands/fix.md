@@ -7,6 +7,11 @@ argument-hint: Bug description or issue number
 
 $ARGUMENTS
 
+Use `TaskCreate` and `TaskUpdate` to track progress across phases. Codex
+ensemble runs automatically per `ensemble-protocol.md` when Ensemble Affinity
+warrants it — never ask the user whether to invoke Codex, and never direct
+them to run `/codex:*` commands manually.
+
 ---
 
 ## Phase 1: Investigate
@@ -44,7 +49,8 @@ After root cause is confirmed, evaluate the fix scope:
    and run the affected code path to confirm correct behavior.
    Otherwise: Run the failing test — confirm it now PASSES.
 3. If test suite available: Run the full test suite — confirm no regressions.
-   Otherwise: follow Completion Verification Rules in `CLAUDE.md`.
+   Without a test framework, manual verification (Steps 2 otherwise + 5) is
+   sufficient; inform the user the full suite was skipped.
 4. Ensemble fix verification (all affinity levels):
    - Launch Codex **fix-verify** ensemble point (background) with `--scope working-tree`
    - Collect Codex review of the patch

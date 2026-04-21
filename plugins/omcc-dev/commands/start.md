@@ -7,6 +7,12 @@ argument-hint: Feature description or goal
 
 $ARGUMENTS
 
+Use `TaskCreate` to register each phase and `TaskUpdate` to mark progress as
+the pipeline advances. Codex ensemble runs automatically per
+`ensemble-protocol.md` when Ensemble Affinity warrants it — never ask the
+user whether to invoke Codex, and never direct them to run `/codex:*`
+commands manually.
+
 ---
 
 ## Phase 1: Brainstorm (no code allowed)
@@ -76,14 +82,23 @@ and reasoning to the user for final decision.
 
 ## Phase 4: Implement
 
+If a task reveals a meaningful design decision with 2+ viable alternatives,
+invoke the brainstorm skill first and wait for user approval before
+implementing — do not code through ambiguous forks.
+
 ### Single pass mode
 
 Execute the plan task by task:
 
-1. For each task, follow the TDD cycle (see TDD Rules in `CLAUDE.md`)
-2. If no test framework, implement directly but verify each task manually
-3. Mark each task as completed in TaskUpdate as you go
-4. If a task reveals the plan needs adjustment — see Plan Adjustment below
+1. For each task, follow the RED-GREEN-REFACTOR cycle:
+   - **RED**: Write a failing test first and confirm failure with Bash
+   - **GREEN**: Minimal implementation to pass the test
+   - **REFACTOR**: Clean up while keeping tests green
+
+   In projects without a test framework, skip the cycle, implement directly,
+   and verify each task manually — inform the user about the absent framework.
+2. Mark each task as completed in TaskUpdate as you go.
+3. If a task reveals the plan needs adjustment — see Plan Adjustment below.
 
 ### Deliverable mode
 
@@ -119,7 +134,13 @@ In all cases: present the situation and proposed response to the user for approv
 
 ## Phase 5: Review
 
-Follow the parallel-review skill's command-invoked mode (`skills/parallel-review/SKILL.md`).
+Before parallel-review, verify completion:
+
+1. Run the full test suite (if available) — confirm all pass.
+2. If the implementation transformed a pattern (rename/refactor), Grep for
+   the old pattern to confirm 0 remaining occurrences.
+
+Then follow the parallel-review skill's command-invoked mode (`skills/parallel-review/SKILL.md`).
 
 ### Phase 5b: Cross-deliverable Final Review (deliverable mode only)
 

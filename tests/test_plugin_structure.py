@@ -1,5 +1,4 @@
 import re
-from pathlib import Path
 
 import pytest
 
@@ -8,9 +7,6 @@ from conftest import (
     ALL_COMMANDS,
     ALL_SKILLS,
     LOCAL_PLUGIN_DIRS,
-    ROOT_DIR,
-    discover_commands,
-    discover_skills,
     load_plugin_json,
     parse_frontmatter,
 )
@@ -67,6 +63,10 @@ def test_plugin_json_optional_field_types(entry, plugin_dir):
         assert isinstance(data["homepage"], str), "homepage should be str"
     if "license" in data:
         assert isinstance(data["license"], str), "license should be str"
+    if "keywords" in data:
+        assert isinstance(data["keywords"], list), "keywords should be list"
+        for kw in data["keywords"]:
+            assert isinstance(kw, str) and kw, "each keyword must be non-empty str"
 
 
 # ---------------------------------------------------------------------------
@@ -191,131 +191,3 @@ def test_referenced_files_exist(entry, plugin_dir):
                 )
 
 
-# ---------------------------------------------------------------------------
-# CLAUDE.md command/skill list sync
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.parametrize(
-    "entry,plugin_dir", LOCAL_PLUGIN_DIRS, ids=_plugin_dir_ids
-)
-def test_claude_md_lists_all_commands_and_skills(entry, plugin_dir):
-    """CLAUDE.md must mention every command and skill the plugin provides."""
-    claude_md_path = plugin_dir / "CLAUDE.md"
-    if not claude_md_path.exists():
-        pytest.skip("no CLAUDE.md")
-    claude_md = claude_md_path.read_text(encoding="utf-8")
-    for cmd in discover_commands(plugin_dir):
-        assert cmd.stem in claude_md, (
-            f"Command '{cmd.stem}' not mentioned in CLAUDE.md"
-        )
-    for skill in discover_skills(plugin_dir):
-        assert skill.parent.name in claude_md, (
-            f"Skill '{skill.parent.name}' not mentioned in CLAUDE.md"
-        )
-
-
-# ---------------------------------------------------------------------------
-# Cross-plugin Output File Rules drift prevention
-# ---------------------------------------------------------------------------
-
-
-def _extract_h3_section(text: str, heading: str) -> str | None:
-    """Return the text of an H3 section (### heading ... until next H2/H3/EOF)."""
-    pattern = re.compile(
-        rf"^###\s+{re.escape(heading)}\s*\n(.*?)(?=^#{{2,3}}\s|\Z)",
-        re.DOTALL | re.MULTILINE,
-    )
-    m = pattern.search(text)
-    return m.group(1).strip() if m else None
-
-
-def _normalize_section_for_sync_check(text: str) -> str:
-    """Normalize an Output File Rules subsection for cross-plugin comparison.
-
-    Plugins that produce output share the same filesystem-level behavior
-    (sanitization, overwrite policy, directory creation) but describe it in
-    domain-specific prose (e.g., 'project name' vs 'meeting name'). Normalize
-    that vocabulary to a placeholder and strip the trailing `---` separator
-    so cross-plugin equality captures substantive rule changes without false
-    positives for terminology differences.
-    """
-    # Canonicalize domain-specific name references
-    normalized = re.sub(r"\b(project|meeting)\s+name\b", "NAME", text)
-    # Remove trailing horizontal-rule separator (between subsections)
-    normalized = re.sub(r"\n?---\s*$", "", normalized)
-    # Strip per-line trailing whitespace and collapse trailing blank lines
-    lines = [line.rstrip() for line in normalized.splitlines()]
-    while lines and not lines[-1]:
-        lines.pop()
-    return "\n".join(lines).strip()
-
-
-# Plugins that produce output files and therefore have Output File Rules.
-# Filename lists vary per plugin, but the sanitization and policy subsections
-# must stay in sync to prevent silent behavioral drift.
-_OUTPUT_FILE_PLUGIN_DIRS = [
-    ROOT_DIR / "plugins" / "omcc-designer",
-    ROOT_DIR / "plugins" / "omcc-meeting",
-]
-
-# Subsections that should be byte-identical across plugins that produce output.
-# Plugin-specific content (Directory structure, Directory naming with project
-# vs meeting terminology, Filenames) is intentionally excluded.
-_SYNCED_OUTPUT_SUBSECTIONS = [
-    "Directory name sanitization",
-    "Overwrite protection",
-    "Other",
-]
-
-
-@pytest.mark.parametrize("subsection", _SYNCED_OUTPUT_SUBSECTIONS)
-def test_output_file_rules_subsections_match_across_plugins(subsection):
-    """Output File Rules subsections that define shared behavior must not drift.
-
-    The sanitization rules, overwrite policy, and encoding/directory-creation
-    rules apply identically regardless of plugin domain. Allowing the two
-    copies (omcc-designer and omcc-meeting) to drift invites silent behavioral
-    divergence — users would get different filesystem sanitization depending
-    on which plugin produced their output.
-    """
-    text_by_plugin = {}
-    for plugin_dir in _OUTPUT_FILE_PLUGIN_DIRS:
-        claude_md = (plugin_dir / "CLAUDE.md").read_text(encoding="utf-8")
-        section = _extract_h3_section(claude_md, subsection)
-        if section is None:
-            pytest.fail(
-                f"{plugin_dir.name} CLAUDE.md missing subsection: "
-                f"'### {subsection}'"
-            )
-        text_by_plugin[plugin_dir.name] = _normalize_section_for_sync_check(section)
-
-    distinct = set(text_by_plugin.values())
-    if len(distinct) > 1:
-        plugins = list(text_by_plugin.keys())
-        pytest.fail(
-            f"Content of '### {subsection}' differs between plugins "
-            f"{plugins}. These sections must stay in sync."
-        )
-
-
-def test_output_filename_naming_convention_consistent():
-    """Snake_case filename convention must be stated in every Output File Rules plugin.
-
-    The convention lives in the `### Filenames` subsection, which is excluded
-    from the bulk drift test (the actual filename list legitimately differs per
-    plugin). Check specifically for the naming convention statement so drift on
-    this one rule is caught even when the surrounding subsection varies.
-    """
-    expected_phrase = "multi-word filenames use"
-    missing = []
-    for plugin_dir in _OUTPUT_FILE_PLUGIN_DIRS:
-        claude_md = (plugin_dir / "CLAUDE.md").read_text(encoding="utf-8")
-        section = _extract_h3_section(claude_md, "Filenames")
-        if section is None or expected_phrase not in section:
-            missing.append(plugin_dir.name)
-    assert not missing, (
-        "Output File Rules > Filenames must state the snake_case naming "
-        f"convention (expected phrase containing '{expected_phrase}'). "
-        f"Missing in: {missing}"
-    )

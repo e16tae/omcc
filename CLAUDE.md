@@ -53,3 +53,27 @@ Scope: plugin name or area
 - MINOR: plugin addition
 - PATCH: description edits, etc.
 - release-please manages versions automatically based on commit messages
+
+## Plugin Design Principles
+
+Built-in plugins (under `plugins/`) follow these principles.
+
+### Canonical mechanisms only
+End-user-facing rules — methodology, pipeline ordering, interaction protocols,
+behavioral constraints — must be delivered through Claude Code's canonical plugin
+components: `skills/`, `commands/`, `agents/`, `hooks/`, `settings.json`.
+The plugin cache (`~/.claude/plugins/cache/...`) is not in the user's cwd
+hierarchy, so plugin-level `CLAUDE.md` is NOT auto-injected for installed users.
+
+### Plugin CLAUDE.md = contributor-only
+Each plugin's own `CLAUDE.md` is loaded only when working inside this repo
+(cwd-based discovery). Use it for maintainer/contributor notes — never for
+end-user methodology rules.
+
+### Independence over uniformity
+Each plugin optimizes for its own domain. Do not force structural or
+terminological consistency across plugins. Cross-plugin consistency is not a goal.
+
+### Quality priority
+Fundamentals > Standards > Recommendations > Pragmatics. Favor canonical
+and spec-aligned approaches over pragmatic shortcuts when they conflict.

@@ -7,8 +7,9 @@ Confirm and correct items identified in Phase 1 through a 4-step interactive int
 
 ## Core Principles
 
-See Interview Protocol Rules in `CLAUDE.md`:
-LLM presents first, line number references, cumulative reflection, one step per message, minimize burden.
+See the core principles in `skills/interview/SKILL.md` — LLM presents first,
+line number references, cumulative reflection, one step per message, minimize
+user burden.
 
 ---
 
