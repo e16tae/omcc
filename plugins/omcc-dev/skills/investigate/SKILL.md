@@ -28,8 +28,14 @@ regardless of how the user phrased their request.
 
 1. Build the Task Profile (`orchestration.md` Step 1), including Ensemble Affinity
 2. Follow `orchestration.md`, targeting Investigation Agents based on symptom characteristics
-3. Launch agents in parallel for multi-hypothesis investigation
-4. If Ensemble Affinity is MEDIUM or HIGH: launch Codex **investigate** ensemble point
+3. Investigation subagents have read-only file tools and no `git` access.
+   When a hypothesis depends on change history (regression, "worked before",
+   post-deployment), collect `git log --oneline -20` and the relevant diffs
+   (`git show <commit>`, `git diff <range>`) before spawning and embed them
+   in the agent's mission — required for the `regression-hunter` pattern
+   (see `agent-taxonomy.md`).
+4. Launch agents in parallel for multi-hypothesis investigation
+5. If Ensemble Affinity is MEDIUM or HIGH: launch Codex **investigate** ensemble point
    in parallel per `ensemble-protocol.md`
 
 ### Step 3: Evaluate and synthesize
@@ -78,6 +84,12 @@ Follow `orchestration.md`, targeting Investigation Agents based on symptom chara
 - More hypotheses when the cause is ambiguous
 - Each agent traces its assigned hypothesis and returns:
   verdict, confidence, evidence, verification method
+
+Investigation subagents have read-only file tools and do not run `git`
+themselves. When a hypothesis depends on change history (regression, "worked
+before", post-deployment issue), the orchestrator collects `git log --oneline`
+and the relevant diffs first and embeds them in the agent's mission —
+especially for the `regression-hunter` pattern (see `agent-taxonomy.md`).
 
 Launch all agents in parallel (single message, multiple Agent calls).
 

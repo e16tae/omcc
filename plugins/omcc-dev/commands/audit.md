@@ -7,6 +7,11 @@ argument-hint: Audit scope (e.g., "security", "performance", "full")
 
 $ARGUMENTS
 
+Use `TaskCreate` and `TaskUpdate` to track audit progress across phases.
+Codex ensemble runs automatically per `ensemble-protocol.md` when Ensemble
+Affinity warrants it (Phase 2 for MEDIUM/HIGH, Phase 4 for LOW) — never ask
+the user whether to invoke Codex.
+
 ---
 
 ## Phase 1: Determine Scope

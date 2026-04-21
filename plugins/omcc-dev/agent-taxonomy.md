@@ -1,16 +1,27 @@
 # Agent Taxonomy
 
-Pool of available roles for agent orchestration.
-Each role specializes in one perspective and is dynamically selected via the process in `orchestration.md`.
+Catalog of available agent capabilities for orchestration. The orchestrator
+selects from this catalog via the process in `orchestration.md`.
 
-## Dispatch
+## Agent types
 
-There are two kinds of roles:
+**Primary agents** — have dedicated definition files under `agents/` and are
+invokable by name. The Agent tool with `subagent_type: "<name>"` resolves to
+the corresponding file.
 
-- **Primary role**: Has a dedicated agent definition file and operates according to its default instructions
-- **Derived role**: Reuses another agent's definition file but overrides behavior with a custom mission
+**Orchestration patterns** — named combinations of a primary agent + a
+task-specific mission. Patterns are catalogued below for orchestrator
+convenience, but they are NOT callable agent types — the Agent tool cannot
+resolve `subagent_type: "<pattern-name>"` to a file. Instead, the
+orchestrator spawns the pattern's base primary agent with the pattern's
+mission text:
 
-When using a derived role, spawn the agent from the mapped definition file and include the custom mission in the prompt. These agents are designed to follow the custom mission instead of their default investigation targets when one is provided.
+```
+Agent({ subagent_type: "<primary-name>", prompt: "<custom mission>" })
+```
+
+Primary agents accept custom missions and follow them instead of their
+default investigation targets.
 
 ---
 
@@ -32,17 +43,17 @@ Used during exploration and understanding phases. Map the structure and flow of 
 - **Key question**: "Where does data enter, how is it transformed, and where is it stored?"
 - **Best for**: Understanding existing behavior, tracing bug impact paths, identifying performance bottlenecks
 
-### dependency-analyzer (derived -> architecture-mapper)
+### dependency-analyzer (pattern, base: architecture-mapper)
 
 - **Purpose**: Map module dependencies and change impact radius
-- **Agent definition**: `agents/architecture-mapper.md` + custom mission
+- **Spawn as**: `architecture-mapper` + mission focused on dependency graphs and impact scope
 - **Key question**: "How far does this change's impact reach?"
 - **Best for**: Scoping refactoring, detecting dependency cycles, analyzing breaking change impact
 
-### pattern-detector (derived -> flow-tracer)
+### pattern-detector (pattern, base: flow-tracer)
 
 - **Purpose**: Identify recurring patterns, anti-patterns, and consistency deviations in the codebase
-- **Agent definition**: `agents/flow-tracer.md` + custom mission
+- **Spawn as**: `flow-tracer` + mission focused on pattern extraction and deviation detection
 - **Key question**: "What patterns repeat in this codebase, and where do they deviate?"
 - **Best for**: Pre-refactoring assessment, coding convention audits
 
@@ -128,16 +139,17 @@ Used during debugging and root cause analysis phases.
 - **Key question**: "If this hypothesis is correct, what evidence should be visible in the code?"
 - **Best for**: When a specific root cause candidate exists, tracing logic/condition errors
 
-### regression-hunter (derived -> hypothesis-tracer)
+### regression-hunter (pattern, base: hypothesis-tracer)
 
 - **Purpose**: Search recent change history for commits/changes that caused a regression
-- **Agent definition**: `agents/hypothesis-tracer.md` + custom mission
+- **Spawn as**: `hypothesis-tracer` + mission focused on recent git-diff-derived hypotheses
+- **Orchestrator responsibility**: the base agent has no git access. Before spawning, run `git log --oneline -20` and collect relevant diffs (`git show`, `git diff`), and embed them in the mission prompt so the agent can reason about specific commits.
 - **Key question**: "Which recent change broke this behavior?"
 - **Best for**: "It worked before" type bugs, post-deployment incidents
 
-### state-analyzer (derived -> hypothesis-tracer)
+### state-analyzer (pattern, base: hypothesis-tracer)
 
 - **Purpose**: Analyze runtime state, data flow anomalies, and state transition errors
-- **Agent definition**: `agents/hypothesis-tracer.md` + custom mission
+- **Spawn as**: `hypothesis-tracer` + mission focused on state transitions and runtime data shape
 - **Key question**: "How does state change at runtime, and where does it diverge from expectations?"
 - **Best for**: State-related bugs, cache inconsistency, data corruption, intermittent failures

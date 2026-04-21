@@ -9,18 +9,26 @@ Review code changes from multiple independent perspectives to catch what single-
 
 ## When auto-activated (without /start or /audit command)
 
-Provide a structured multi-perspective review. Since this is auto-activated, work within the current context.
+Lightweight in-context review — Claude evaluates each selected perspective
+directly in the current conversation (no subagent spawning), so Claude's own
+git tools cover the diff.
 
 ### Step 1: Identify what to review
 
-1. Run `git diff --stat` to see the scope of changes
-2. If no uncommitted changes, ask the user what to review
-3. Determine if this is a small change (1-2 files) or large change (3+ files)
+Collect the full change set (Claude uses its Bash tool directly):
+- `git diff --stat` for scope overview
+- `git diff --cached` + `git diff` for staged and unstaged hunks
+  (together, these handle partially staged files that `git diff HEAD` can mask)
+- `git ls-files --others --exclude-standard` + `Read` each untracked file
+
+If there are no uncommitted changes, ask the user what to review.
 
 ### Step 2: Determine review perspectives
 
-Follow `orchestration.md`, targeting Review Agents based on the scope of changes and risk areas.
-Evaluate the changes independently from each selected perspective.
+Select review perspectives from `agent-taxonomy.md` based on the scope of
+changes and risk areas. Evaluate each perspective **directly in context**
+without spawning subagents (auto-activated mode is meant to be lightweight;
+the full parallel-agent workflow runs under `/start` or `/audit`).
 
 ### Step 3: Synthesize
 
@@ -52,11 +60,30 @@ Evaluate the changes independently from each selected perspective.
 
 Full review with agent spawning and ensemble coordination.
 
-### Step 1: Spawn review agents
+### Step 1: Collect change context and spawn review agents
 
-Follow `orchestration.md`, targeting Review Agents based on the implementation's
-scope and risk areas.
-Launch all selected reviewers in parallel (single message, multiple Agent calls).
+Reviewer subagents have read-only file tools (`Read`, `Glob`, `Grep`) and do
+not run `git` themselves. The orchestrator collects the change set first and
+embeds it in each reviewer's mission:
+
+1. Collect the full change set for review context. For a single commit-pending
+   review:
+   - `git diff --cached` — staged hunks (index vs HEAD)
+   - `git diff` — unstaged hunks (worktree vs index). Collecting both
+     separately captures partially-staged files that `git diff HEAD` can mask
+     (staged version is hidden when a later unstaged edit exists in the same file).
+   - `git ls-files --others --exclude-standard` — untracked new files
+   - Read each untracked file with the `Read` tool so its contents are part
+     of the review context.
+   For an entire-branch review:
+   - `git diff [base]...HEAD` — the full branch diff. Note any untracked
+     files separately; they should typically be committed before merge.
+2. Follow `orchestration.md`, targeting Review Agents based on the
+   implementation's scope and risk areas.
+3. Include the relevant diff hunks and file paths in each reviewer's mission
+   prompt, so the agent can evaluate before/after behavior rather than only
+   current file contents.
+4. Launch all selected reviewers in parallel (single message, multiple Agent calls).
 
 ### Step 2: Ensemble coordination
 
