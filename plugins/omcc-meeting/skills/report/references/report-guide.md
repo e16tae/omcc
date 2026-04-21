@@ -88,5 +88,5 @@ If no risks found, state none. Do not fabricate.
 ## Save
 
 - Path: ./output/YYYY-MM-DD_meeting-name/report.md
-- Directory naming per `output-file-rules.md`.
+- Directory naming per `skills/transcript-correction/references/output-file-rules.md`.
 - Encoding: UTF-8

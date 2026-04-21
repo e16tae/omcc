@@ -44,7 +44,7 @@ Run the quality checklist in `skills/transcript-correction/references/correction
 
 ### Step 5: Save file
 
-Save per `output-file-rules.md` to:
+Save per `skills/transcript-correction/references/output-file-rules.md` to:
 ./output/YYYY-MM-DD_meeting-name/corrected_transcript.md
 
 Detailed guidelines in `skills/transcript-correction/references/correction-guide.md`.

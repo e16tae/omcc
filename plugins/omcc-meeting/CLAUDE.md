@@ -17,9 +17,9 @@ shared specs at the plugin root.
   - `transcript-correction` (Phase 3)
   - `minutes` (Phase 4, standalone-invocable)
   - `report` (Phase 5, standalone-invocable)
-- Shared specs at plugin root:
-  - `transcript-header-spec.md` — corrected transcript header contract
-  - `output-file-rules.md` — shared output file/directory conventions
+- Shared specs:
+  - `transcript-header-spec.md` (plugin root) — corrected transcript header contract
+  - `skills/transcript-correction/references/output-file-rules.md` — shared output file/directory conventions (owned by transcript-correction as the first writer; consumed by minutes and report)
 
 ---
 

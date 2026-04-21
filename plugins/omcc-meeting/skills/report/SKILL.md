@@ -38,7 +38,7 @@ Uses the corrected transcript directly. Does NOT reference minutes.
 
 ### Output
 
-Save per `output-file-rules.md` to:
+Save per `skills/transcript-correction/references/output-file-rules.md` to:
 ./output/YYYY-MM-DD_meeting-name/report.md
 
 Detailed guidelines and template in `skills/report/references/report-guide.md`.

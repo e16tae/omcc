@@ -50,7 +50,7 @@ Follow each skill's command-invoked mode:
 - `skills/minutes/SKILL.md`
 - `skills/report/SKILL.md`
 
-File locations follow `output-file-rules.md`.
+File locations follow `skills/transcript-correction/references/output-file-rules.md`.
 
 After both files are saved, output the pipeline completion message and offer
 modification assistance.

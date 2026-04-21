@@ -35,7 +35,7 @@ Correction is recommended but not enforced; proceed directly when input is uncor
 
 ### Output
 
-Save per `output-file-rules.md` to:
+Save per `skills/transcript-correction/references/output-file-rules.md` to:
 ./output/YYYY-MM-DD_meeting-name/minutes.md
 
 Detailed guidelines and template in `skills/minutes/references/minutes-guide.md`.
