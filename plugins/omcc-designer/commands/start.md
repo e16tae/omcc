@@ -40,14 +40,19 @@ Save the design brief to ./output/YYYY-MM-DD_project-name/design_brief.md
 
 ## Phase 4: Domain-Specific Output
 
-Read the brief's Target medium field, then check via Glob whether
-`skills/<medium>/SKILL.md` exists in this plugin.
+Read the brief's Target medium field and dispatch to the matching domain
+skill. Currently available domain skills:
 
-- If it exists: follow that skill's command-invoked mode, save the output to
-  `./output/YYYY-MM-DD_project-name/<medium>_spec.md` per output-file-rules.
-- If it does not exist: inform the user that the <medium> domain skill is not
-  yet available, the design brief has been saved and can be used when the
-  skill is added. End the pipeline.
+- **poster** → follow `skills/poster/SKILL.md`; save to
+  ./output/YYYY-MM-DD_project-name/poster_spec.md per output-file-rules.
+
+For any other medium (brochure, infographic, frontend, etc.), the
+corresponding domain skill is not yet available. Inform the user: "The
+<medium> domain skill is not yet available. The design brief has been saved
+and can be used when the skill is added." End the pipeline.
+
+When adding a new domain skill, extend the bullet list above with the
+medium-to-skill mapping.
 
 ---
 

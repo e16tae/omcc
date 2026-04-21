@@ -41,6 +41,10 @@ Uses the corrected transcript directly. Does NOT reference minutes.
 Save per `skills/transcript-correction/references/output-file-rules.md` to:
 ./output/YYYY-MM-DD_meeting-name/report.md
 
+**Output language**: Write the report in the same language as the source
+transcript (typically Korean). The plugin's internal documentation stays
+English, but user-facing output matches the input language.
+
 Detailed guidelines and template in `skills/report/references/report-guide.md`.
 
 ---

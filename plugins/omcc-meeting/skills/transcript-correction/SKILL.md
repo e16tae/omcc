@@ -47,6 +47,13 @@ Run the quality checklist in `skills/transcript-correction/references/correction
 Save per `skills/transcript-correction/references/output-file-rules.md` to:
 ./output/YYYY-MM-DD_meeting-name/corrected_transcript.md
 
+**Output language**: The corrected transcript **body** (utterances,
+supplementary notes, prose) is written in the source transcript's language
+(typically Korean). The **header structure and field names** defined in
+`transcript-header-spec.md` must stay canonical (English field keys) so
+Phase 4/5 can extract metadata reliably. Values inside the header (meeting
+title, attendee names, agenda items) follow the source language.
+
 Detailed guidelines in `skills/transcript-correction/references/correction-guide.md`.
 
 ---

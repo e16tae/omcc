@@ -38,6 +38,10 @@ Correction is recommended but not enforced; proceed directly when input is uncor
 Save per `skills/transcript-correction/references/output-file-rules.md` to:
 ./output/YYYY-MM-DD_meeting-name/minutes.md
 
+**Output language**: Write the minutes in the same language as the source
+transcript (typically Korean). The plugin's internal documentation stays
+English, but user-facing output matches the input language.
+
 Detailed guidelines and template in `skills/minutes/references/minutes-guide.md`.
 
 ---
