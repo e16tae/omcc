@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.9.1](https://github.com/e16tae/omcc/compare/v0.9.0...v0.9.1) (2026-04-21)
+
+
+### Bug Fixes
+
+* branch-scope review resolutions ([d3a0c63](https://github.com/e16tae/omcc/commit/d3a0c63208fedccad469dfaec410e32967aba565))
+
+
+### Documentation
+
+* add Plugin Design Principles and decouple tests from plugin CLAUDE.md ([d43fc30](https://github.com/e16tae/omcc/commit/d43fc3095d75dd291c89fc08faf3e4c24763586f))
+* **omcc-designer,omcc-meeting:** document output filename naming convention ([9649cc4](https://github.com/e16tae/omcc/commit/9649cc4d3214a7c8b87d82877a5ff31f4b0406ac))
+* **omcc-designer:** clarify design-extraction area alignment with analysis ([51f8c99](https://github.com/e16tae/omcc/commit/51f8c99f6e99e0bc5e016caf56dbb3d555eac04d))
+* **omcc-dev:** clarify command vs standalone skill distinction ([124a4f8](https://github.com/e16tae/omcc/commit/124a4f8bffe8eab3863444c44ac4515b62acd8e8))
+* **omcc-dev:** clarify command vs standalone skill distinction ([7af6105](https://github.com/e16tae/omcc/commit/7af6105fb16e0ebb8222fcc4125244f0b174c6fa))
+* **omcc-dev:** make /security-review mention conditional ([6aee995](https://github.com/e16tae/omcc/commit/6aee995a7d3831fc9832ca23000f30930db934fa))
+* **omcc-dev:** rephrase /security-review suggestion to degrade gracefully ([7cdb235](https://github.com/e16tae/omcc/commit/7cdb235893db677292d53ec89b46ed7fac6d4224))
+
 ## [0.9.0](https://github.com/e16tae/omcc/compare/v0.8.0...v0.9.0) (2026-04-20)
 
 

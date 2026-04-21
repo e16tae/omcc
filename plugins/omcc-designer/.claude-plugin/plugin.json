@@ -1,6 +1,6 @@
 {
   "name": "omcc-designer",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "Design consultation plugin with interview-based creative direction, design briefs, domain-specific specifications, existing design formalization, design planning, and quality auditing",
   "license": "MIT",
   "category": "design",
