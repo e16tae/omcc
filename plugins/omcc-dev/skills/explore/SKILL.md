@@ -69,3 +69,10 @@ After agents return:
 
 Follow the Presentation Mode Protocol (`presentation-protocol.md`) before presenting.
 Present unified findings to user.
+
+### State write (when invoked by /start)
+
+After synthesis, write the architecture findings to the active workflow
+file per `continuity-protocol.md` Phase-boundary Write Rules (fields:
+`architecture.patterns`, `architecture.integration_points`,
+`architecture.pitfalls`).

@@ -106,3 +106,10 @@ Present unified review findings to user.
 
 Do not fix issues in this skill. Fixing is handled by the invoking command
 (e.g., /start Phase 6: Resolve Findings).
+
+### State write (when invoked by /start or /audit)
+
+After synthesis, the invoking command writes the review result into the
+active workflow file per `continuity-protocol.md` Phase-boundary Write
+Rules. This skill does not write state itself — it hands findings to
+the command, which owns the write.

@@ -114,6 +114,17 @@ Simultaneously with agent dispatch:
 
 Follow the Presentation Mode Protocol (`presentation-protocol.md`) before presenting.
 
+### State write (when invoked by /fix)
+
+Write state at two points per `continuity-protocol.md` Phase-boundary
+Write Rules for `/fix`:
+
+- After hypotheses are spawned (Step 2): write `hypotheses` as a
+  snapshot of the hypothesis set + verdicts + evidence — this is the
+  highest-ROI resume anchor for interrupted investigations.
+- After root cause is confirmed (end of Step 4): write `root_cause`
+  and `fix_approach`.
+
 ### Full strike rule
 
 - If ensemble was launched: all Claude hypotheses AND Codex diagnosis are refuted →

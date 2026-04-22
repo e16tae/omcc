@@ -106,3 +106,10 @@ If the user rejects the plan, ask what needs to change:
   (Brainstorm) with the rejection reason as new context.
 
 Register approved tasks with TaskCreate for progress tracking.
+
+### State write (when invoked by /start)
+
+After approval and TaskCreate registration, write the plan snapshot to
+the active workflow file per `continuity-protocol.md` Phase-boundary
+Write Rules (fields: `tasks` and, in deliverable mode,
+`plan.deliverables`).
