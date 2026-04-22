@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.10.0](https://github.com/e16tae/omcc/compare/v0.9.1...v0.10.0) (2026-04-22)
+
+
+### Features
+
+* **omcc-dev:** add /omcc-dev:resume command and wire /start to continuity protocol ([8926a64](https://github.com/e16tae/omcc/commit/8926a64e7022a66d625569ea9d87da5e92a8ac5a))
+* **omcc-dev:** add continuity hooks (SessionStart / PreCompact / Stop) ([a58f0cd](https://github.com/e16tae/omcc/commit/a58f0cd251e54325b18b61e8fc767206d3f763b5))
+* **omcc-dev:** add continuity-protocol framework doc and hooks whitelist ([224e193](https://github.com/e16tae/omcc/commit/224e1932a4f99022a121df8fc65f5abbb2cd5a62))
+* **omcc-dev:** integrate Phase 0 continuity check into /fix and /audit ([86b2ac1](https://github.com/e16tae/omcc/commit/86b2ac18efb6be093a43b00401834eea9a70cf50))
+* **omcc-dev:** session continuity protocol (resume, Phase 0, hooks) ([9a38a7e](https://github.com/e16tae/omcc/commit/9a38a7eb4c6b4a569d70dbce87ba080134203b47))
+* **omcc-dev:** wire continuity state writes into skills and update layout ([bca07ae](https://github.com/e16tae/omcc/commit/bca07ae066a09c43b20152cca97c2bb88c9a8aae))
+
+
+### Bug Fixes
+
+* **omcc-dev:** branch-scope review resolutions ([8625e4e](https://github.com/e16tae/omcc/commit/8625e4e4a4efd49f4503b5000e5762dc9f59bdb9))
+
 ## [0.9.1](https://github.com/e16tae/omcc/compare/v0.9.0...v0.9.1) (2026-04-21)
 
 
