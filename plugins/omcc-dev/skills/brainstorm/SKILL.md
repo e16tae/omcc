@@ -169,3 +169,10 @@ Before Step 1, build the Task Profile:
 
 **Wait for user to choose a direction** — do not proceed to the next phase
 without explicit approval.
+
+### State write (when invoked by /start)
+
+After user approval, write the decision to the active workflow file per
+`continuity-protocol.md` Phase-boundary Write Rules (fields:
+`decision.chosen`, `decision.rationale`, `decision.rejected`) before
+the phase transitions.
