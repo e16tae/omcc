@@ -154,6 +154,12 @@ git_baseline:
 current_phase: <see Phase State Enum>
 next_action: <short imperative sentence>
 tasks: []                              # empty list at bootstrap; updated from TaskCreate/TaskUpdate
+task_profile:                          # built during orchestration.md Step 1
+  scope: <string>
+  layers: <list>
+  risks: <list>
+  complexity: low | medium | high
+  ensemble_affinity: LOW | MEDIUM | HIGH
 ---
 ```
 
@@ -164,6 +170,10 @@ tasks: []                              # empty list at bootstrap; updated from T
   Absent otherwise.
 - `originating_finding`: string OR absent. Required with a finding id
   when `parent_workflow` is present AND parent is `/audit`. Absent otherwise.
+- `presentation_mode`: string OR absent. Required as `batch` or
+  `interview` once the user has chosen at the first presentation point
+  (per `presentation-protocol.md`). Absent until then. On resume,
+  `/omcc-dev:resume` re-applies this value to avoid re-asking.
 - `pending_ensemble`: list OR absent. When present, each entry:
   ```yaml
   pending_ensemble:
@@ -223,9 +233,6 @@ similar_pattern_grep:                  # after Phase 3 similar-pattern search
 ```yaml
 audit_type: security | performance | code-quality | tech-debt | full
 target_scope: <dir or "all">
-task_profile:
-  scope: <string>
-  ensemble_affinity: LOW | MEDIUM | HIGH
 findings:                              # after Phase 2
   - id: finding-1
     severity: critical | high | medium | low | observation
@@ -395,7 +402,7 @@ against current git state. Classification:
 | Classification | Condition | Action |
 |---|---|---|
 | `clean` | Branch unchanged AND HEAD equals `git_baseline.head` AND `status_digest` equals current digest | Resume directly at recorded phase |
-| `compatible` | Same branch AND current HEAD descends from `git_baseline.head` (fast-forward) AND no state-referenced file renamed/deleted | Surface drift summary; re-verify assumptions; continue |
+| `compatible` | Same branch AND (HEAD advanced on top of `git_baseline.head` via fast-forward, OR HEAD still equals baseline but `status_digest` differs due to uncommitted in-flight edits made by the workflow itself) AND no state-referenced file renamed/deleted in committed history since baseline | Surface drift summary (including the uncommitted diff when applicable); re-verify assumptions; continue |
 | `conflicting` | Any of: branch changed, HEAD not reachable from baseline OR baseline not reachable from HEAD (diverged / rewound), state-referenced file renamed/deleted/conflictingly modified | Invoke `skills/investigate/SKILL.md` with state-analyzer custom mission per `agent-taxonomy.md`; user chooses adapt or archive |
 
 **Rewound HEAD** (`git merge-base --is-ancestor <HEAD> <baseline.head>` succeeds
