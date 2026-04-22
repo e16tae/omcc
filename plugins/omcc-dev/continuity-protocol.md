@@ -243,8 +243,12 @@ findings:                              # after Phase 2
 ```
 
 **`decision: undecided`** is the default when a finding is first added.
-Workflow MUST NOT transition to `summary-complete` while any finding is
-`undecided` — the summary table step forces a decision.
+Workflow MUST NOT transition to `summary-complete` while any **actionable**
+finding (severity `critical | high | medium | low`) is `undecided` — the
+summary table step forces a decision. Findings with `severity: observation`
+are informational and MAY stay `undecided` at terminal state; an
+observation-only audit (no actionable findings) can advance directly
+from `present` to `summary-complete` without a remediation discussion.
 
 ### Phase State Enum (authoritative)
 
@@ -343,6 +347,26 @@ append-only shortcut exists.)
   terminal state added; `workflow_id` format changed. Non-backward-compatible.
 - Readers of schema `N` MAY read files where `schema <= N` and SHOULD
   migrate on write. Readers MUST NOT read files where `schema > N`.
+
+---
+
+## Resume Handoff Path (Phase 0 contract)
+
+Every `/start`, `/fix`, `/audit` command MUST handle two invocation
+contexts in its Phase 0 Continuity Check:
+
+1. **Direct invocation** — the user runs the command with no resume
+   context. Active registry entries, if any, trigger the standard
+   resume / start new / archive prompt.
+2. **Resume handoff** — `/omcc-dev:resume` Step 6 has already selected
+   an active workflow, validated drift, restored TaskCreate, and is
+   now delegating execution back to the originating command. In this
+   case Phase 0 MUST NOT re-prompt; it recognizes the selected active
+   workflow and continues at its recorded `current_phase` without
+   bootstrap, without further registry prompts, and without re-running
+   drift analysis. The resume handoff is identified by conversation
+   context (agent judgement) — no filesystem sentinel is required —
+   and commands phrase the Phase 0 decision tree accordingly.
 
 ---
 

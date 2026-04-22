@@ -17,15 +17,22 @@ commands manually.
 
 ## Phase 0: Continuity Check
 
-Follow `continuity-protocol.md` Phase-boundary Write Rules and the
-Legacy design-context.md Migration section.
+Follow `continuity-protocol.md` Phase-boundary Write Rules, the Resume
+Handoff Path contract, and the Legacy design-context.md Migration
+section.
 
+0. **Resume handoff**: if this invocation arrived via `/omcc-dev:resume`
+   Step 6 delegating control back to `/start` after having selected and
+   validated an active workflow of `workflow_type: start`, skip the
+   bootstrap path. Recognize the selected workflow, advance to its
+   recorded `current_phase`, and continue from the body of the
+   corresponding Phase below. Do not re-prompt for resume/new/archive.
 1. Read the active registry at `<cwd>/.claude/omcc-dev/active.md` if
-   present. If any active workflow is listed, offer the user: **resume**
-   (hand control to `/omcc-dev:resume` and exit this command) /
-   **start new** (continue here with a new workflow file alongside the
-   existing ones) / **archive** (archive the chosen existing workflow,
-   then continue here).
+   present. If any active workflow is listed (and this is NOT a resume
+   handoff), offer the user: **resume** (hand control to
+   `/omcc-dev:resume` and exit this command) / **start new** (continue
+   here with a new workflow file alongside the existing ones) /
+   **archive** (archive the chosen existing workflow, then continue).
 2. If `<cwd>/.claude/design-context.md` exists (legacy artifact from an
    earlier omcc-dev version), apply the Legacy Migration rules in
    `continuity-protocol.md`: offer **import** / **archive** / **delete**.
@@ -35,12 +42,23 @@ Legacy design-context.md Migration section.
    with the always-required frontmatter from `continuity-protocol.md`
    State File Schema. Initial values: `workflow_type: start`,
    `current_phase: "brainstorm"`, `next_action` describing the Phase 1
-   next step, `tasks: []`, and `git_baseline` captured from
-   `git rev-parse HEAD`, `git branch --show-current`, and the pinned
-   `status_digest` pipeline. Apply the secrets-hygiene regex scrub to
+   next step, `tasks: []`, `git_baseline` captured from `git rev-parse
+   HEAD` + `git branch --show-current` + the pinned `status_digest`
+   pipeline, and `task_profile` (to be populated during Phase 1
+   orchestration). Apply the secrets-hygiene regex scrub to
    `$ARGUMENTS` before writing `original_request`.
-4. Add or update the entry in the active registry.
-5. Run `git check-ignore <cwd>/.claude/omcc-dev/` and warn if the
+4. If `$ARGUMENTS` indicates this `/start` is spawned from an `/audit`
+   finding (cross-workflow handoff — typically a `fix-now` decision
+   routed to `/start` because the scope exceeds `/fix`'s domain), set
+   `parent_workflow` to the audit workflow id and `originating_finding`
+   to the finding id per `continuity-protocol.md` Cross-workflow
+   Handoff. Acquire a lock on the parent audit file and update its
+   `findings[i].decision = "fix-now"` and `findings[i].child_workflow
+   = <this id>`. If the parent file is in
+   `<cwd>/.claude/omcc-dev/archive/`, write a warning and proceed
+   without the parent update (parent state is static).
+5. Add or update the entry in the active registry.
+6. Run `git check-ignore <cwd>/.claude/omcc-dev/` and warn if the
    directory is not gitignored (per `continuity-protocol.md` Security
    Considerations).
 
@@ -230,10 +248,16 @@ If the changes warrant a PR, ask the user whether to create one.
 ### Cleanup
 
 Set `current_phase: "commit-complete"` and `next_action: "archive"` in
-the workflow file per `continuity-protocol.md`. The Stop hook
-auto-archives when all four conditions (A1–A4) are met; no manual
-cleanup is needed in normal cases. If hooks did not fire, the user can
-run `/omcc-dev:resume archive <workflow_id>` to archive manually.
+the workflow file per `continuity-protocol.md`. If this workflow has a
+`parent_workflow` (spawned from `/audit` as a `fix-now` transition),
+acquire a lock on the parent's file and update
+`findings[i].resolved_commit` with the new commit SHA. If the parent
+is in `<cwd>/.claude/omcc-dev/archive/`, skip with a warning.
+
+The Stop hook auto-archives when all four conditions (A1–A4) are met;
+no manual cleanup is needed in normal cases. If hooks did not fire,
+the user can run `/omcc-dev:resume archive <workflow_id>` to archive
+manually.
 
 Handling of previous workflow files from earlier sessions is owned by
 Phase 0 (Continuity Check), not this Cleanup section — a new `/start`
