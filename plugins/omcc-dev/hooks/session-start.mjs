@@ -15,6 +15,7 @@ import {
   parseFrontmatter,
   sanitize,
   isValidWorkflowId,
+  SUPPORTED_SCHEMA_VERSION,
 } from "./_utils.mjs";
 
 async function main() {
@@ -36,6 +37,12 @@ async function main() {
     try { content = await readFile(wfPath, "utf8"); } catch { continue; }
     const parsed = parseFrontmatter(content);
     const fields = parsed ? parsed.fields : {};
+    // Schema-version gate: skip workflows whose schema is newer than we
+    // understand, rather than echoing a potentially mis-interpreted
+    // summary back into Claude's context.
+    const schemaRaw = fields.schema;
+    const schema = schemaRaw !== undefined ? Number(schemaRaw) : undefined;
+    if (schema !== undefined && schema > SUPPORTED_SCHEMA_VERSION) continue;
     const phase = sanitize(fields.current_phase || e.phase || "unknown", 64);
     const nextAction = sanitize(fields.next_action || "", 120);
     const type = sanitize(e.type || fields.workflow_type || "?", 16);

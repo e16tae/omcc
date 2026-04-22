@@ -35,7 +35,10 @@ section.
    the Legacy Migration rules in `continuity-protocol.md`: offer
    **import** / **archive** / **delete**. Acquire the migration lock
    sentinel per the protocol before acting.
-3. Bootstrap write: create
+3. Ensure `<cwd>/.claude/omcc-dev/workflows/` and
+   `<cwd>/.claude/omcc-dev/archive/` exist with mode `0700` per
+   `continuity-protocol.md` §Directory Layout.
+4. Bootstrap write: create
    `<cwd>/.claude/omcc-dev/workflows/audit-<timestamp>-<shortid>.md`
    with the always-required frontmatter from `continuity-protocol.md`
    State File Schema. Initial values: `workflow_type: audit`,
@@ -44,9 +47,13 @@ section.
    + `git branch --show-current` + the pinned `status_digest`
    pipeline, and `task_profile` (to be populated during Phase 1).
    Apply the secrets-hygiene regex scrub to `$ARGUMENTS` before
-   writing `original_request`.
-4. Add or update the entry in the active registry.
-5. Run `git check-ignore <cwd>/.claude/omcc-dev/` and warn if the
+   writing `original_request`. Write the file with mode `0600`.
+5. Add or update the entry in the active registry with all required
+   fields per `continuity-protocol.md` §Active Registry: `id` = this
+   workflow id, `type: audit`, `phase: "scope"`, `parent: null` (audit
+   workflows are always root), `children: []`, `originating_finding:
+   null`.
+6. Run `git check-ignore <cwd>/.claude/omcc-dev/` and warn if the
    directory is not gitignored (per `continuity-protocol.md` Security
    Considerations).
 
@@ -172,8 +179,10 @@ subsequent `/omcc-dev:resume` does not re-ask.
 `severity: observation` (no actionable findings requiring remediation
 decisions), this is the workflow's terminal point. After presenting the
 observations, write `current_phase: "summary-complete"` and
-`next_action: "archive"` directly and exit. Per `continuity-protocol.md`,
-observations are exempt from the "no undecided at terminal" rule.
+`next_action: "archive"` directly and exit. The Stop hook then handles
+the archive move per `continuity-protocol.md` §Archive and Completion
+Lifecycle (A1 + A4 conditions for audit workflows). Observations are
+exempt from the "no undecided at terminal" rule.
 
 ---
 
@@ -183,8 +192,9 @@ Walk through each actionable finding from Phase 4 for detailed analysis and dire
 
 If all findings are positive observations with no actionable items, the
 observation-only short-circuit in Phase 4 already wrote
-`summary-complete` and archived; skip this phase entirely — it is never
-entered in the observation-only case.
+`summary-complete` and terminated Phase 4 (the Stop hook handles the
+archive move); skip this phase entirely — it is never entered in the
+observation-only case.
 
 Use the presentation mode already chosen for this audit invocation
 (per `presentation-protocol.md` timing rule — do not re-ask).

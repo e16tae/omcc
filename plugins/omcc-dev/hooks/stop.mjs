@@ -5,7 +5,7 @@
 // Exits 0 on stop_hook_active to prevent infinite loops.
 
 import { existsSync } from "node:fs";
-import { readFile, rename } from "node:fs/promises";
+import { readFile, rename, unlink } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import {
   readStdinJson,
@@ -19,6 +19,8 @@ import {
   isValidWorkflowId,
   TERMINAL_PHASES,
   COMMIT_SUBJECT_REGEX,
+  KNOWN_WORKFLOW_TYPES,
+  SUPPORTED_SCHEMA_VERSION,
 } from "./_utils.mjs";
 
 function getCommitSubjectsInRange(cwd, baselineHead) {
@@ -51,7 +53,7 @@ async function validateFields(filePath) {
   catch { return { valid: false }; }
   const parsed = parseFrontmatter(content);
   if (!parsed) return { valid: false };
-  const { current_phase, next_action, workflow_type } = parsed.fields;
+  const { current_phase, next_action, workflow_type, schema } = parsed.fields;
   const git_baseline = getNestedMap(parsed.fmBody, "git_baseline");
   return {
     valid: !!(current_phase && next_action),
@@ -59,6 +61,7 @@ async function validateFields(filePath) {
     next_action,
     workflow_type,
     git_baseline,
+    schema: schema !== undefined ? Number(schema) : undefined,
   };
 }
 
@@ -83,9 +86,24 @@ async function maybeAutoArchive(cwd, entry, entries) {
     );
     return { archive: false };
   }
+  // Schema-version gate per continuity-protocol.md §Parser rules.
+  if (typeof meta.schema === "number" && meta.schema > SUPPORTED_SCHEMA_VERSION) {
+    process.stderr.write(
+      `[omcc-dev/stop] workflow ${entry.id}: schema ${meta.schema} newer than supported (${SUPPORTED_SCHEMA_VERSION}); not archiving\n`
+    );
+    return { archive: false };
+  }
   // A1
   if (!TERMINAL_PHASES.includes(meta.current_phase)) return { archive: false };
   const type = meta.workflow_type;
+  // Fail closed on unknown/missing workflow_type — corrupt or malformed
+  // state files must not be archived based on incomplete checks.
+  if (!KNOWN_WORKFLOW_TYPES.includes(type)) {
+    process.stderr.write(
+      `[omcc-dev/stop] workflow ${entry.id}: unknown workflow_type "${type}"; not archiving\n`
+    );
+    return { archive: false };
+  }
   if (type !== "audit") {
     // A2
     const head = getCurrentHead(cwd);
@@ -93,10 +111,11 @@ async function maybeAutoArchive(cwd, entry, entries) {
     if (!meta.git_baseline || head === meta.git_baseline.head) return { archive: false };
     // A3
     const re = COMMIT_SUBJECT_REGEX[type];
-    if (re) {
-      const subjects = getCommitSubjectsInRange(cwd, meta.git_baseline.head);
-      if (!subjects.some((s) => re.test(s))) return { archive: false };
-    }
+    // A known type with no regex (should not happen for start/fix) fails
+    // closed to avoid skipping A3.
+    if (!re) return { archive: false };
+    const subjects = getCommitSubjectsInRange(cwd, meta.git_baseline.head);
+    if (!subjects.some((s) => re.test(s))) return { archive: false };
   }
   // A4
   if (hasActiveChildren(entries, entry.id)) return { archive: false };
@@ -108,8 +127,15 @@ async function moveToArchive(cwd, workflowId) {
   const dst = resolveArchivePath(cwd, workflowId);
   try {
     await rename(src, dst);
-    return true;
   } catch { return false; }
+  // Clean up the transient `.bak` sibling so orphans do not accumulate
+  // in workflows/ over time. Do NOT touch `<id>.md.lock`: that sentinel
+  // is owned by whichever process is currently holding the write lock
+  // (possibly a concurrent PreCompact in another session). Deleting
+  // someone else's lock sentinel would let a second writer enter the
+  // critical section and corrupt the atomic-write sequence.
+  try { await unlink(`${src}.bak`); } catch {}
+  return true;
 }
 
 async function removeFromActiveRegistry(cwd, removeId) {

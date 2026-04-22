@@ -2,7 +2,7 @@
 // Pure Node.js built-ins — no external dependencies.
 // See continuity-protocol.md for the contract this file implements.
 
-import { readFile, writeFile, rename, chmod, unlink, open } from "node:fs/promises";
+import { readFile, rename, chmod, unlink, open } from "node:fs/promises";
 import { openSync, closeSync, existsSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
@@ -14,6 +14,13 @@ export const WORKFLOW_ID_REGEX =
   /^(start|fix|audit)-\d{8}T\d{6}Z-(migrated-)?[0-9a-f]{6}$/;
 
 export const TERMINAL_PHASES = ["commit-complete", "summary-complete"];
+
+export const KNOWN_WORKFLOW_TYPES = ["start", "fix", "audit"];
+
+// Schema version this hook layer understands. Files with higher
+// `schema` are skipped with a stderr diagnostic per
+// continuity-protocol.md §Parser rules.
+export const SUPPORTED_SCHEMA_VERSION = 1;
 
 export const COMMIT_SUBJECT_REGEX = {
   start: /^feat(\([^)]+\))?!?:/,
@@ -151,15 +158,33 @@ const SENSITIVE_FILE_PATTERNS = [/\.env/, /\.pem$/, /\.key$/, /id_rsa/, /\.p12$/
 // Output: newline-joined "XY path" lines (or bare path for rename-from
 // continuations), with any entry whose path component matches a
 // SENSITIVE_FILE_PATTERNS regex removed.
+//
+// Rename/copy records in -z format span two NUL-separated tokens:
+//   "R  new-path\0old-path\0"
+// If EITHER path is sensitive, the ENTIRE entry (both tokens) is dropped
+// — otherwise a sensitive companion path leaks into the snapshot.
 export function filterSensitiveStatus(statusZ) {
   const tokens = statusZ.split("\0").filter(Boolean);
   const out = [];
-  for (const tok of tokens) {
-    // XY prefix format: two status chars + space. Rename/copy continuation
-    // lines are bare paths (no XY prefix).
-    const path = /^[ MADRCU?!][ MADRCU?!] /.test(tok) ? tok.slice(3) : tok;
-    if (SENSITIVE_FILE_PATTERNS.some((p) => p.test(path))) continue;
-    out.push(tok);
+  let i = 0;
+  while (i < tokens.length) {
+    const tok = tokens[i];
+    const hasXY = /^[ MADRCU?!][ MADRCU?!] /.test(tok);
+    const statusChar = hasXY ? tok.charAt(0) : " ";
+    const path = hasXY ? tok.slice(3) : tok;
+    const isRenameCopy = hasXY && (statusChar === "R" || statusChar === "C");
+    // For rename/copy, the next token is the previous path and belongs to
+    // the same entry. Consume it here.
+    const companion = isRenameCopy && i + 1 < tokens.length ? tokens[i + 1] : null;
+    const allPaths = companion ? [path, companion] : [path];
+    const sensitive = allPaths.some(
+      (p) => SENSITIVE_FILE_PATTERNS.some((r) => r.test(p))
+    );
+    if (!sensitive) {
+      out.push(tok);
+      if (companion !== null) out.push(companion);
+    }
+    i += companion !== null ? 2 : 1;
   }
   return out.join("\n");
 }
@@ -193,11 +218,14 @@ export async function atomicUpdateFile(filePath, newContent) {
   try {
     const tmp = `${filePath}.tmp`;
     const bak = `${filePath}.bak`;
-    // Open with O_WRONLY|O_CREAT|O_TRUNC, mode 0600; write; fsync; close.
-    // fsync before rename is required per continuity-protocol.md
-    // §Atomic write discipline so data reaches disk before the
-    // metadata-level rename commits the name swap.
-    const fh = await open(tmp, "w", 0o600);
+    // Remove any stale tempfile (e.g., symlink planted by another process)
+    // before exclusive-create. unlink ignores ENOENT.
+    try { await unlink(tmp); } catch {}
+    // Open with O_WRONLY|O_CREAT|O_EXCL, mode 0600 — fails on any
+    // pre-existing file (regular OR symlink), defeating follow-symlink
+    // write redirection. fsync before rename is required per
+    // continuity-protocol.md §Atomic write discipline.
+    const fh = await open(tmp, "wx", 0o600);
     try {
       await fh.writeFile(newContent, { encoding: "utf8" });
       await fh.sync();

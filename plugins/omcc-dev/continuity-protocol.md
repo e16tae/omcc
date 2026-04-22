@@ -166,8 +166,9 @@ task_profile:                          # built during orchestration.md Step 1
 ### Conditionally-required frontmatter (present iff condition holds)
 
 - `parent_workflow`: string OR absent. Required with a workflow_id value
-  when this workflow was spawned from another (`/fix` from `/audit`).
-  Absent otherwise.
+  when this workflow was spawned from another — either `/fix` from
+  `/audit` (normal fix-now transition) or `/start` from `/audit`
+  (scope-exceeding fix-now transition). Absent otherwise.
 - `originating_finding`: string OR absent. Required with a finding id
   when `parent_workflow` is present AND parent is `/audit`. Absent otherwise.
 - `presentation_mode`: string OR absent. Required as `batch` or
@@ -411,7 +412,8 @@ frontmatter (atomic full-file replace, not append).
 | 2 | Scan dispatch | `pending_ensemble` append; `current_phase="scan"` |
 | 2 | Scan results collected | `findings` (initial); `pending_ensemble` remove |
 | 3 | Integrate built-in results | body: integrated findings; `current_phase="integrate"` |
-| 4 | Synthesis complete | `findings` (synthesized); `current_phase="present"` |
+| 4 | Synthesis complete | `findings` (synthesized); `current_phase="present"`; `presentation_mode` (if first presentation) |
+| 4 (observation-only) | All findings are observations | `current_phase="summary-complete"`, `next_action="archive"` (short-circuits Phase 5) |
 | 5 | Enter remediation | `current_phase="remediation-discussion"` |
 | 5 | Per-finding decision | `findings[i].decision` |
 | Terminal | Summary table written | `current_phase="summary-complete"`, `next_action="archive"` |
@@ -536,9 +538,9 @@ Scenario: during `/audit` Phase 5 remediation, a finding is marked
 
 **Write ownership** (pinned):
 
-1. Child `/fix` command owns **both** writes — bootstrap of the child
-   file AND update of the parent's `findings[i].decision`. This avoids
-   requiring the parent `/audit` to be actively running.
+1. Child `/fix` or `/start` command owns **both** writes — bootstrap of
+   the child file AND update of the parent's `findings[i].decision`.
+   This avoids requiring the parent `/audit` to be actively running.
 2. Child's parent write:
    - Acquires a separate lock on the parent file
    - Sets `findings[i].decision = "fix-now"` and
@@ -551,6 +553,14 @@ Scenario: during `/audit` Phase 5 remediation, a finding is marked
    findings field is NOT updated (parent already archived).
 4. On child's terminal archive, child updates the parent's
    `findings[i].resolved_commit` with the child's commit SHA.
+
+**Lock acquisition order** (pinned to avoid deadlock under concurrent
+sessions): active registry → parent workflow file → child workflow file.
+Each lock is released in reverse order. Commands MUST NOT hold multiple
+locks simultaneously except in this exact order. The active registry
+lock is short-lived (read-modify-write) and released before the parent
+lock is acquired in normal flow; only the cross-workflow handoff path
+holds both parent and child locks, in the stated order.
 
 **Parent archive gating**: when Stop hook evaluates a parent workflow for
 auto-archive, condition A4 checks the active registry for entries with

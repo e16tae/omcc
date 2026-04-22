@@ -164,9 +164,11 @@ session features:
      recognises the active workflow and skips bootstrap; per-phase
      logic consults `tasks[].status` to skip completed work.
    - `workflow_type=fix` → continue from `commands/fix.md` at the
-     recorded phase (requires Deliverable C Phase 0 in `commands/fix.md`).
+     recorded phase. The target command's Phase 0 continuity check
+     recognises the active workflow and skips bootstrap; per-phase logic
+     consults `tasks[].status` to skip completed work.
    - `workflow_type=audit` → continue from `commands/audit.md` at the
-     recorded phase (requires Deliverable C Phase 0 in `commands/audit.md`).
+     recorded phase (same behavior as `/fix` above).
 6. The resumed command emits subsequent state writes through its normal
    Phase-boundary Write Rules.
 

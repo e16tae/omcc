@@ -18,6 +18,7 @@ import {
   atomicUpdateFile,
   updateUpdatedAt,
   isValidWorkflowId,
+  SUPPORTED_SCHEMA_VERSION,
 } from "./_utils.mjs";
 
 const IDEMPOTENT_WINDOW_MS = 60 * 1000;
@@ -48,6 +49,16 @@ async function processWorkflow(cwd, id) {
   const content = await readFile(filePath, "utf8");
   const parsed = parseFrontmatter(content);
   if (!parsed) return;
+  // Schema-version gate: skip files with a schema version we do not
+  // understand, to avoid corrupting forward-compat data on write-back.
+  const schemaRaw = parsed.fields && parsed.fields.schema;
+  const schema = schemaRaw !== undefined ? Number(schemaRaw) : undefined;
+  if (schema !== undefined && schema > SUPPORTED_SCHEMA_VERSION) {
+    process.stderr.write(
+      `[omcc-dev/pre-compact] workflow ${id}: schema ${schema} newer than supported (${SUPPORTED_SCHEMA_VERSION}); skipping snapshot\n`
+    );
+    return;
+  }
   const now = Date.now();
   const lastMs = latestSnapshotMs(parsed.body);
   if (lastMs !== null && now - lastMs < IDEMPOTENT_WINDOW_MS) return;

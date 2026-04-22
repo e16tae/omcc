@@ -36,7 +36,10 @@ section.
    the Legacy Migration rules in `continuity-protocol.md`: offer
    **import** / **archive** / **delete**. Acquire the migration lock
    sentinel per the protocol before acting.
-3. Bootstrap write: create
+3. Ensure `<cwd>/.claude/omcc-dev/workflows/` and
+   `<cwd>/.claude/omcc-dev/archive/` exist with mode `0700` per
+   `continuity-protocol.md` §Directory Layout.
+4. Bootstrap write: create
    `<cwd>/.claude/omcc-dev/workflows/fix-<timestamp>-<shortid>.md`
    with the always-required frontmatter from `continuity-protocol.md`
    State File Schema. Initial values: `workflow_type: fix`,
@@ -45,17 +48,27 @@ section.
    HEAD` + `git branch --show-current` + the pinned `status_digest`
    pipeline, and `task_profile` (to be populated during Phase 1
    orchestration). Apply the secrets-hygiene regex scrub to
-   `$ARGUMENTS` before writing `original_request`.
-4. If `$ARGUMENTS` indicates this `/fix` is spawned from an `/audit`
-   finding (cross-workflow handoff), set `parent_workflow` to the audit
-   workflow id and `originating_finding` to the finding id per
-   `continuity-protocol.md` Cross-workflow Handoff. Acquire a lock on
-   the parent audit file and update its `findings[i].decision =
-   "fix-now"` and `findings[i].child_workflow = <this id>`. If the
-   parent file is in `<cwd>/.claude/omcc-dev/archive/`, write a warning
-   and proceed without the parent update (parent state is static).
-5. Add or update the entry in the active registry.
-6. Run `git check-ignore <cwd>/.claude/omcc-dev/` and warn if the
+   `$ARGUMENTS` before writing `original_request`. Write the file
+   with mode `0600`.
+5. If `$ARGUMENTS` indicates this `/fix` is spawned from an `/audit`
+   finding (cross-workflow handoff), validate the finding id against
+   the finding-id regex (`^finding-[0-9]+$` per
+   `continuity-protocol.md` §Finding IDs) and the audit workflow id
+   against the workflow-id regex. Reject the handoff with a diagnostic
+   and proceed as a root workflow if validation fails. Otherwise set
+   `parent_workflow` to the audit workflow id and `originating_finding`
+   to the finding id per `continuity-protocol.md` Cross-workflow
+   Handoff. Acquire a lock on the parent audit file and update its
+   `findings[i].decision = "fix-now"` and `findings[i].child_workflow
+   = <this id>`. If the parent file is in
+   `<cwd>/.claude/omcc-dev/archive/`, write a warning and proceed
+   without the parent update (parent state is static).
+6. Add or update the entry in the active registry with all required
+   fields per `continuity-protocol.md` §Active Registry: `id` = this
+   workflow id, `type: fix`, `phase: "investigate"`, `parent:
+   <parent_workflow if step 5 set one, else null>`, `children: []`,
+   `originating_finding: <finding id if step 5 set one, else null>`.
+7. Run `git check-ignore <cwd>/.claude/omcc-dev/` and warn if the
    directory is not gitignored (per `continuity-protocol.md` Security
    Considerations).
 
