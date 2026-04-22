@@ -1,3 +1,4 @@
+import json
 import re
 
 import pytest
@@ -138,18 +139,20 @@ def test_agent_optional_field_types(plugin_name, agent_path):
 # ---------------------------------------------------------------------------
 
 _STANDARD_ENTRIES = {".claude-plugin", "CLAUDE.md"}
+_CANONICAL_COMPONENT_KEYS = ("skills", "commands", "agents", "hooks")
 
 
-@pytest.mark.parametrize(
-    "entry,plugin_dir", LOCAL_PLUGIN_DIRS, ids=_plugin_dir_ids
-)
-def test_plugin_no_unexpected_top_level_entries(entry, plugin_dir):
-    pjson = load_plugin_json(entry["source"])
+def _compute_unexpected_top_level_entries(plugin_dir, plugin_json):
+    """Return unexpected top-level entries for a plugin directory.
 
-    # Build allowed set from plugin.json declared component paths
+    Allowed entries: _STANDARD_ENTRIES plus, for each key in
+    _CANONICAL_COMPONENT_KEYS, the directory name declared in plugin.json
+    (defaulting to the key itself). Plain .md files at plugin root are
+    always allowed as documentation.
+    """
     allowed = set(_STANDARD_ENTRIES)
-    for key in ("skills", "commands", "agents"):
-        val = pjson.get(key, key)  # default to standard directory name
+    for key in _CANONICAL_COMPONENT_KEYS:
+        val = plugin_json.get(key, key)
         if isinstance(val, str):
             allowed.add(val.removeprefix("./"))
         elif isinstance(val, list):
@@ -160,9 +163,52 @@ def test_plugin_no_unexpected_top_level_entries(entry, plugin_dir):
         if not p.name.startswith(".") or p.name == ".claude-plugin"
     }
     unexpected = actual - allowed
-    # .md files are documentation and always allowed at plugin root
-    unexpected = {f for f in unexpected if not f.endswith(".md")}
+    return {f for f in unexpected if not f.endswith(".md")}
+
+
+@pytest.mark.parametrize(
+    "entry,plugin_dir", LOCAL_PLUGIN_DIRS, ids=_plugin_dir_ids
+)
+def test_plugin_no_unexpected_top_level_entries(entry, plugin_dir):
+    pjson = load_plugin_json(entry["source"])
+    unexpected = _compute_unexpected_top_level_entries(plugin_dir, pjson)
     assert not unexpected, f"Unexpected entries at plugin root: {unexpected}"
+
+
+def test_plugin_structure_rejects_bogus_top_level_entry(tmp_path):
+    """Regression: whitelist must not silently accept arbitrary top-level names."""
+    pdir = tmp_path / "fake-plugin"
+    pdir.mkdir()
+    (pdir / ".claude-plugin").mkdir()
+    (pdir / ".claude-plugin" / "plugin.json").write_text(
+        json.dumps({"name": "fake", "version": "0.1.0", "description": "x"})
+    )
+    (pdir / "CLAUDE.md").write_text("# fake\n")
+    (pdir / "bogus_entry").mkdir()
+
+    pjson = {"name": "fake", "version": "0.1.0", "description": "x"}
+    unexpected = _compute_unexpected_top_level_entries(pdir, pjson)
+    assert unexpected == {"bogus_entry"}, (
+        f"expected bogus_entry to be flagged, got {unexpected}"
+    )
+
+
+def test_plugin_structure_allows_hooks_directory(tmp_path):
+    """hooks/ is a canonical plugin component and must be accepted at plugin root."""
+    pdir = tmp_path / "fake-plugin"
+    pdir.mkdir()
+    (pdir / ".claude-plugin").mkdir()
+    (pdir / ".claude-plugin" / "plugin.json").write_text(
+        json.dumps({"name": "fake", "version": "0.1.0", "description": "x"})
+    )
+    (pdir / "CLAUDE.md").write_text("# fake\n")
+    (pdir / "hooks").mkdir()
+
+    pjson = {"name": "fake", "version": "0.1.0", "description": "x"}
+    unexpected = _compute_unexpected_top_level_entries(pdir, pjson)
+    assert unexpected == set(), (
+        f"hooks/ should be canonically allowed, got unexpected={unexpected}"
+    )
 
 
 # ---------------------------------------------------------------------------
