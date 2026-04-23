@@ -326,3 +326,102 @@ console.log(sanitizeField('phase', 'helloworld`cmd`'));
     )
     assert rc == 0, stderr
     assert stdout.strip() == "helloworldcmd"
+
+
+# --- walkWorkflowTree (1.7) -------------------------------------------------
+
+
+def test_walk_tree_empty_or_invalid_inputs_return_empty():
+    rc, stdout, stderr = _call_util(
+        """
+console.log(JSON.stringify(walkWorkflowTree([], 'root')));
+console.log(JSON.stringify(walkWorkflowTree(null, 'root')));
+console.log(JSON.stringify(walkWorkflowTree([], 42)));
+console.log(JSON.stringify(walkWorkflowTree([{id:'only', parent:null}], 'root')));
+""",
+        imports=["walkWorkflowTree"],
+    )
+    assert rc == 0, stderr
+    assert stdout.strip().split("\n") == ["[]", "[]", "[]", "[]"]
+
+
+def test_walk_tree_direct_children():
+    rc, stdout, stderr = _call_util(
+        """
+const entries = [
+  { id: 'root', parent: null },
+  { id: 'A', parent: 'root' },
+  { id: 'B', parent: 'root' },
+  { id: 'C', parent: 'other' },
+];
+console.log(JSON.stringify(walkWorkflowTree(entries, 'root').map(e => e.id)));
+""",
+        imports=["walkWorkflowTree"],
+    )
+    assert rc == 0, stderr
+    result = json.loads(stdout.strip())
+    assert set(result) == {"A", "B"}
+
+
+def test_walk_tree_multi_level_topological():
+    """Descendants appear after their parent; BFS order is stable per level."""
+    rc, stdout, stderr = _call_util(
+        """
+const entries = [
+  { id: 'root', parent: null },
+  { id: 'A', parent: 'root' },
+  { id: 'AA', parent: 'A' },
+  { id: 'AAA', parent: 'AA' },
+];
+console.log(JSON.stringify(walkWorkflowTree(entries, 'root').map(e => e.id)));
+""",
+        imports=["walkWorkflowTree"],
+    )
+    assert rc == 0, stderr
+    assert stdout.strip() == '["A","AA","AAA"]'
+
+
+def test_walk_tree_handles_direct_cycle():
+    """Cycle A->B->A must terminate without infinite loop."""
+    rc, stdout, stderr = _call_util(
+        """
+const entries = [
+  { id: 'A', parent: 'B' },
+  { id: 'B', parent: 'A' },
+];
+console.log(JSON.stringify(walkWorkflowTree(entries, 'A').map(e => e.id)));
+""",
+        imports=["walkWorkflowTree"],
+    )
+    assert rc == 0, stderr
+    # Starting from A: B is a child of A (visited once). B's only listed
+    # child is A, already visited, so the walk terminates.
+    assert stdout.strip() == '["B"]'
+
+
+def test_walk_tree_skips_self_parent():
+    rc, stdout, stderr = _call_util(
+        """
+const entries = [
+  { id: 'root', parent: null },
+  { id: 'loop', parent: 'loop' },
+  { id: 'A', parent: 'root' },
+];
+console.log(JSON.stringify(walkWorkflowTree(entries, 'root').map(e => e.id)));
+""",
+        imports=["walkWorkflowTree"],
+    )
+    assert rc == 0, stderr
+    assert stdout.strip() == '["A"]'
+
+
+def test_walk_tree_excludes_root_itself():
+    rc, stdout, stderr = _call_util(
+        """
+const entries = [{ id: 'root', parent: null }];
+console.log(JSON.stringify(walkWorkflowTree(entries, 'root').map(e => e.id)));
+""",
+        imports=["walkWorkflowTree"],
+    )
+    assert rc == 0, stderr
+    assert stdout.strip() == "[]"

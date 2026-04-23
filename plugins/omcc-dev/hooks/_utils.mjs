@@ -155,6 +155,42 @@ export function getNestedMap(fmBody, topKey) {
   return out;
 }
 
+// Return all descendants of rootId reachable via entry.parent back-pointers,
+// in breadth-first topological order (each parent appears before its
+// descendants). rootId itself is excluded from the result.
+//
+// Cycle-safe: every node is visited at most once. Self-parent edges
+// (entry.parent === entry.id) are ignored. Intended for A4 transitive
+// "no active children" gating under hierarchical workflows.
+export function walkWorkflowTree(entries, rootId) {
+  if (typeof rootId !== "string" || !Array.isArray(entries)) return [];
+  // Build child index: parent_id -> [child_entry]
+  const byParent = new Map();
+  for (const e of entries) {
+    if (!e || typeof e !== "object" || typeof e.id !== "string") continue;
+    const p = e.parent;
+    if (typeof p !== "string" || p === e.id) continue;
+    const arr = byParent.get(p);
+    if (arr) arr.push(e);
+    else byParent.set(p, [e]);
+  }
+  const result = [];
+  const visited = new Set([rootId]);
+  const queue = [rootId];
+  while (queue.length > 0) {
+    const currentId = queue.shift();
+    const children = byParent.get(currentId);
+    if (!children) continue;
+    for (const child of children) {
+      if (visited.has(child.id)) continue;
+      visited.add(child.id);
+      result.push(child);
+      queue.push(child.id);
+    }
+  }
+  return result;
+}
+
 // Parse active.md's `active:` list into [{id, type, phase, parent, children, originating_finding}]
 export function parseActiveRegistry(content) {
   const parsed = parseFrontmatter(content);
