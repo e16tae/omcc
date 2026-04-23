@@ -375,6 +375,34 @@ class TestStop:
         _run_hook("stop.mjs", {"cwd": str(cwd)}, cwd)
         assert parent_path.exists(), "A4 must block parent archive while child active"
 
+    def test_active_grandchild_blocks_root_archive(self, tmp_path):
+        """Transitive A4: an active grandchild blocks the root's archive even
+        though the root's direct child is also non-terminal. Pre-hierarchical
+        A4 was 1-level; walkWorkflowTree now walks the full descendant tree."""
+        cwd = _init_cwd(tmp_path)
+        root_id = "audit-20260423T120000Z-aaaaaa"
+        mid_id = "fix-20260423T120100Z-bbbbbb"
+        leaf_id = "fix-20260423T120200Z-cccccc"
+        root_path = _write_workflow(
+            cwd, root_id, "summary-complete", "archive", "audit"
+        )
+        _write_workflow(cwd, mid_id, "investigate", "working", "fix")
+        _write_workflow(cwd, leaf_id, "investigate", "working", "fix")
+        _write_active(cwd, [
+            {"id": root_id, "type": "audit", "phase": "summary-complete",
+             "parent": None, "children": [mid_id]},
+            {"id": mid_id, "type": "fix", "phase": "investigate",
+             "parent": root_id, "children": [leaf_id]},
+            {"id": leaf_id, "type": "fix", "phase": "investigate",
+             "parent": mid_id, "children": []},
+        ])
+        _run_hook("stop.mjs", {"cwd": str(cwd)}, cwd)
+        assert root_path.exists(), \
+            "transitive A4 must block root archive while any descendant is active"
+        assert not (
+            cwd / ".claude" / "omcc-dev" / "archive" / f"{root_id}.md"
+        ).exists()
+
     def test_stale_registry_entry_reconciled(self, tmp_path):
         """If a workflow file is already in archive/ but the active registry
         still lists it, Stop hook should reconcile by removing the entry."""

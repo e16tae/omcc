@@ -20,6 +20,7 @@ import {
   atomicModifyFile,
   archiveCleanupPolicy,
   isValidWorkflowId,
+  walkWorkflowTree,
   TERMINAL_PHASES,
   COMMIT_SUBJECT_REGEX,
   KNOWN_WORKFLOW_TYPES,
@@ -46,8 +47,12 @@ function getCurrentHead(cwd) {
   } catch { return null; }
 }
 
+// Transitive: any descendant (child, grandchild, deeper) in the
+// active registry blocks the workflow's archive under hierarchical
+// workflows. Cycle-safe via walkWorkflowTree's visited set.
+// continuity-protocol.md §Cross-workflow Handoff — Parent archive gating.
 function hasActiveChildren(entries, workflowId) {
-  return entries.some((e) => e.parent === workflowId);
+  return walkWorkflowTree(entries, workflowId).length > 0;
 }
 
 async function validateFields(filePath) {
