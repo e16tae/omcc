@@ -13,7 +13,7 @@ import {
   resolveWorkflowPath,
   parseActiveRegistry,
   parseFrontmatter,
-  sanitize,
+  sanitizeField,
   isValidWorkflowId,
   SUPPORTED_SCHEMA_VERSION,
 } from "./_utils.mjs";
@@ -43,9 +43,9 @@ async function main() {
     const schemaRaw = fields.schema;
     const schema = schemaRaw !== undefined ? Number(schemaRaw) : undefined;
     if (schema !== undefined && schema > SUPPORTED_SCHEMA_VERSION) continue;
-    const phase = sanitize(fields.current_phase || e.phase || "unknown", 64);
-    const nextAction = sanitize(fields.next_action || "", 120);
-    const type = sanitize(e.type || fields.workflow_type || "?", 16);
+    const phase = sanitizeField("phase", fields.current_phase || e.phase || "unknown");
+    const nextAction = sanitizeField("next_action", fields.next_action || "");
+    const type = sanitizeField("type", e.type || fields.workflow_type || "?");
     lines.push(`- ${e.id} (${type}) phase=${phase} next="${nextAction}"`);
   }
   if (lines.length === 1) process.exit(0);

@@ -35,6 +35,24 @@ export function sanitize(value, cap = SANITIZE_CAP) {
   return s;
 }
 
+// Per-field length caps for sanitize() callers. Prefer sanitizeField over
+// hand-picked numeric caps at call sites — the table keeps caps consistent
+// across hooks and commands and makes new fields easy to register.
+export const SANITIZE_FIELD_CAPS = {
+  phase: 64,
+  next_action: 120,
+  type: 16,
+  // Pre-registered for schema 2 /omcc-dev:checkpoint injection (B5.3).
+  checkpoint_summary: 200,
+};
+
+export function sanitizeField(name, value) {
+  const cap = Object.prototype.hasOwnProperty.call(SANITIZE_FIELD_CAPS, name)
+    ? SANITIZE_FIELD_CAPS[name]
+    : SANITIZE_CAP;
+  return sanitize(value, cap);
+}
+
 export function isValidWorkflowId(id) {
   return typeof id === "string" && WORKFLOW_ID_REGEX.test(id);
 }

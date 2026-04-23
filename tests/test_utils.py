@@ -276,3 +276,53 @@ for (const c of cases) {
     # JSON.stringify(undefined) returns the value undefined (not a string),
     # which console.log prints as the literal "undefined".
     assert lines == ["null", "undefined", "42", '{"a":1}'], lines
+
+
+# --- SANITIZE_FIELD_CAPS / sanitizeField (1.6) ------------------------------
+
+
+def test_sanitize_field_applies_table_caps():
+    """Each field name gets its table-defined cap."""
+    rc, stdout, stderr = _call_util(
+        """
+const long = 'x'.repeat(300);
+console.log('phase:' + sanitizeField('phase', long).length);
+console.log('next_action:' + sanitizeField('next_action', long).length);
+console.log('type:' + sanitizeField('type', long).length);
+console.log('checkpoint_summary:' + sanitizeField('checkpoint_summary', long).length);
+""",
+        imports=["sanitizeField"],
+    )
+    assert rc == 0, stderr
+    lines = stdout.strip().split("\n")
+    assert lines == [
+        "phase:64",
+        "next_action:120",
+        "type:16",
+        "checkpoint_summary:200",
+    ]
+
+
+def test_sanitize_field_unknown_name_uses_default_cap():
+    """Unknown field name falls back to SANITIZE_CAP (512)."""
+    rc, stdout, stderr = _call_util(
+        """
+const long = 'x'.repeat(1000);
+console.log(sanitizeField('nonexistent_field_name', long).length);
+""",
+        imports=["sanitizeField"],
+    )
+    assert rc == 0, stderr
+    assert stdout.strip() == "512"
+
+
+def test_sanitize_field_strips_control_chars_and_backticks():
+    """sanitizeField inherits sanitize() stripping behavior."""
+    rc, stdout, stderr = _call_util(
+        r"""
+console.log(sanitizeField('phase', 'helloworld`cmd`'));
+""",
+        imports=["sanitizeField"],
+    )
+    assert rc == 0, stderr
+    assert stdout.strip() == "helloworldcmd"
