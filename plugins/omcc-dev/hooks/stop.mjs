@@ -15,6 +15,8 @@ import {
   parseActiveRegistry,
   parseFrontmatter,
   getNestedMap,
+  acquireLock,
+  releaseLock,
   atomicModifyFile,
   archiveCleanupPolicy,
   isValidWorkflowId,
@@ -126,11 +128,25 @@ async function maybeAutoArchive(cwd, entry, entries) {
 async function moveToArchive(cwd, workflowId) {
   const src = resolveWorkflowPath(cwd, workflowId);
   const dst = resolveArchivePath(cwd, workflowId);
+  // Acquire the same `<src>.lock` sentinel that atomicModifyFile /
+  // atomicUpdateFile use so archive rename cannot interleave with a
+  // concurrent PreCompact (or any other writer) between its
+  // rename(src, bak) and rename(tmp, src) pair. Without this lock the
+  // archiver can see the file momentarily absent and fail with ENOENT,
+  // or worse replace the freshly-written snapshot with an archived
+  // copy whose active-registry entry has not yet been removed.
+  const lockPath = `${src}.lock`;
+  const acquired = await acquireLock(lockPath);
+  if (!acquired) return false;
   try {
-    await rename(src, dst);
-  } catch { return false; }
-  await archiveCleanupPolicy(src);
-  return true;
+    try {
+      await rename(src, dst);
+    } catch { return false; }
+    await archiveCleanupPolicy(src);
+    return true;
+  } finally {
+    await releaseLock(lockPath);
+  }
 }
 
 async function removeFromActiveRegistry(cwd, removeId) {
