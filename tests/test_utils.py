@@ -425,3 +425,126 @@ console.log(JSON.stringify(walkWorkflowTree(entries, 'root').map(e => e.id)));
     )
     assert rc == 0, stderr
     assert stdout.strip() == "[]"
+
+
+# --- parseNestedList + parseActiveRegistry (1.8) ---------------------------
+
+
+def test_parse_active_registry_regression():
+    """Primary regression: active registry parse via parseNestedList."""
+    rc, stdout, stderr = _call_util(
+        """
+const content = `---
+schema: 1
+updated_at: 2026-04-22T00:00:00Z
+active:
+  - id: fix-20260422T120000Z-abcdef
+    type: fix
+    phase: investigate
+    parent: null
+    children: []
+    originating_finding: null
+  - id: start-20260422T130000Z-123456
+    type: start
+    phase: implement
+    parent: null
+    children:
+      - fix-20260422T120000Z-abcdef
+    originating_finding: null
+---
+`;
+console.log(JSON.stringify(parseActiveRegistry(content)));
+""",
+        imports=["parseActiveRegistry"],
+    )
+    assert rc == 0, stderr
+    result = json.loads(stdout.strip())
+    assert len(result) == 2
+    assert result[0]["id"] == "fix-20260422T120000Z-abcdef"
+    assert result[0]["type"] == "fix"
+    assert result[0]["parent"] is None
+    assert result[0]["children"] == []
+    assert result[1]["children"] == ["fix-20260422T120000Z-abcdef"]
+
+
+def test_parse_nested_list_with_unrelated_top_key():
+    """parseNestedList works for any top-level list-of-maps key, not just `active`."""
+    rc, stdout, stderr = _call_util(
+        """
+const fmBody = `schema: 1
+findings:
+  - id: finding-1
+    severity: high
+    decision: undecided
+  - id: finding-2
+    severity: low
+    decision: fix-now`;
+console.log(JSON.stringify(parseNestedList(fmBody, 'findings')));
+""",
+        imports=["parseNestedList"],
+    )
+    assert rc == 0, stderr
+    result = json.loads(stdout.strip())
+    assert len(result) == 2
+    assert result[0]["id"] == "finding-1"
+    assert result[0]["severity"] == "high"
+    assert result[1]["decision"] == "fix-now"
+
+
+def test_parse_nested_list_empty_inline_literal():
+    """`topKey: []` parses as empty list."""
+    rc, stdout, stderr = _call_util(
+        """
+const fmBody = 'schema: 1\\nfindings: []\\n';
+console.log(JSON.stringify(parseNestedList(fmBody, 'findings')));
+""",
+        imports=["parseNestedList"],
+    )
+    assert rc == 0, stderr
+    assert stdout.strip() == "[]"
+
+
+def test_parse_nested_list_ignores_malformed_lines():
+    """Lines without `key: value` shape are skipped silently (fail-closed)."""
+    rc, stdout, stderr = _call_util(
+        """
+const fmBody = `schema: 1
+active:
+  - id: valid-id
+    type: fix
+    malformed line without colon
+    phase: investigate`;
+const result = parseNestedList(fmBody, 'active', ['children']);
+console.log(JSON.stringify(result[0]));
+""",
+        imports=["parseNestedList"],
+    )
+    assert rc == 0, stderr
+    entry = json.loads(stdout.strip())
+    assert entry["id"] == "valid-id"
+    assert entry["type"] == "fix"
+    assert entry["phase"] == "investigate"
+
+
+def test_parse_nested_list_respects_inner_list_keys():
+    """children is collected as nested list only when listed in innerListKeys."""
+    rc, stdout, stderr = _call_util(
+        """
+const fmBody = `schema: 1
+active:
+  - id: a
+    children:
+      - child-1
+      - child-2`;
+const withInner = parseNestedList(fmBody, 'active', ['children']);
+const withoutInner = parseNestedList(fmBody, 'active');
+console.log(JSON.stringify(withInner[0].children));
+console.log(JSON.stringify(withoutInner[0].children));
+""",
+        imports=["parseNestedList"],
+    )
+    assert rc == 0, stderr
+    lines = stdout.strip().split("\n")
+    assert lines[0] == '["child-1","child-2"]'
+    # Without innerListKeys, `children` is parsed as a scalar kv -> "" -> null
+    assert lines[1] in ("null", "undefined")

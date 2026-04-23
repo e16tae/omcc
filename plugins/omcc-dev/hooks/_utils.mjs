@@ -191,38 +191,46 @@ export function walkWorkflowTree(entries, rootId) {
   return result;
 }
 
-// Parse active.md's `active:` list into [{id, type, phase, parent, children, originating_finding}]
-export function parseActiveRegistry(content) {
-  const parsed = parseFrontmatter(content);
-  if (!parsed) return [];
-  const m = parsed.fmBody.match(/(?:^|\n)active:\s*(?:\n([\s\S]*))?$/);
+// Parse a YAML-subset list of maps from an fmBody region starting at
+// `<topKey>:`. Each map is introduced by `  - id: <value>` and continues
+// with `    <key>: <value>` lines until the next map or a non-indented
+// line (including the `---` terminator). Nested lists for specific keys
+// (e.g., `children:` under each active entry) are recognized when that
+// key is listed in `innerListKeys`.
+//
+// Returns [] when the topKey is absent or its block is empty.
+export function parseNestedList(fmBody, topKey, innerListKeys = []) {
+  const pattern = new RegExp(`(?:^|\\n)${topKey}:\\s*(?:\\n([\\s\\S]*))?$`);
+  const m = fmBody.match(pattern);
   if (!m || !m[1]) return [];
+  const innerSet = new Set(innerListKeys);
   const entries = [];
   let current = null;
-  let inChildren = false;
+  let currentList = null; // name of the nested list currently being filled, or null
   for (const line of m[1].split("\n")) {
     if (/^\S/.test(line) || line.trim() === "---") break;
     const idLine = line.match(/^\s*-\s*id:\s*(\S+)/);
     if (idLine) {
       if (current) entries.push(current);
-      current = { id: idLine[1], children: [] };
-      inChildren = false;
+      current = { id: idLine[1] };
+      for (const k of innerListKeys) current[k] = [];
+      currentList = null;
       continue;
     }
     if (!current) continue;
     const listItem = line.match(/^\s{6,}-\s*(\S+)/);
-    if (inChildren && listItem) {
-      current.children.push(listItem[1]);
+    if (currentList && listItem) {
+      current[currentList].push(listItem[1]);
       continue;
     }
     const kv = line.match(/^\s+([a-zA-Z_][a-zA-Z0-9_]*):\s*(.*)$/);
     if (!kv) continue;
     const [, key, rawVal] = kv;
-    inChildren = false;
+    currentList = null;
     let val = rawVal.trim();
-    if (key === "children") {
-      inChildren = true;
-      if (val === "[]") current.children = [];
+    if (innerSet.has(key)) {
+      currentList = key;
+      if (val === "[]") current[key] = [];
       continue;
     }
     if (val === "null" || val === "") val = null;
@@ -230,6 +238,13 @@ export function parseActiveRegistry(content) {
   }
   if (current) entries.push(current);
   return entries;
+}
+
+// Parse active.md's `active:` list into [{id, type, phase, parent, children, originating_finding}]
+export function parseActiveRegistry(content) {
+  const parsed = parseFrontmatter(content);
+  if (!parsed) return [];
+  return parseNestedList(parsed.fmBody, "active", ["children"]);
 }
 
 export function getGitInfo(cwd) {
