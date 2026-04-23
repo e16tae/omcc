@@ -319,7 +319,7 @@ console.log(sanitizeField('nonexistent_field_name', long).length);
 def test_sanitize_field_strips_control_chars_and_backticks():
     """sanitizeField inherits sanitize() stripping behavior."""
     rc, stdout, stderr = _call_util(
-        r"""
+        """
 console.log(sanitizeField('phase', 'helloworld`cmd`'));
 """,
         imports=["sanitizeField"],
