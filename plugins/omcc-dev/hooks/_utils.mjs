@@ -39,6 +39,15 @@ export function isValidWorkflowId(id) {
   return typeof id === "string" && WORKFLOW_ID_REGEX.test(id);
 }
 
+// Finding IDs are audit-only keys into the parent audit's `findings[]`
+// array — never used as a filesystem path component. Validated against
+// a separate regex per continuity-protocol.md §Finding IDs.
+export const FINDING_ID_REGEX = /^finding-[0-9]+$/;
+
+export function isValidFindingId(id) {
+  return typeof id === "string" && FINDING_ID_REGEX.test(id);
+}
+
 export function readStdinJson(timeoutMs = 100) {
   return new Promise((resolvePromise) => {
     let data = "";

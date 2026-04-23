@@ -138,3 +138,48 @@ def test_atomic_update_file_still_works(tmp_path):
     assert rc == 0, stderr
     assert target.read_text() == "v2\n"
     assert (tmp_path / "state.md.bak").read_text() == "v1\n"
+
+
+# --- FINDING_ID_REGEX / isValidFindingId (1.4) ------------------------------
+
+
+def test_finding_id_accepts_valid():
+    """isValidFindingId accepts ^finding-[0-9]+$ per continuity-protocol.md:86."""
+    rc, stdout, stderr = _call_util(
+        """
+for (const id of ['finding-0', 'finding-1', 'finding-42', 'finding-999']) {
+  console.log(id + ':' + isValidFindingId(id));
+}
+""",
+        imports=["isValidFindingId"],
+    )
+    assert rc == 0, stderr
+    lines = stdout.strip().split("\n")
+    assert lines == [
+        "finding-0:true",
+        "finding-1:true",
+        "finding-42:true",
+        "finding-999:true",
+    ]
+
+
+def test_finding_id_rejects_invalid():
+    """Malformed / path-traversal / wrong-type inputs must be rejected."""
+    rc, stdout, stderr = _call_util(
+        """
+for (const id of [
+  'finding-', 'finding', 'find-1', 'FINDING-1', 'finding-1.5',
+  'finding-1/../etc', '', 'finding-1 ', 'findingx1', 'finding--1',
+]) {
+  console.log(id + ':' + isValidFindingId(id));
+}
+console.log('null:' + isValidFindingId(null));
+console.log('undef:' + isValidFindingId(undefined));
+console.log('number:' + isValidFindingId(1));
+console.log('object:' + isValidFindingId({}));
+""",
+        imports=["isValidFindingId"],
+    )
+    assert rc == 0, stderr
+    for line in stdout.strip().split("\n"):
+        assert line.endswith(":false"), f"expected false, got: {line}"
