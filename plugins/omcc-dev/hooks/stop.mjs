@@ -15,7 +15,7 @@ import {
   parseActiveRegistry,
   parseFrontmatter,
   getNestedMap,
-  atomicUpdateFile,
+  atomicModifyFile,
   isValidWorkflowId,
   TERMINAL_PHASES,
   COMMIT_SUBJECT_REGEX,
@@ -141,45 +141,46 @@ async function moveToArchive(cwd, workflowId) {
 async function removeFromActiveRegistry(cwd, removeId) {
   const activePath = resolveActivePath(cwd);
   if (!existsSync(activePath)) return;
-  let content = "";
-  try { content = await readFile(activePath, "utf8"); } catch { return; }
-  // Line-scan: skip the `- id: removeId` block until the next `- id:` or
-  // the frontmatter terminator. Blocks are identified by indentation > 2.
-  const lines = content.split("\n");
-  const out = [];
-  let skipping = false;
-  for (const line of lines) {
-    const idLine = line.match(/^\s*-\s*id:\s*(\S+)/);
-    if (idLine) {
-      skipping = idLine[1] === removeId;
-      if (!skipping) out.push(line);
-      continue;
-    }
-    if (skipping) {
-      // still inside the entry block if line has >= 4 leading spaces or is a
-      // bare list continuation; otherwise we exited the entry.
-      if (/^\s{4,}/.test(line) || line.trim() === "") {
-        continue;
-      }
-      skipping = false;
-    }
-    out.push(line);
-  }
-  const nowIso = new Date().toISOString();
-  let updated = out.join("\n");
-  // If the `active:` list is now empty, normalize a dangling `active:`
-  // scalar (which YAML reads as null) to the required empty list
-  // literal `active: []`.
-  updated = updated.replace(
-    /(^|\n)active:\s*\n(\s*---)/,
-    (_m, prefix, terminator) => `${prefix}active: []\n${terminator}`
-  );
-  updated = updated.replace(
-    /^(\s*updated_at:\s*).*$/m,
-    `$1${nowIso}`
-  );
   try {
-    await atomicUpdateFile(activePath, updated);
+    await atomicModifyFile(activePath, async (content) => {
+      if (content === null) return null;
+      // Line-scan: skip the `- id: removeId` block until the next `- id:` or
+      // the frontmatter terminator. Blocks are identified by indentation > 2.
+      const lines = content.split("\n");
+      const out = [];
+      let skipping = false;
+      for (const line of lines) {
+        const idLine = line.match(/^\s*-\s*id:\s*(\S+)/);
+        if (idLine) {
+          skipping = idLine[1] === removeId;
+          if (!skipping) out.push(line);
+          continue;
+        }
+        if (skipping) {
+          // still inside the entry block if line has >= 4 leading spaces or
+          // is a bare list continuation; otherwise we exited the entry.
+          if (/^\s{4,}/.test(line) || line.trim() === "") {
+            continue;
+          }
+          skipping = false;
+        }
+        out.push(line);
+      }
+      const nowIso = new Date().toISOString();
+      let updated = out.join("\n");
+      // If the `active:` list is now empty, normalize a dangling `active:`
+      // scalar (which YAML reads as null) to the required empty list
+      // literal `active: []`.
+      updated = updated.replace(
+        /(^|\n)active:\s*\n(\s*---)/,
+        (_m, prefix, terminator) => `${prefix}active: []\n${terminator}`
+      );
+      updated = updated.replace(
+        /^(\s*updated_at:\s*).*$/m,
+        `$1${nowIso}`
+      );
+      return updated;
+    });
   } catch {
     // best-effort reconciliation
   }

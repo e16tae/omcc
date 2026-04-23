@@ -211,11 +211,23 @@ export async function releaseLock(lockPath) {
   try { await unlink(lockPath); } catch {}
 }
 
-export async function atomicUpdateFile(filePath, newContent) {
+// atomicModifyFile: read-modify-write under advisory lock.
+// mutator signature: async (current: string | null) => string | null | undefined
+//   - receives null when target does not exist
+//   - returns new content to write, or null/undefined for no-op
+// The full read → mutate → write sequence runs inside one lock acquisition,
+// preventing lost updates between read and write. Errors from mutator
+// release the lock and re-throw.
+export async function atomicModifyFile(filePath, mutator) {
   const lockPath = `${filePath}.lock`;
   const acquired = await acquireLock(lockPath);
   if (!acquired) throw new Error(`lock timeout: ${filePath}`);
   try {
+    const current = existsSync(filePath)
+      ? await readFile(filePath, "utf8")
+      : null;
+    const next = await mutator(current);
+    if (next === null || next === undefined) return;
     const tmp = `${filePath}.tmp`;
     const bak = `${filePath}.bak`;
     // Remove any stale tempfile (e.g., symlink planted by another process)
@@ -227,7 +239,7 @@ export async function atomicUpdateFile(filePath, newContent) {
     // continuity-protocol.md §Atomic write discipline.
     const fh = await open(tmp, "wx", 0o600);
     try {
-      await fh.writeFile(newContent, { encoding: "utf8" });
+      await fh.writeFile(next, { encoding: "utf8" });
       await fh.sync();
     } finally {
       await fh.close();
@@ -240,6 +252,13 @@ export async function atomicUpdateFile(filePath, newContent) {
   } finally {
     await releaseLock(lockPath);
   }
+}
+
+// Thin wrapper: atomic write with pre-computed content. Equivalent to
+// atomicModifyFile(path, async () => newContent). Retained for callers
+// that compute content outside the lock; see atomicModifyFile for RMW.
+export async function atomicUpdateFile(filePath, newContent) {
+  return atomicModifyFile(filePath, async () => newContent);
 }
 
 export function resolveActivePath(cwd) {
