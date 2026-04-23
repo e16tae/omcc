@@ -95,7 +95,7 @@ of currently-active workflows. Schema:
 
 ```yaml
 ---
-schema: 1
+schema: 2
 updated_at: 2026-04-22T14:30:00Z
 active:                                  # required; empty list when no workflows active
   - id: <workflow_id>                    # required
@@ -126,7 +126,13 @@ body is human/agent context.
 
 ### YAML subset
 
-Frontmatter MUST be parseable as **YAML 1.2 core schema** (JSON-compat).
+Frontmatter MUST be parseable as a **strict subset of YAML 1.2 core
+schema** (JSON-compat). Specifically, the parser layer in
+`hooks/_utils.mjs` (`parseFrontmatter` + `getNestedMap` +
+`parseNestedList`) supports: top-level scalar key: value pairs,
+single-level nested maps, and list-of-maps blocks with optional
+nested scalar lists (e.g., `children:`) — not the full YAML grammar.
+Writers MUST stay inside this subset.
 Timestamps use the `Z` suffix (UTC). All `id` fields throughout the schema
 are **opaque strings**; consumers MUST NOT parse them as integers.
 
@@ -140,7 +146,7 @@ across implementations.
 
 ```yaml
 ---
-schema: 1                              # integer; protocol version
+schema: 2                              # integer; protocol version
 workflow_id: <type>-<timestamp>-<shortid>
 workflow_type: start | fix | audit
 original_request: <summary; see Security>
@@ -332,8 +338,18 @@ append-only shortcut exists.)
 - Frontmatter fields not in the schema: consumers MUST **preserve them
   verbatim on round-trip write** (no silent drop). Writers MUST NOT
   introduce new frontmatter fields without bumping `schema`.
-- Unknown `schema` version `schema > 1`: `/omcc-dev:resume` and hooks MUST
-  warn the user and offer archive/abort — never silently proceed.
+- `schema` outside the supported range: hooks MUST skip the file with a
+  stderr diagnostic. `/omcc-dev:resume` MUST offer Import / Archive /
+  Abort — never silently proceed.
+  - **Future** (`schema > SUPPORTED_SCHEMA_VERSION`): the reader does
+    not understand the file. Diagnostic names the schema and the
+    supported ceiling.
+  - **Legacy** (`schema < SUPPORTED_SCHEMA_VERSION`, currently
+    `schema === 1`): file is carryover from an earlier protocol
+    version. Hook-layer diagnostic points the user at
+    `/omcc-dev:resume` which provides the migration path
+    (see Schema 1 → 2 Migration below, implemented in the schema-2
+    resume handoff).
 - Older `schema < 1` is undefined (1 is the initial); treat as corrupt.
 - Missing required field: treat as corrupt; fall back to `<file>.bak` if
   available AND `.bak` passes validation (schema + workflow_id regex +
@@ -344,8 +360,10 @@ append-only shortcut exists.)
 - **Minor bump** (schema stays integer; documentation tracks minor
   revision): new field added to existing section; new non-terminal
   `current_phase` value; new `ensemble_type` entry. Backward compatible.
-- **Major bump** (`schema: 1` → `schema: 2`): field renamed or removed;
-  terminal state added; `workflow_id` format changed. Non-backward-compatible.
+- **Major bump** (e.g., `schema: 2` → `schema: 3`): field renamed or
+  removed; terminal state added; `workflow_id` format changed.
+  Non-backward-compatible. Legacy files are skipped at the hook layer
+  and migrated via `/omcc-dev:resume`.
 - Readers of schema `N` MAY read files where `schema <= N` and SHOULD
   migrate on write. Readers MUST NOT read files where `schema > N`.
 
@@ -684,7 +702,7 @@ When a command's Phase 0 detects a file at `<cwd>/.claude/design-context.md`:
    - **Import**: parse the four sections (Decision / Architecture / Plan /
      Deliverable Progress) and create a new workflow file at
      `<cwd>/.claude/omcc-dev/workflows/start-<now-timestamp>-migrated-<shortid>.md`.
-     Required fields on the new file: `schema: 1`; `workflow_type: start`;
+     Required fields on the new file: `schema: 2`; `workflow_type: start`;
      `workflow_id` follows the migration exception format; `started_at`
      and `updated_at` = migration time; `git_baseline` = current repo
      state (baseline is unknowable from legacy); imported sections are
