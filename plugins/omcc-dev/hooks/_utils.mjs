@@ -48,6 +48,39 @@ export function isValidFindingId(id) {
   return typeof id === "string" && FINDING_ID_REGEX.test(id);
 }
 
+// Secret scrub patterns per continuity-protocol.md §Secrets hygiene.
+// Applied in order; each match is replaced with "[REDACTED]".
+// Patterns 1 and 2 are case-sensitive (token formats and the HTTP
+// Bearer header convention respectively). Pattern 3 is
+// case-insensitive via the /i flag.
+export const SECRETS_SCRUB_PATTERNS = [
+  {
+    pattern:
+      /(sk|pk|ghp|gho|ghu|ghs|ghr|github_pat|xoxb|xoxp|AKIA)[_A-Za-z0-9-]{8,}/g,
+    replacement: "[REDACTED]",
+  },
+  {
+    pattern: /Bearer\s+[A-Za-z0-9._~+/=-]+/g,
+    replacement: "[REDACTED]",
+  },
+  {
+    pattern:
+      /(password|token|secret|api[_-]?key|authorization)\s*[:=]\s*\S+/gi,
+    replacement: "[REDACTED]",
+  },
+];
+
+// Best-effort scrub. Non-string values pass through unchanged so callers
+// may chain without defensive type checks at each call site.
+export function scrubSecrets(text) {
+  if (typeof text !== "string") return text;
+  let out = text;
+  for (const { pattern, replacement } of SECRETS_SCRUB_PATTERNS) {
+    out = out.replace(pattern, replacement);
+  }
+  return out;
+}
+
 export function readStdinJson(timeoutMs = 100) {
   return new Promise((resolvePromise) => {
     let data = "";

@@ -183,3 +183,94 @@ console.log('object:' + isValidFindingId({}));
     assert rc == 0, stderr
     for line in stdout.strip().split("\n"):
         assert line.endswith(":false"), f"expected false, got: {line}"
+
+
+# --- SECRETS_SCRUB_PATTERNS / scrubSecrets (1.5) ----------------------------
+
+
+def test_scrub_redacts_token_prefixes():
+    """Pattern 1: sk*, ghp*, AKIA*, xoxb* etc. per continuity-protocol.md:764-766."""
+    rc, stdout, stderr = _call_util(
+        """
+for (const s of [
+  'ghp_1234567890abcdef',
+  'sk-ant-api-abc12345',
+  'AKIAIOSFODNN7EXAMPLE',
+  'xoxb-test-abcdefgh12',
+  'github_pat_abcdef12345',
+]) {
+  console.log(scrubSecrets(s));
+}
+""",
+        imports=["scrubSecrets"],
+    )
+    assert rc == 0, stderr
+    for line in stdout.strip().split("\n"):
+        assert line == "[REDACTED]", f"expected REDACTED, got: {line}"
+
+
+def test_scrub_redacts_bearer_token():
+    """Pattern 2: case-sensitive Bearer header per continuity-protocol.md:767."""
+    rc, stdout, stderr = _call_util(
+        "console.log(scrubSecrets('Bearer abc.def-123+xyz/='));",
+        imports=["scrubSecrets"],
+    )
+    assert rc == 0, stderr
+    assert stdout.strip() == "[REDACTED]"
+
+
+def test_scrub_keyword_value_case_insensitive():
+    """Pattern 3: (password|token|secret|api_key|authorization) + :/= + value."""
+    rc, stdout, stderr = _call_util(
+        """
+for (const s of [
+  'password=hunter2',
+  'PASSWORD: supersecret',
+  'api_key = xyz123',
+  'API-KEY: ABCDEF',
+  'Secret=shh',
+  'token : t0k3n',
+  'Authorization=opaque',
+]) {
+  console.log(scrubSecrets(s));
+}
+""",
+        imports=["scrubSecrets"],
+    )
+    assert rc == 0, stderr
+    for line in stdout.strip().split("\n"):
+        assert line == "[REDACTED]", f"expected REDACTED, got: {line}"
+
+
+def test_scrub_replaces_all_occurrences():
+    """Global flag: multiple matches in the same string all redact."""
+    rc, stdout, stderr = _call_util(
+        "console.log(scrubSecrets('ghp_xxxxxxxx and ghp_yyyyyyyy'));",
+        imports=["scrubSecrets"],
+    )
+    assert rc == 0, stderr
+    assert stdout.strip() == "[REDACTED] and [REDACTED]"
+
+
+def test_scrub_passes_through_innocuous_text():
+    rc, stdout, stderr = _call_util(
+        "console.log(scrubSecrets('this is a normal string'));",
+        imports=["scrubSecrets"],
+    )
+    assert rc == 0, stderr
+    assert stdout.strip() == "this is a normal string"
+
+
+def test_scrub_returns_non_strings_unchanged():
+    rc, stdout, stderr = _call_util(
+        """
+const cases = [null, undefined, 42, {a: 1}];
+for (const c of cases) {
+  console.log(JSON.stringify(scrubSecrets(c)));
+}
+""",
+        imports=["scrubSecrets"],
+    )
+    assert rc == 0, stderr
+    lines = stdout.strip().split("\n")
+    assert lines == ["null", "", "42", '{"a":1}'], lines
