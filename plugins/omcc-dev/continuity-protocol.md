@@ -670,9 +670,19 @@ invoke other git subcommands such as `check-ignore` during Phase 0):
   fires on every compaction, so the silent path is the common case.
 
 - **Frontmatter sanitization** (applied to every string value before
-  injection): length cap 512 chars, strip control characters (`\x00-\x08`,
-  `\x0b-\x1f`, `\x7f`), refuse to echo backtick-quoted shell content
-  (reject backticks).
+  injection): length cap (see `SANITIZE_FIELD_CAPS` in `hooks/_utils.mjs`
+  — phase=64, next_action=120, type=16, checkpoint_summary=200; default
+  SANITIZE_CAP=512 for unregistered field names), strip control
+  characters (`\x00-\x08`, `\x0b-\x1f`, `\x7f`).
+- **Backtick rule**: if any sanitized value in an entry contains a
+  backtick (U+0060), that entire entry is rejected (skipped from the
+  output) and a one-line stderr diagnostic names the workflow id and
+  field. Rationale: backtick-quoted content in a summary that later
+  lands in Claude's context is a prompt-injection surface; the
+  conservative posture is to drop the row rather than emit a stripped
+  fragment. When every surviving entry is dropped this way, the hook
+  emits a one-line stderr summary "N entries skipped" and exits with
+  no stdout (matches the silent-no-workflows path).
 - **Body content is NOT injected** via SessionStart.
 
 ### PreCompact (no matcher)
