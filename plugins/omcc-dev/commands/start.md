@@ -71,9 +71,13 @@ section.
    workflow id, `type: start`, `phase: "brainstorm"` (mirrors
    `current_phase`), `parent: <parent_workflow if step 5 set one, else
    null>`, `children: []`, `originating_finding: <finding id if step 5
-   set one, else null>`. The Stop hook's A4 active-children check
-   relies on the `parent` field, so omitting it can cause a parent
-   audit to auto-archive prematurely.
+   set one, else null>`. **If step 5 set `parent_workflow`, also call
+   `appendChildToParentRegistry(activePath, parent_workflow, <this id>)`**
+   so the parent's `children:` list operationally reflects this child
+   (schema-2 requires the two-way `parent` ↔ `children` link; the
+   Stop hook's transitive A4 gate walks `walkWorkflowTree` over the
+   registry, but manual audit UX and cross-tooling rely on a correct
+   `children:` field).
 7. Run `git check-ignore <cwd>/.claude/omcc-dev/` and warn if the
    directory is not gitignored (per `continuity-protocol.md` Security
    Considerations).

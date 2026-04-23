@@ -68,6 +68,9 @@ section.
    workflow id, `type: fix`, `phase: "investigate"`, `parent:
    <parent_workflow if step 5 set one, else null>`, `children: []`,
    `originating_finding: <finding id if step 5 set one, else null>`.
+   **If step 5 set `parent_workflow`, also call
+   `appendChildToParentRegistry(activePath, parent_workflow, <this id>)`**
+   so the parent's `children:` list operationally reflects this child.
 7. Run `git check-ignore <cwd>/.claude/omcc-dev/` and warn if the
    directory is not gitignored (per `continuity-protocol.md` Security
    Considerations).

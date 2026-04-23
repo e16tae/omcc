@@ -76,7 +76,11 @@ active registry and workflow files directly for every decision.
      vs the corrupt primary and ask the user whether to restore.
    - Otherwise archive the corrupt file (rename to
      `archive/<selected_id>-corrupt-<timestamp>.md`), update the
-     registry, and treat the workflow as missing.
+     registry, and treat the workflow as missing. **If the entry's
+     `parent` is a valid workflow id, also call
+     `removeChildFromParentRegistry(activePath, parent, <id>)`** —
+     corrupt-state archive is a cleanup path too and must scrub the
+     back-pointer like Stop auto-archive does.
 
 ## Step 3: Git Drift Analysis
 
@@ -123,7 +127,10 @@ Present synthesis to the user with three options:
 - **Adapt**: record the drift analysis into the workflow body, update
   `current_phase`/`next_action` as needed, proceed.
 - **Archive**: move the workflow to `archive/` with the drift verdict
-  recorded in its body; exit.
+  recorded in its body; exit. **If the entry's `parent` is a valid
+  workflow id, also call
+  `removeChildFromParentRegistry(activePath, parent, <id>)`** to
+  scrub the back-pointer.
 - **Abort**: leave state untouched; exit.
 
 ## Step 5: Native Resume Interaction Check
@@ -175,17 +182,24 @@ session features:
 ## Step 7: Manual Archive (`$ARGUMENTS == "archive <id>"`)
 
 1. Validate the target id against the workflow-id regex.
-2. Confirm with the user. If the active registry shows the target has
-   `children: [...]`, warn that children will reference a workflow in
-   `archive/` after this operation; `continuity-protocol.md` specifies
-   that child resolution MUST search both `workflows/` and `archive/`.
+2. Confirm with the user. Read the active registry to determine (a) if
+   the target has non-empty `children: [...]` — warn that child
+   resolution will fall through to `archive/` after this operation
+   (`continuity-protocol.md` Cross-workflow Handoff specifies that
+   resolution MUST search both `workflows/` and `archive/`) — and
+   (b) the target's own `parent` field, which drives step 4.
 3. Move `workflows/<id>.md` → `archive/<id>.md` atomically per the
    continuity protocol's atomic write rules.
 4. Remove the entry from the active registry (atomic update).
-5. If the archived workflow had a parent, that parent's
-   `findings[i].child_workflow` pointer (when present) now points into
-   `archive/` — resolution rule already handles this; no additional
-   action needed.
+   **If the archived entry's `parent` is a valid workflow id, also
+   call `removeChildFromParentRegistry(activePath, parent, <id>)`** so
+   the parent entry's `children:` list no longer references the
+   archived id.
+5. If the archived workflow had a parent, the parent's writeback link
+   — `findings[i].child_workflow` for audit parents,
+   `child_completions[i]` for non-audit parents — now points into
+   `archive/`. Resolution rule already handles this; no additional
+   action needed beyond step 4's registry scrub.
 
 ---
 
