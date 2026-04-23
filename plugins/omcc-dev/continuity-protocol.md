@@ -102,8 +102,8 @@ active:                                  # required; empty list when no workflow
     type: start | fix | audit            # required
     phase: <phase-state-enum value>      # required; cached from workflow file
     parent: <workflow_id or null>        # required (null when no parent)
-    children: []                         # required (empty list when no children)
-    originating_finding: <string or null># required for fix with parent=audit; null otherwise (registry uses explicit null for tabular uniformity, distinct from workflow-file omit-vs-null rule)
+    children: []                         # required; operationally maintained (child bootstrap appends, child archive removes). Empty list when no children.
+    originating_finding: <string or null># required when parent is /audit; null otherwise (registry uses explicit null for tabular uniformity, distinct from workflow-file omit-vs-null rule)
 ---
 ```
 
@@ -171,12 +171,16 @@ task_profile:                          # built during orchestration.md Step 1
 
 ### Conditionally-required frontmatter (present iff condition holds)
 
-- `parent_workflow`: string OR absent. Required with a workflow_id value
-  when this workflow was spawned from another — either `/fix` from
-  `/audit` (normal fix-now transition) or `/start` from `/audit`
-  (scope-exceeding fix-now transition). Absent otherwise.
+- `parent_workflow`: string OR absent. Required with a workflow_id
+  value when this workflow was spawned from another. The parent MAY be
+  any workflow type — including non-`audit` parents (e.g., a `/start`
+  deliverable spawns a child `/fix`). The child's writeback shape to
+  the parent is dispatched by parent `workflow_type` (see
+  Cross-workflow Handoff).
 - `originating_finding`: string OR absent. Required with a finding id
-  when `parent_workflow` is present AND parent is `/audit`. Absent otherwise.
+  **iff** `parent_workflow` is set AND the parent's `workflow_type` is
+  `audit`. Omitted for all non-audit parents — they have no `findings[]`
+  array to key into.
 - `presentation_mode`: string OR absent. Required as `batch` or
   `interview` once the user has chosen at the first presentation point
   (per `presentation-protocol.md`). Absent until then. On resume,
@@ -551,34 +555,63 @@ conditions — including the "no active children" check (with a warning).
 
 ## Cross-workflow Handoff
 
-Scenario: during `/audit` Phase 5 remediation, a finding is marked
-`fix-now` and the user transitions to `/fix`.
+Scenarios:
+- `/audit` Phase 5 remediation marks a finding `fix-now` — user
+  transitions to `/fix` (child) or `/start` (child, scope-exceeding).
+- `/start` deliverable mode spawns a child `/fix` when a deliverable
+  uncovers a bug needing separate root-cause treatment.
+- Any workflow may spawn a child of any type. Parent type drives the
+  writeback dispatch below; the lock discipline is uniform.
 
-**Write ownership** (pinned):
+**Active registry maintenance** (pinned):
+
+On child bootstrap, the child command MUST append its id to the
+parent registry entry's `children: []` list. On child terminal
+archive, the Stop hook MUST remove the id from the parent entry's
+`children`. Both operations run under the active-registry lock via
+the RMW `atomicModifyFile` helper so concurrent child bootstraps do
+not lose updates. Stop's A4 "no active children" gate queries the
+transitive closure of the parent registry entries (via
+`walkWorkflowTree`) — a grandchild also blocks the root's archive.
+
+**Write ownership — parent workflow file** (pinned, dispatched by
+parent `workflow_type`):
 
 1. Child `/fix` or `/start` command owns **both** writes — bootstrap of
-   the child file AND update of the parent's `findings[i].decision`.
-   This avoids requiring the parent `/audit` to be actively running.
-2. Child's parent write:
-   - Acquires a separate lock on the parent file
-   - Sets `findings[i].decision = "fix-now"` and
-     `findings[i].child_workflow = <child_id>`
-   - Releases the lock
-3. If the parent file is not in `workflows/`, child checks `archive/` as a
-   fallback. If parent is found in `archive/`, child writes a warning to
-   stderr and proceeds with bootstrap but `parent_workflow` is recorded as
-   `<parent_id>` and `originating_finding` recorded — the parent's
-   findings field is NOT updated (parent already archived).
-4. On child's terminal archive, child updates the parent's
-   `findings[i].resolved_commit` with the child's commit SHA.
+   the child file AND update of the parent's workflow file. This
+   avoids requiring the parent to be actively running.
+2. Child's parent write depends on parent `workflow_type`:
+   - Parent is `audit` (legacy case): acquires the parent-file lock,
+     sets `findings[i].decision = "fix-now"` and
+     `findings[i].child_workflow = <child_id>` keyed by
+     `originating_finding`, releases the lock.
+   - Parent is non-audit (`start` or `fix`): acquires the parent-file
+     lock, appends `{child_id: <child_id>, spawned_at: <timestamp>}`
+     to the parent's `child_completions:` frontmatter list (initialized
+     to `[]` on parent bootstrap when this field is present).
+3. If the parent file is in `archive/` (not `workflows/`), child writes a
+   stderr warning and proceeds with its own bootstrap but **skips the
+   parent writeback** — the parent state is frozen. `parent_workflow`
+   and (for audit parents) `originating_finding` are still recorded on
+   the child so provenance is preserved.
+4. On child's terminal archive:
+   - Audit parent: child updates the parent's
+     `findings[i].resolved_commit` with the child's commit SHA.
+   - Non-audit parent: child updates the matching
+     `child_completions[i]` entry with `commit: <sha>` and
+     `closed_at: <timestamp>`.
+   The "parent is archived" skip-with-warning rule in step 3 applies
+   equally here.
 
 **Lock acquisition order** (pinned to avoid deadlock under concurrent
-sessions): active registry → parent workflow file → child workflow file.
-Each lock is released in reverse order. Commands MUST NOT hold multiple
-locks simultaneously except in this exact order. The active registry
-lock is short-lived (read-modify-write) and released before the parent
-lock is acquired in normal flow; only the cross-workflow handoff path
-holds both parent and child locks, in the stated order.
+sessions): active registry → root workflow file → child → grandchild
+(descending tree depth). Locks MUST be acquired in depth-ascending
+order (ancestor before descendant) and released in reverse. Commands
+MUST NOT hold multiple locks simultaneously except in this exact
+order. The active registry lock is short-lived (read-modify-write)
+and released before the root lock is acquired in normal flow; only
+the cross-workflow handoff path holds both ancestor and descendant
+locks, in the stated order.
 
 **Parent archive gating**: when Stop hook evaluates a parent workflow for
 auto-archive, condition A4 checks the active registry for entries with
