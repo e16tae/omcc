@@ -375,6 +375,41 @@ class TestStop:
         _run_hook("stop.mjs", {"cwd": str(cwd)}, cwd)
         assert parent_path.exists(), "A4 must block parent archive while child active"
 
+    def test_auto_archive_cleans_parent_children_backref(self, tmp_path):
+        """When a child workflow auto-archives, its id is removed from the
+        parent entry's `children` list — not just from the registry's
+        entry list."""
+        cwd = _init_cwd(tmp_path)
+        parent_id = "audit-20260423T120000Z-aaaaaa"
+        child_id = "fix-20260423T120100Z-bbbbbb"
+        # Parent stays non-terminal so only the child auto-archives
+        _write_workflow(cwd, parent_id, "remediation-discussion",
+                        "discuss", "audit")
+        _write_workflow(cwd, child_id, "commit-complete", "archive", "fix")
+        _write_active(cwd, [
+            {"id": parent_id, "type": "audit",
+             "phase": "remediation-discussion",
+             "parent": None, "children": [child_id]},
+            {"id": child_id, "type": "fix", "phase": "commit-complete",
+             "parent": parent_id, "children": []},
+        ])
+        # Add a fix-subject commit so A2 + A3 pass for the child
+        (cwd / "fix.txt").write_text("x")
+        subprocess.run(["git", "add", "-A"], cwd=str(cwd), check=True)
+        subprocess.run(
+            ["git", "commit", "-m", "fix(test): resolve issue", "-q"],
+            cwd=str(cwd), check=True,
+        )
+        _run_hook("stop.mjs", {"cwd": str(cwd)}, cwd)
+        # child is archived
+        assert (cwd / ".claude" / "omcc-dev" / "archive"
+                / f"{child_id}.md").exists()
+        # parent entry remains; its `children` no longer lists the archived id
+        registry = (cwd / ".claude" / "omcc-dev" / "active.md").read_text()
+        assert parent_id in registry
+        assert child_id not in registry, \
+            "archived child id must be scrubbed from parent.children"
+
     def test_active_grandchild_blocks_root_archive(self, tmp_path):
         """Transitive A4: an active grandchild blocks the root's archive even
         though the root's direct child is also non-terminal. Pre-hierarchical

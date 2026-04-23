@@ -19,6 +19,7 @@ import {
   releaseLock,
   atomicModifyFile,
   archiveCleanupPolicy,
+  removeChildFromParentRegistry,
   isValidWorkflowId,
   walkWorkflowTree,
   TERMINAL_PHASES,
@@ -210,13 +211,22 @@ async function main() {
     if (!isValidWorkflowId(e.id)) continue;
     const verdict = await maybeAutoArchive(cwd, e, entries).catch(() => ({ archive: false }));
     if (verdict.staleRegistryEntry) {
-      // Workflow file already in archive/ — reconcile registry.
+      // Workflow file already in archive/ — reconcile registry and
+      // clean the back-pointer from the parent's children list (if any).
+      if (e.parent && isValidWorkflowId(e.parent)) {
+        await removeChildFromParentRegistry(activePath, e.parent, e.id);
+      }
       await removeFromActiveRegistry(cwd, e.id);
       continue;
     }
     if (!verdict.archive) continue;
     const moved = await moveToArchive(cwd, e.id);
-    if (moved) await removeFromActiveRegistry(cwd, e.id);
+    if (moved) {
+      if (e.parent && isValidWorkflowId(e.parent)) {
+        await removeChildFromParentRegistry(activePath, e.parent, e.id);
+      }
+      await removeFromActiveRegistry(cwd, e.id);
+    }
   }
   process.exit(0);
 }
