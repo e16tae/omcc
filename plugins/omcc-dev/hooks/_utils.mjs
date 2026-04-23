@@ -273,6 +273,103 @@ export function parseActiveRegistry(content) {
   return parseNestedList(parsed.fmBody, "active", ["children"]);
 }
 
+// Re-serialize active.md content from its schema/updated_at and the
+// entries list. Fields are emitted in the canonical order
+// (id, type, phase, parent, children, originating_finding) and any
+// unknown scalar keys are appended verbatim after originating_finding
+// so round-trip preserves fields the parser didn't anticipate.
+// Active entries are sorted by `id` ASCII ascending per spec.
+function serializeActiveRegistry(entries, schema, updatedAt) {
+  const lines = [
+    "---",
+    `schema: ${schema}`,
+    `updated_at: ${updatedAt}`,
+    "active:",
+  ];
+  const sorted = [...entries].sort((a, b) =>
+    a.id < b.id ? -1 : a.id > b.id ? 1 : 0
+  );
+  const known = new Set([
+    "id", "type", "phase", "parent", "children", "originating_finding",
+  ]);
+  const emitScalar = (k, v) => {
+    lines.push(`    ${k}: ${v === null || v === undefined ? "null" : v}`);
+  };
+  for (const e of sorted) {
+    lines.push(`  - id: ${e.id}`);
+    if ("type" in e) emitScalar("type", e.type);
+    if ("phase" in e) emitScalar("phase", e.phase);
+    if ("parent" in e) emitScalar("parent", e.parent);
+    const children = Array.isArray(e.children) ? e.children : [];
+    if (children.length === 0) {
+      lines.push("    children: []");
+    } else {
+      lines.push("    children:");
+      for (const c of children) lines.push(`      - ${c}`);
+    }
+    if ("originating_finding" in e) {
+      emitScalar("originating_finding", e.originating_finding);
+    }
+    // Unknown scalars preserved at the end of the entry block
+    for (const k of Object.keys(e)) {
+      if (known.has(k)) continue;
+      emitScalar(k, e[k]);
+    }
+  }
+  lines.push("---");
+  lines.push("");
+  return lines.join("\n");
+}
+
+// Append childId to parentId's `children:` list in the active registry.
+// Dedupes (no-op if already present). Maintains ASCII-ascending order
+// for diff stability. No-op if the parent entry is absent or either
+// id fails the workflow-id regex. Writes via atomicModifyFile so the
+// read-modify-write sequence is serialized with all other writers.
+export async function appendChildToParentRegistry(activePath, parentId, childId) {
+  if (!isValidWorkflowId(parentId) || !isValidWorkflowId(childId)) return;
+  await atomicModifyFile(activePath, async (content) => {
+    if (content === null) return null;
+    const parsed = parseFrontmatter(content);
+    if (!parsed) return null;
+    const entries = parseActiveRegistry(content);
+    const parent = entries.find((e) => e.id === parentId);
+    if (!parent) return null;
+    const children = Array.isArray(parent.children) ? parent.children : [];
+    if (children.includes(childId)) return null;
+    children.push(childId);
+    children.sort();
+    parent.children = children;
+    const schema = parsed.fields.schema ?? "2";
+    const updatedAt = new Date().toISOString();
+    return serializeActiveRegistry(entries, schema, updatedAt);
+  });
+}
+
+// Remove childId from parentId's `children:` list. No-op if parent is
+// absent, child is not currently in the list, or either id fails
+// validation. When the last child is removed, the block collapses to
+// the inline empty-list literal `children: []`.
+export async function removeChildFromParentRegistry(activePath, parentId, childId) {
+  if (!isValidWorkflowId(parentId) || !isValidWorkflowId(childId)) return;
+  await atomicModifyFile(activePath, async (content) => {
+    if (content === null) return null;
+    const parsed = parseFrontmatter(content);
+    if (!parsed) return null;
+    const entries = parseActiveRegistry(content);
+    const parent = entries.find((e) => e.id === parentId);
+    if (!parent) return null;
+    const children = Array.isArray(parent.children) ? parent.children : [];
+    const idx = children.indexOf(childId);
+    if (idx < 0) return null;
+    children.splice(idx, 1);
+    parent.children = children;
+    const schema = parsed.fields.schema ?? "2";
+    const updatedAt = new Date().toISOString();
+    return serializeActiveRegistry(entries, schema, updatedAt);
+  });
+}
+
 export function getGitInfo(cwd) {
   const env = { ...process.env, LC_ALL: "C" };
   const opts = { cwd, env, encoding: "utf8" };

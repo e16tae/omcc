@@ -577,3 +577,174 @@ def test_archive_cleanup_noop_when_bak_absent(tmp_path):
     )
     assert rc == 0, stderr
     assert stdout.strip() == "ok"
+
+
+# --- append/removeChildToParentRegistry (B2.1) ------------------------------
+
+# Note: workflow-id shortids are 6 hex chars per WORKFLOW_ID_REGEX. These
+# tests use descriptive aliases via Python variables so intent reads clearly:
+_PARENT = "start-20260423T120000Z-aaaaaa"
+_CHILD_A = "fix-20260423T125900Z-bbbbba"  # earlier timestamp, sorts first
+_CHILD_B = "fix-20260423T130000Z-bbbbbb"
+_CHILD_C = "fix-20260423T130000Z-bbbbbc"
+_OTHER_PARENT = "start-20260423T999999Z-ffffff"  # not in registry
+_OTHER_CHILD = "fix-20260423T130000Z-cccccc"   # not in any child list
+
+
+def _write_active_registry(path, entries):
+    """Helper: write an active.md with the given entries (for B2.1 tests).
+
+    Each entry is a dict {id, parent, children} — minimal shape that
+    exercises the new helpers without dragging in _write_active.
+    """
+    lines = ["---", "schema: 2", "updated_at: 2026-04-23T00:00:00Z", "active:"]
+    for e in entries:
+        lines.append(f"  - id: {e['id']}")
+        lines.append(f"    type: {e.get('type', 'start')}")
+        lines.append(f"    phase: {e.get('phase', 'implement')}")
+        lines.append(f"    parent: {e['parent'] if e.get('parent') else 'null'}")
+        children = e.get("children", [])
+        if children:
+            lines.append("    children:")
+            for c in children:
+                lines.append(f"      - {c}")
+        else:
+            lines.append("    children: []")
+        lines.append(f"    originating_finding: null")
+    lines.append("---")
+    lines.append("")
+    path.write_text("\n".join(lines))
+
+
+def test_append_child_to_empty_children(tmp_path):
+    """Parent with `children: []` gets a multi-line children block with one entry."""
+    active = tmp_path / "active.md"
+    _write_active_registry(active, [
+        {"id": _PARENT, "parent": None, "children": []},
+    ])
+    rc, _, stderr = _call_util(
+        f"await appendChildToParentRegistry({json.dumps(str(active))}, "
+        f"{json.dumps(_PARENT)}, {json.dumps(_CHILD_B)});\n",
+        imports=["appendChildToParentRegistry"],
+    )
+    assert rc == 0, stderr
+    content = active.read_text()
+    assert f"children:\n      - {_CHILD_B}" in content
+    assert "children: []" not in content
+
+
+def test_append_child_extends_existing_children(tmp_path):
+    """Parent already with children gets a new entry in sorted order."""
+    active = tmp_path / "active.md"
+    _write_active_registry(active, [
+        {"id": _PARENT, "parent": None, "children": [_CHILD_C]},
+    ])
+    rc, _, stderr = _call_util(
+        f"await appendChildToParentRegistry({json.dumps(str(active))}, "
+        f"{json.dumps(_PARENT)}, {json.dumps(_CHILD_A)});\n",
+        imports=["appendChildToParentRegistry"],
+    )
+    assert rc == 0, stderr
+    content = active.read_text()
+    # Sorted ascending: CHILD_A (timestamp earlier) before CHILD_C
+    idx_a = content.find(_CHILD_A)
+    idx_c = content.find(_CHILD_C)
+    assert 0 < idx_a < idx_c, f"expected sorted order; got idx_a={idx_a}, idx_c={idx_c}"
+
+
+def test_append_child_dedupes(tmp_path):
+    """Appending an existing child is a no-op (no duplicate entry)."""
+    active = tmp_path / "active.md"
+    _write_active_registry(active, [
+        {"id": _PARENT, "parent": None, "children": [_CHILD_B]},
+    ])
+    rc, _, stderr = _call_util(
+        f"await appendChildToParentRegistry({json.dumps(str(active))}, "
+        f"{json.dumps(_PARENT)}, {json.dumps(_CHILD_B)});\n",
+        imports=["appendChildToParentRegistry"],
+    )
+    assert rc == 0, stderr
+    content = active.read_text()
+    assert content.count(_CHILD_B) == 1
+
+
+def test_append_child_noop_for_missing_parent(tmp_path):
+    """Unknown parent id: no-op, no throw, content unchanged."""
+    active = tmp_path / "active.md"
+    _write_active_registry(active, [
+        {"id": _PARENT, "parent": None, "children": []},
+    ])
+    rc, _, stderr = _call_util(
+        f"await appendChildToParentRegistry({json.dumps(str(active))}, "
+        f"{json.dumps(_OTHER_PARENT)}, {json.dumps(_CHILD_B)});\n",
+        imports=["appendChildToParentRegistry"],
+    )
+    assert rc == 0, stderr
+    content = active.read_text()
+    assert _CHILD_B not in content
+
+
+def test_append_child_rejects_invalid_ids(tmp_path):
+    """Malformed ids are rejected (path-safety parity with isValidWorkflowId)."""
+    active = tmp_path / "active.md"
+    _write_active_registry(active, [
+        {"id": _PARENT, "parent": None, "children": []},
+    ])
+    rc, _, stderr = _call_util(
+        f"await appendChildToParentRegistry({json.dumps(str(active))}, "
+        f"'../evil', {json.dumps(_CHILD_B)});\n",
+        imports=["appendChildToParentRegistry"],
+    )
+    assert rc == 0, stderr
+    content = active.read_text()
+    assert _CHILD_B not in content
+
+
+def test_remove_child_from_multi(tmp_path):
+    """Remove one of several children; others remain, order preserved."""
+    active = tmp_path / "active.md"
+    _write_active_registry(active, [
+        {"id": _PARENT, "parent": None, "children": [_CHILD_A, _CHILD_C]},
+    ])
+    rc, _, stderr = _call_util(
+        f"await removeChildFromParentRegistry({json.dumps(str(active))}, "
+        f"{json.dumps(_PARENT)}, {json.dumps(_CHILD_A)});\n",
+        imports=["removeChildFromParentRegistry"],
+    )
+    assert rc == 0, stderr
+    content = active.read_text()
+    assert _CHILD_A not in content
+    assert _CHILD_C in content
+
+
+def test_remove_last_child_collapses_to_empty_literal(tmp_path):
+    """Removing the last child leaves `children: []` inline literal."""
+    active = tmp_path / "active.md"
+    _write_active_registry(active, [
+        {"id": _PARENT, "parent": None, "children": [_CHILD_B]},
+    ])
+    rc, _, stderr = _call_util(
+        f"await removeChildFromParentRegistry({json.dumps(str(active))}, "
+        f"{json.dumps(_PARENT)}, {json.dumps(_CHILD_B)});\n",
+        imports=["removeChildFromParentRegistry"],
+    )
+    assert rc == 0, stderr
+    content = active.read_text()
+    assert _CHILD_B not in content
+    assert "children: []" in content
+
+
+def test_remove_child_noop_when_absent(tmp_path):
+    """Removing a child that isn't in the list is a no-op."""
+    active = tmp_path / "active.md"
+    _write_active_registry(active, [
+        {"id": _PARENT, "parent": None, "children": [_CHILD_A]},
+    ])
+    rc, _, stderr = _call_util(
+        f"await removeChildFromParentRegistry({json.dumps(str(active))}, "
+        f"{json.dumps(_PARENT)}, {json.dumps(_OTHER_CHILD)});\n",
+        imports=["removeChildFromParentRegistry"],
+    )
+    assert rc == 0, stderr
+    content = active.read_text()
+    assert _CHILD_A in content
