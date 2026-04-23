@@ -273,4 +273,6 @@ for (const c of cases) {
     )
     assert rc == 0, stderr
     lines = stdout.strip().split("\n")
-    assert lines == ["null", "", "42", '{"a":1}'], lines
+    # JSON.stringify(undefined) returns the value undefined (not a string),
+    # which console.log prints as the literal "undefined".
+    assert lines == ["null", "undefined", "42", '{"a":1}'], lines
