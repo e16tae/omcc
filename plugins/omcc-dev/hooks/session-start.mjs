@@ -15,7 +15,7 @@ import {
   parseFrontmatter,
   sanitizeField,
   isValidWorkflowId,
-  SUPPORTED_SCHEMA_VERSION,
+  handleLegacySchema,
 } from "./_utils.mjs";
 
 async function main() {
@@ -37,12 +37,12 @@ async function main() {
     try { content = await readFile(wfPath, "utf8"); } catch { continue; }
     const parsed = parseFrontmatter(content);
     const fields = parsed ? parsed.fields : {};
-    // Schema-version gate: skip workflows whose schema is newer than we
-    // understand, rather than echoing a potentially mis-interpreted
-    // summary back into Claude's context.
+    // Schema-version gate: skip workflows outside the supported range
+    // (legacy OR future). Legacy files are silently skipped with a
+    // stderr hint suggesting /omcc-dev:resume migration.
     const schemaRaw = fields.schema;
     const schema = schemaRaw !== undefined ? Number(schemaRaw) : undefined;
-    if (schema !== undefined && schema > SUPPORTED_SCHEMA_VERSION) continue;
+    if (handleLegacySchema(schema, e.id, "session-start")) continue;
     const phase = sanitizeField("phase", fields.current_phase || e.phase || "unknown");
     const nextAction = sanitizeField("next_action", fields.next_action || "");
     const type = sanitizeField("type", e.type || fields.workflow_type || "?");

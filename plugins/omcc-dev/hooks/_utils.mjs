@@ -17,10 +17,36 @@ export const TERMINAL_PHASES = ["commit-complete", "summary-complete"];
 
 export const KNOWN_WORKFLOW_TYPES = ["start", "fix", "audit"];
 
-// Schema version this hook layer understands. Files with higher
-// `schema` are skipped with a stderr diagnostic per
-// continuity-protocol.md §Parser rules.
-export const SUPPORTED_SCHEMA_VERSION = 1;
+// Schema version this hook layer understands. Files with `schema`
+// either higher (future) or lower (legacy) are skipped with a stderr
+// diagnostic per continuity-protocol.md §Parser rules. Legacy schema
+// files are carried across the migration window — `/omcc-dev:resume`
+// offers the user an Import / Archive / Abort choice to migrate them.
+export const SUPPORTED_SCHEMA_VERSION = 2;
+
+// Returns true if the file's schema version is not actively supported
+// (either legacy `schema < SUPPORTED` or future `schema > SUPPORTED`).
+// Writes a one-line stderr diagnostic identifying the workflow and the
+// calling hook. Callers should skip the workflow entirely when this
+// returns true. `schema` may be `undefined` (field missing) — that
+// case returns false so existing call sites keep their pre-schema-gate
+// behavior.
+export function handleLegacySchema(schema, workflowId, hookName) {
+  if (typeof schema !== "number") return false;
+  if (schema < SUPPORTED_SCHEMA_VERSION) {
+    process.stderr.write(
+      `[omcc-dev/${hookName}] workflow ${workflowId}: legacy schema ${schema}; run /omcc-dev:resume to migrate\n`
+    );
+    return true;
+  }
+  if (schema > SUPPORTED_SCHEMA_VERSION) {
+    process.stderr.write(
+      `[omcc-dev/${hookName}] workflow ${workflowId}: schema ${schema} newer than supported (${SUPPORTED_SCHEMA_VERSION})\n`
+    );
+    return true;
+  }
+  return false;
+}
 
 export const COMMIT_SUBJECT_REGEX = {
   start: /^feat(\([^)]+\))?!?:/,

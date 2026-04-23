@@ -23,7 +23,7 @@ import {
   TERMINAL_PHASES,
   COMMIT_SUBJECT_REGEX,
   KNOWN_WORKFLOW_TYPES,
-  SUPPORTED_SCHEMA_VERSION,
+  handleLegacySchema,
 } from "./_utils.mjs";
 
 function getCommitSubjectsInRange(cwd, baselineHead) {
@@ -90,12 +90,7 @@ async function maybeAutoArchive(cwd, entry, entries) {
     return { archive: false };
   }
   // Schema-version gate per continuity-protocol.md §Parser rules.
-  if (typeof meta.schema === "number" && meta.schema > SUPPORTED_SCHEMA_VERSION) {
-    process.stderr.write(
-      `[omcc-dev/stop] workflow ${entry.id}: schema ${meta.schema} newer than supported (${SUPPORTED_SCHEMA_VERSION}); not archiving\n`
-    );
-    return { archive: false };
-  }
+  if (handleLegacySchema(meta.schema, entry.id, "stop")) return { archive: false };
   // A1
   if (!TERMINAL_PHASES.includes(meta.current_phase)) return { archive: false };
   const type = meta.workflow_type;

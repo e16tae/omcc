@@ -48,7 +48,7 @@ def test_utils_module_imports():
         imports=["SUPPORTED_SCHEMA_VERSION"],
     )
     assert rc == 0, f"node exit {rc} stderr={stderr}"
-    assert stdout.strip() == "1"
+    assert stdout.strip() == "2"
 
 
 # --- atomicModifyFile (1.3) -------------------------------------------------
@@ -435,7 +435,7 @@ def test_parse_active_registry_regression():
     rc, stdout, stderr = _call_util(
         """
 const content = `---
-schema: 1
+schema: 2
 updated_at: 2026-04-22T00:00:00Z
 active:
   - id: fix-20260422T120000Z-abcdef
@@ -471,7 +471,7 @@ def test_parse_nested_list_with_unrelated_top_key():
     """parseNestedList works for any top-level list-of-maps key, not just `active`."""
     rc, stdout, stderr = _call_util(
         """
-const fmBody = `schema: 1
+const fmBody = `schema: 2
 findings:
   - id: finding-1
     severity: high
@@ -495,7 +495,7 @@ def test_parse_nested_list_empty_inline_literal():
     """`topKey: []` parses as empty list."""
     rc, stdout, stderr = _call_util(
         """
-const fmBody = 'schema: 1\\nfindings: []\\n';
+const fmBody = 'schema: 2\\nfindings: []\\n';
 console.log(JSON.stringify(parseNestedList(fmBody, 'findings')));
 """,
         imports=["parseNestedList"],
@@ -508,7 +508,7 @@ def test_parse_nested_list_ignores_malformed_lines():
     """Lines without `key: value` shape are skipped silently (fail-closed)."""
     rc, stdout, stderr = _call_util(
         """
-const fmBody = `schema: 1
+const fmBody = `schema: 2
 active:
   - id: valid-id
     type: fix
@@ -530,7 +530,7 @@ def test_parse_nested_list_respects_inner_list_keys():
     """children is collected as nested list only when listed in innerListKeys."""
     rc, stdout, stderr = _call_util(
         """
-const fmBody = `schema: 1
+const fmBody = `schema: 2
 active:
   - id: a
     children:

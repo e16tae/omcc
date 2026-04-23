@@ -59,7 +59,7 @@ def _init_cwd(tmp_path):
     return tmp_path
 
 
-def _write_active(cwd, active_list):
+def _write_active(cwd, active_list, schema=2):
     """Write the active registry with the given list of workflow entries."""
     path = cwd / ".claude" / "omcc-dev" / "active.md"
     entry_blocks = []
@@ -77,9 +77,9 @@ def _write_active(cwd, active_list):
             else:
                 lines.append("    children: []")
         entry_blocks.append("\n".join(lines))
-    header = dedent("""\
+    header = dedent(f"""\
         ---
-        schema: 1
+        schema: {schema}
         updated_at: 2026-04-22T00:00:00Z
         active:
         """)
@@ -98,7 +98,7 @@ def _current_head(cwd):
 
 
 def _write_workflow(cwd, workflow_id, phase, next_action, workflow_type=None,
-                    baseline_head=None, body_extra=""):
+                    baseline_head=None, body_extra="", schema=2):
     wtype = workflow_type or workflow_id.split("-")[0]
     bh = baseline_head or _current_head(cwd)
     path = cwd / ".claude" / "omcc-dev" / "workflows" / f"{workflow_id}.md"
@@ -107,7 +107,7 @@ def _write_workflow(cwd, workflow_id, phase, next_action, workflow_type=None,
     # force dedent to remove zero columns and leave the frontmatter indented).
     frontmatter = (
         "---\n"
-        "schema: 1\n"
+        f"schema: {schema}\n"
         f"workflow_id: {workflow_id}\n"
         f"workflow_type: {wtype}\n"
         "original_request: test\n"
@@ -208,6 +208,27 @@ class TestSessionStart:
         assert rc == 0
         # Corrupt file handled gracefully; workflow id still appears but with default phase
         # (or is skipped depending on parser robustness — either is acceptable).
+
+    def test_legacy_schema1_workflow_is_skipped_with_diagnostic(self, tmp_path):
+        """Legacy schema-1 files are silently skipped by SessionStart; the
+        hook writes a stderr diagnostic suggesting /omcc-dev:resume migration
+        rather than echoing a potentially mis-interpreted summary back into
+        Claude's context."""
+        cwd = _init_cwd(tmp_path)
+        wf_id = "fix-20260422T120000Z-abcdef"
+        _write_workflow(cwd, wf_id, "investigate", "do thing", "fix", schema=1)
+        _write_active(cwd, [{"id": wf_id, "type": "fix", "phase": "investigate",
+                             "parent": None, "children": []}])
+        rc, out, err = _run_hook(
+            "session-start.mjs", {"cwd": str(cwd), "source": "compact"}, cwd
+        )
+        assert rc == 0
+        # entry is skipped — no output line at all when it's the only workflow
+        assert wf_id not in out
+        assert out == ""
+        # diagnostic on stderr points user at the migration path
+        assert "legacy schema 1" in err
+        assert "/omcc-dev:resume" in err
 
 
 # ---------------------------------------------------------------------------
@@ -361,7 +382,7 @@ class TestStop:
         wf_id = "audit-20260422T120000Z-abcdef"
         # Place file directly in archive/, not workflows/
         archive_path = cwd / ".claude" / "omcc-dev" / "archive" / f"{wf_id}.md"
-        archive_path.write_text("---\nschema: 1\n---\n")
+        archive_path.write_text("---\nschema: 2\n---\n")
         _write_active(cwd, [{"id": wf_id, "type": "audit", "phase": "summary-complete",
                              "parent": None, "children": []}])
         _run_hook("stop.mjs", {"cwd": str(cwd)}, cwd)
