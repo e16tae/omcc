@@ -35,8 +35,68 @@ export function sanitize(value, cap = SANITIZE_CAP) {
   return s;
 }
 
+// Per-field length caps for sanitize() callers. Prefer sanitizeField over
+// hand-picked numeric caps at call sites — the table keeps caps consistent
+// across hooks and commands and makes new fields easy to register.
+export const SANITIZE_FIELD_CAPS = {
+  phase: 64,
+  next_action: 120,
+  type: 16,
+  // Pre-registered for schema 2 /omcc-dev:checkpoint injection (B5.3).
+  checkpoint_summary: 200,
+};
+
+export function sanitizeField(name, value) {
+  const cap = Object.prototype.hasOwnProperty.call(SANITIZE_FIELD_CAPS, name)
+    ? SANITIZE_FIELD_CAPS[name]
+    : SANITIZE_CAP;
+  return sanitize(value, cap);
+}
+
 export function isValidWorkflowId(id) {
   return typeof id === "string" && WORKFLOW_ID_REGEX.test(id);
+}
+
+// Finding IDs are audit-only keys into the parent audit's `findings[]`
+// array — never used as a filesystem path component. Validated against
+// a separate regex per continuity-protocol.md §Finding IDs.
+export const FINDING_ID_REGEX = /^finding-[0-9]+$/;
+
+export function isValidFindingId(id) {
+  return typeof id === "string" && FINDING_ID_REGEX.test(id);
+}
+
+// Secret scrub patterns per continuity-protocol.md §Secrets hygiene.
+// Applied in order; each match is replaced with "[REDACTED]".
+// Patterns 1 and 2 are case-sensitive (token formats and the HTTP
+// Bearer header convention respectively). Pattern 3 is
+// case-insensitive via the /i flag.
+export const SECRETS_SCRUB_PATTERNS = [
+  {
+    pattern:
+      /(sk|pk|ghp|gho|ghu|ghs|ghr|github_pat|xoxb|xoxp|AKIA)[_A-Za-z0-9-]{8,}/g,
+    replacement: "[REDACTED]",
+  },
+  {
+    pattern: /Bearer\s+[A-Za-z0-9._~+/=-]+/g,
+    replacement: "[REDACTED]",
+  },
+  {
+    pattern:
+      /(password|token|secret|api[_-]?key|authorization)\s*[:=]\s*\S+/gi,
+    replacement: "[REDACTED]",
+  },
+];
+
+// Best-effort scrub. Non-string values pass through unchanged so callers
+// may chain without defensive type checks at each call site.
+export function scrubSecrets(text) {
+  if (typeof text !== "string") return text;
+  let out = text;
+  for (const { pattern, replacement } of SECRETS_SCRUB_PATTERNS) {
+    out = out.replace(pattern, replacement);
+  }
+  return out;
 }
 
 export function readStdinJson(timeoutMs = 100) {
@@ -95,38 +155,82 @@ export function getNestedMap(fmBody, topKey) {
   return out;
 }
 
-// Parse active.md's `active:` list into [{id, type, phase, parent, children, originating_finding}]
-export function parseActiveRegistry(content) {
-  const parsed = parseFrontmatter(content);
-  if (!parsed) return [];
-  const m = parsed.fmBody.match(/(?:^|\n)active:\s*(?:\n([\s\S]*))?$/);
+// Return all descendants of rootId reachable via entry.parent back-pointers,
+// in breadth-first topological order (each parent appears before its
+// descendants). rootId itself is excluded from the result.
+//
+// Cycle-safe: every node is visited at most once. Self-parent edges
+// (entry.parent === entry.id) are ignored. Intended for A4 transitive
+// "no active children" gating under hierarchical workflows.
+export function walkWorkflowTree(entries, rootId) {
+  if (typeof rootId !== "string" || !Array.isArray(entries)) return [];
+  // Build child index: parent_id -> [child_entry]
+  const byParent = new Map();
+  for (const e of entries) {
+    if (!e || typeof e !== "object" || typeof e.id !== "string") continue;
+    const p = e.parent;
+    if (typeof p !== "string" || p === e.id) continue;
+    const arr = byParent.get(p);
+    if (arr) arr.push(e);
+    else byParent.set(p, [e]);
+  }
+  const result = [];
+  const visited = new Set([rootId]);
+  const queue = [rootId];
+  while (queue.length > 0) {
+    const currentId = queue.shift();
+    const children = byParent.get(currentId);
+    if (!children) continue;
+    for (const child of children) {
+      if (visited.has(child.id)) continue;
+      visited.add(child.id);
+      result.push(child);
+      queue.push(child.id);
+    }
+  }
+  return result;
+}
+
+// Parse a YAML-subset list of maps from an fmBody region starting at
+// `<topKey>:`. Each map is introduced by `  - id: <value>` and continues
+// with `    <key>: <value>` lines until the next map or a non-indented
+// line (including the `---` terminator). Nested lists for specific keys
+// (e.g., `children:` under each active entry) are recognized when that
+// key is listed in `innerListKeys`.
+//
+// Returns [] when the topKey is absent or its block is empty.
+export function parseNestedList(fmBody, topKey, innerListKeys = []) {
+  const pattern = new RegExp(`(?:^|\\n)${topKey}:\\s*(?:\\n([\\s\\S]*))?$`);
+  const m = fmBody.match(pattern);
   if (!m || !m[1]) return [];
+  const innerSet = new Set(innerListKeys);
   const entries = [];
   let current = null;
-  let inChildren = false;
+  let currentList = null; // name of the nested list currently being filled, or null
   for (const line of m[1].split("\n")) {
     if (/^\S/.test(line) || line.trim() === "---") break;
     const idLine = line.match(/^\s*-\s*id:\s*(\S+)/);
     if (idLine) {
       if (current) entries.push(current);
-      current = { id: idLine[1], children: [] };
-      inChildren = false;
+      current = { id: idLine[1] };
+      for (const k of innerListKeys) current[k] = [];
+      currentList = null;
       continue;
     }
     if (!current) continue;
     const listItem = line.match(/^\s{6,}-\s*(\S+)/);
-    if (inChildren && listItem) {
-      current.children.push(listItem[1]);
+    if (currentList && listItem) {
+      current[currentList].push(listItem[1]);
       continue;
     }
     const kv = line.match(/^\s+([a-zA-Z_][a-zA-Z0-9_]*):\s*(.*)$/);
     if (!kv) continue;
     const [, key, rawVal] = kv;
-    inChildren = false;
+    currentList = null;
     let val = rawVal.trim();
-    if (key === "children") {
-      inChildren = true;
-      if (val === "[]") current.children = [];
+    if (innerSet.has(key)) {
+      currentList = key;
+      if (val === "[]") current[key] = [];
       continue;
     }
     if (val === "null" || val === "") val = null;
@@ -134,6 +238,13 @@ export function parseActiveRegistry(content) {
   }
   if (current) entries.push(current);
   return entries;
+}
+
+// Parse active.md's `active:` list into [{id, type, phase, parent, children, originating_finding}]
+export function parseActiveRegistry(content) {
+  const parsed = parseFrontmatter(content);
+  if (!parsed) return [];
+  return parseNestedList(parsed.fmBody, "active", ["children"]);
 }
 
 export function getGitInfo(cwd) {
@@ -211,11 +322,23 @@ export async function releaseLock(lockPath) {
   try { await unlink(lockPath); } catch {}
 }
 
-export async function atomicUpdateFile(filePath, newContent) {
+// atomicModifyFile: read-modify-write under advisory lock.
+// mutator signature: async (current: string | null) => string | null | undefined
+//   - receives null when target does not exist
+//   - returns new content to write, or null/undefined for no-op
+// The full read → mutate → write sequence runs inside one lock acquisition,
+// preventing lost updates between read and write. Errors from mutator
+// release the lock and re-throw.
+export async function atomicModifyFile(filePath, mutator) {
   const lockPath = `${filePath}.lock`;
   const acquired = await acquireLock(lockPath);
   if (!acquired) throw new Error(`lock timeout: ${filePath}`);
   try {
+    const current = existsSync(filePath)
+      ? await readFile(filePath, "utf8")
+      : null;
+    const next = await mutator(current);
+    if (next === null || next === undefined) return;
     const tmp = `${filePath}.tmp`;
     const bak = `${filePath}.bak`;
     // Remove any stale tempfile (e.g., symlink planted by another process)
@@ -227,7 +350,7 @@ export async function atomicUpdateFile(filePath, newContent) {
     // continuity-protocol.md §Atomic write discipline.
     const fh = await open(tmp, "wx", 0o600);
     try {
-      await fh.writeFile(newContent, { encoding: "utf8" });
+      await fh.writeFile(next, { encoding: "utf8" });
       await fh.sync();
     } finally {
       await fh.close();
@@ -240,6 +363,23 @@ export async function atomicUpdateFile(filePath, newContent) {
   } finally {
     await releaseLock(lockPath);
   }
+}
+
+// Thin wrapper: atomic write with pre-computed content. Equivalent to
+// atomicModifyFile(path, async () => newContent). Retained for callers
+// that compute content outside the lock; see atomicModifyFile for RMW.
+export async function atomicUpdateFile(filePath, newContent) {
+  return atomicModifyFile(filePath, async () => newContent);
+}
+
+// Cleans up transient sibling files after a workflow file has been
+// atomically renamed into archive/. Removes `<src>.bak` so orphan
+// backups do not accumulate in workflows/ over time. Leaves
+// `<src>.lock` intact because a concurrent writer (e.g., a PreCompact
+// in another session) may still own it — deleting another process's
+// lock sentinel would let a second writer enter the critical section.
+export async function archiveCleanupPolicy(archivedSrcPath) {
+  try { await unlink(`${archivedSrcPath}.bak`); } catch {}
 }
 
 export function resolveActivePath(cwd) {

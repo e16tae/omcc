@@ -5,7 +5,7 @@
 // Exits 0 on stop_hook_active to prevent infinite loops.
 
 import { existsSync } from "node:fs";
-import { readFile, rename, unlink } from "node:fs/promises";
+import { readFile, rename } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import {
   readStdinJson,
@@ -15,7 +15,10 @@ import {
   parseActiveRegistry,
   parseFrontmatter,
   getNestedMap,
-  atomicUpdateFile,
+  acquireLock,
+  releaseLock,
+  atomicModifyFile,
+  archiveCleanupPolicy,
   isValidWorkflowId,
   TERMINAL_PHASES,
   COMMIT_SUBJECT_REGEX,
@@ -125,61 +128,70 @@ async function maybeAutoArchive(cwd, entry, entries) {
 async function moveToArchive(cwd, workflowId) {
   const src = resolveWorkflowPath(cwd, workflowId);
   const dst = resolveArchivePath(cwd, workflowId);
+  // Acquire the same `<src>.lock` sentinel that atomicModifyFile /
+  // atomicUpdateFile use so archive rename cannot interleave with a
+  // concurrent PreCompact (or any other writer) between its
+  // rename(src, bak) and rename(tmp, src) pair. Without this lock the
+  // archiver can see the file momentarily absent and fail with ENOENT,
+  // or worse replace the freshly-written snapshot with an archived
+  // copy whose active-registry entry has not yet been removed.
+  const lockPath = `${src}.lock`;
+  const acquired = await acquireLock(lockPath);
+  if (!acquired) return false;
   try {
-    await rename(src, dst);
-  } catch { return false; }
-  // Clean up the transient `.bak` sibling so orphans do not accumulate
-  // in workflows/ over time. Do NOT touch `<id>.md.lock`: that sentinel
-  // is owned by whichever process is currently holding the write lock
-  // (possibly a concurrent PreCompact in another session). Deleting
-  // someone else's lock sentinel would let a second writer enter the
-  // critical section and corrupt the atomic-write sequence.
-  try { await unlink(`${src}.bak`); } catch {}
-  return true;
+    try {
+      await rename(src, dst);
+    } catch { return false; }
+    await archiveCleanupPolicy(src);
+    return true;
+  } finally {
+    await releaseLock(lockPath);
+  }
 }
 
 async function removeFromActiveRegistry(cwd, removeId) {
   const activePath = resolveActivePath(cwd);
   if (!existsSync(activePath)) return;
-  let content = "";
-  try { content = await readFile(activePath, "utf8"); } catch { return; }
-  // Line-scan: skip the `- id: removeId` block until the next `- id:` or
-  // the frontmatter terminator. Blocks are identified by indentation > 2.
-  const lines = content.split("\n");
-  const out = [];
-  let skipping = false;
-  for (const line of lines) {
-    const idLine = line.match(/^\s*-\s*id:\s*(\S+)/);
-    if (idLine) {
-      skipping = idLine[1] === removeId;
-      if (!skipping) out.push(line);
-      continue;
-    }
-    if (skipping) {
-      // still inside the entry block if line has >= 4 leading spaces or is a
-      // bare list continuation; otherwise we exited the entry.
-      if (/^\s{4,}/.test(line) || line.trim() === "") {
-        continue;
-      }
-      skipping = false;
-    }
-    out.push(line);
-  }
-  const nowIso = new Date().toISOString();
-  let updated = out.join("\n");
-  // If the `active:` list is now empty, normalize a dangling `active:`
-  // scalar (which YAML reads as null) to the required empty list
-  // literal `active: []`.
-  updated = updated.replace(
-    /(^|\n)active:\s*\n(\s*---)/,
-    (_m, prefix, terminator) => `${prefix}active: []\n${terminator}`
-  );
-  updated = updated.replace(
-    /^(\s*updated_at:\s*).*$/m,
-    `$1${nowIso}`
-  );
   try {
-    await atomicUpdateFile(activePath, updated);
+    await atomicModifyFile(activePath, async (content) => {
+      if (content === null) return null;
+      // Line-scan: skip the `- id: removeId` block until the next `- id:` or
+      // the frontmatter terminator. Blocks are identified by indentation > 2.
+      const lines = content.split("\n");
+      const out = [];
+      let skipping = false;
+      for (const line of lines) {
+        const idLine = line.match(/^\s*-\s*id:\s*(\S+)/);
+        if (idLine) {
+          skipping = idLine[1] === removeId;
+          if (!skipping) out.push(line);
+          continue;
+        }
+        if (skipping) {
+          // still inside the entry block if line has >= 4 leading spaces or
+          // is a bare list continuation; otherwise we exited the entry.
+          if (/^\s{4,}/.test(line) || line.trim() === "") {
+            continue;
+          }
+          skipping = false;
+        }
+        out.push(line);
+      }
+      const nowIso = new Date().toISOString();
+      let updated = out.join("\n");
+      // If the `active:` list is now empty, normalize a dangling `active:`
+      // scalar (which YAML reads as null) to the required empty list
+      // literal `active: []`.
+      updated = updated.replace(
+        /(^|\n)active:\s*\n(\s*---)/,
+        (_m, prefix, terminator) => `${prefix}active: []\n${terminator}`
+      );
+      updated = updated.replace(
+        /^(\s*updated_at:\s*).*$/m,
+        `$1${nowIso}`
+      );
+      return updated;
+    });
   } catch {
     // best-effort reconciliation
   }
