@@ -5,7 +5,7 @@
 // Exits 0 on stop_hook_active to prevent infinite loops.
 
 import { existsSync } from "node:fs";
-import { readFile, rename, unlink } from "node:fs/promises";
+import { readFile, rename } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import {
   readStdinJson,
@@ -16,6 +16,7 @@ import {
   parseFrontmatter,
   getNestedMap,
   atomicModifyFile,
+  archiveCleanupPolicy,
   isValidWorkflowId,
   TERMINAL_PHASES,
   COMMIT_SUBJECT_REGEX,
@@ -128,13 +129,7 @@ async function moveToArchive(cwd, workflowId) {
   try {
     await rename(src, dst);
   } catch { return false; }
-  // Clean up the transient `.bak` sibling so orphans do not accumulate
-  // in workflows/ over time. Do NOT touch `<id>.md.lock`: that sentinel
-  // is owned by whichever process is currently holding the write lock
-  // (possibly a concurrent PreCompact in another session). Deleting
-  // someone else's lock sentinel would let a second writer enter the
-  // critical section and corrupt the atomic-write sequence.
-  try { await unlink(`${src}.bak`); } catch {}
+  await archiveCleanupPolicy(src);
   return true;
 }
 

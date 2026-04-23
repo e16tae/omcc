@@ -548,3 +548,32 @@ console.log(JSON.stringify(withoutInner[0].children));
     assert lines[0] == '["child-1","child-2"]'
     # Without innerListKeys, `children` is parsed as a scalar kv -> "" -> null
     assert lines[1] in ("null", "undefined")
+
+
+# --- archiveCleanupPolicy (1.9) --------------------------------------------
+
+
+def test_archive_cleanup_removes_bak_preserves_lock(tmp_path):
+    """`.bak` sibling is removed; `.lock` is preserved (may be owned)."""
+    archived_src = tmp_path / "archived.md"
+    bak = tmp_path / "archived.md.bak"
+    lock = tmp_path / "archived.md.lock"
+    bak.write_text("bak content")
+    lock.write_text("lock content")
+    rc, stdout, stderr = _call_util(
+        f"await archiveCleanupPolicy({json.dumps(str(archived_src))});\nconsole.log('ok');\n",
+        imports=["archiveCleanupPolicy"],
+    )
+    assert rc == 0, stderr
+    assert not bak.exists(), ".bak should be removed"
+    assert lock.exists(), ".lock must be preserved"
+
+
+def test_archive_cleanup_noop_when_bak_absent(tmp_path):
+    archived_src = tmp_path / "archived.md"
+    rc, stdout, stderr = _call_util(
+        f"await archiveCleanupPolicy({json.dumps(str(archived_src))});\nconsole.log('ok');\n",
+        imports=["archiveCleanupPolicy"],
+    )
+    assert rc == 0, stderr
+    assert stdout.strip() == "ok"

@@ -372,6 +372,16 @@ export async function atomicUpdateFile(filePath, newContent) {
   return atomicModifyFile(filePath, async () => newContent);
 }
 
+// Cleans up transient sibling files after a workflow file has been
+// atomically renamed into archive/. Removes `<src>.bak` so orphan
+// backups do not accumulate in workflows/ over time. Leaves
+// `<src>.lock` intact because a concurrent writer (e.g., a PreCompact
+// in another session) may still own it — deleting another process's
+// lock sentinel would let a second writer enter the critical section.
+export async function archiveCleanupPolicy(archivedSrcPath) {
+  try { await unlink(`${archivedSrcPath}.bak`); } catch {}
+}
+
 export function resolveActivePath(cwd) {
   return resolve(cwd, ".claude", "omcc-dev", "active.md");
 }
