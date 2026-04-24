@@ -375,6 +375,65 @@ class TestStop:
         _run_hook("stop.mjs", {"cwd": str(cwd)}, cwd)
         assert parent_path.exists(), "A4 must block parent archive while child active"
 
+    def test_non_audit_parent_a4_blocks_archive(self, tmp_path):
+        """A4 transitive closure is parent-type-agnostic: a non-audit
+        parent (start) is also blocked from archive while a child (fix)
+        is still active, matching B3 parent generalization."""
+        cwd = _init_cwd(tmp_path)
+        parent_id = "start-20260424T120000Z-aaaaaa"
+        child_id = "fix-20260424T120100Z-bbbbbb"
+        parent_path = _write_workflow(
+            cwd, parent_id, "commit-complete", "archive", "start"
+        )
+        _write_workflow(cwd, child_id, "fix-and-verify", "work", "fix")
+        _write_active(cwd, [
+            {"id": parent_id, "type": "start", "phase": "commit-complete",
+             "parent": None, "children": [child_id]},
+            {"id": child_id, "type": "fix", "phase": "fix-and-verify",
+             "parent": parent_id, "children": []},
+        ])
+        # feat-subject commit so the start parent would satisfy A2+A3 on its own
+        (cwd / "feat.txt").write_text("x")
+        subprocess.run(["git", "add", "-A"], cwd=str(cwd), check=True)
+        subprocess.run(
+            ["git", "commit", "-m", "feat(test): new thing", "-q"],
+            cwd=str(cwd), check=True,
+        )
+        _run_hook("stop.mjs", {"cwd": str(cwd)}, cwd)
+        assert parent_path.exists(), (
+            "A4 must block non-audit (start) parent archive while a "
+            "fix child is still active"
+        )
+
+    def test_non_audit_parent_archive_scrubs_children_backref(self, tmp_path):
+        """When a fix child terminates, its id is scrubbed from its
+        non-audit (start) parent's children list, same as audit-parent
+        case but via the generalized path."""
+        cwd = _init_cwd(tmp_path)
+        parent_id = "start-20260424T120000Z-aaaaaa"
+        child_id = "fix-20260424T120100Z-bbbbbb"
+        # parent non-terminal so it doesn't auto-archive
+        _write_workflow(cwd, parent_id, "implement", "work", "start")
+        _write_workflow(cwd, child_id, "commit-complete", "archive", "fix")
+        _write_active(cwd, [
+            {"id": parent_id, "type": "start", "phase": "implement",
+             "parent": None, "children": [child_id]},
+            {"id": child_id, "type": "fix", "phase": "commit-complete",
+             "parent": parent_id, "children": []},
+        ])
+        (cwd / "fix.txt").write_text("x")
+        subprocess.run(["git", "add", "-A"], cwd=str(cwd), check=True)
+        subprocess.run(
+            ["git", "commit", "-m", "fix(test): resolve", "-q"],
+            cwd=str(cwd), check=True,
+        )
+        _run_hook("stop.mjs", {"cwd": str(cwd)}, cwd)
+        assert (cwd / ".claude" / "omcc-dev" / "archive"
+                / f"{child_id}.md").exists()
+        registry = (cwd / ".claude" / "omcc-dev" / "active.md").read_text()
+        assert parent_id in registry
+        assert child_id not in registry
+
     def test_auto_archive_cleans_parent_children_backref(self, tmp_path):
         """When a child workflow auto-archives, its id is removed from the
         parent entry's `children` list — not just from the registry's
