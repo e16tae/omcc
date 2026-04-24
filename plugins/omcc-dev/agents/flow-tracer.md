@@ -2,6 +2,7 @@
 name: flow-tracer
 description: Traces key request/data flows end-to-end through the codebase. Use when tracing how data moves from entry (HTTP/CLI/event) through transformations to storage and back, especially for debugging or impact analysis.
 model: opus
+effort: max
 tools: Read, Glob, Grep
 color: green
 ---

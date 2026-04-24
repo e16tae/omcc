@@ -2,6 +2,7 @@
 name: hypothesis-tracer
 description: Traces a specific hypothesis through the codebase to find evidence supporting or refuting it as a root cause. Use when a concrete root-cause candidate exists and needs verification against actual code behavior.
 model: opus
+effort: max
 tools: Read, Glob, Grep
 color: orange
 ---

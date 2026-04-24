@@ -10,7 +10,9 @@ End-user behavior lives in canonical components: `commands/`, `skills/`,
 
 - `commands/` — thin orchestrators (`start`, `fix`, `audit`, `resume`, `checkpoint`)
 - `skills/` — reusable skill bodies (`brainstorm`, `explore`, `investigate`, `parallel-review`, `plan`)
-- `agents/` — subagent definitions (`architecture-mapper`, `flow-tracer`, `hypothesis-tracer`, `reviewer`)
+- `agents/` — subagent definitions (`architecture-mapper`, `flow-tracer`,
+  `hypothesis-tracer`, `reviewer`). Primary agents pin `model: opus` and
+  `effort: max` in frontmatter — see `orchestration.md` Principle 2.
 - `hooks/` — plugin-level hook scripts registered via `hooks/hooks.json`
   (`session-start.mjs` with compact matcher, `pre-compact.mjs`,
   `stop.mjs`, and shared `_utils.mjs`). Event handlers for the

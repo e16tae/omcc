@@ -8,7 +8,7 @@ Pursue the best results through task-analysis-based dynamic composition, not sta
 ## Principles
 
 1. **Quality first**: Optimize for result quality, not token efficiency
-2. **Opus + Max reasoning**: All agents operate on the opus model
+2. **Opus + Max reasoning**: Every primary agent pins `model: opus` + `effort: max`, overriding session effort
 3. **Task decides**: No predefined minimum/maximum agent count. If the task requires 1, use 1; if it requires 7, use 7
 4. **Mission-specific**: Assign concrete missions tailored to this task, not generic perspective labels
 5. **No overlap**: Clearly delineate mission boundaries so multiple perspectives do not review the same area
