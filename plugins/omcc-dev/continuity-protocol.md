@@ -832,6 +832,43 @@ they smooth UX only.
 
 ---
 
+## Schema 1 → 2 Migration
+
+Schema 2 treats schema-1 state files as legacy — hooks silent-skip
+them with a stderr diagnostic pointing the user at `/omcc-dev:resume`
+(see §Parser rules). On `/omcc-dev:resume` Step 2, a workflow file
+whose `schema: 1` is detected presents a three-way prompt:
+
+- **Import**: run `migrateSchema1to2(content)` against the workflow
+  file AND the active.md registry entry that points to it. Each
+  write goes through `atomicModifyFile`; the migration pair is
+  serialized by the migration lock
+  `.claude/omcc-dev/.schema-migrate.lock` (10s timeout, legacy
+  pattern) so two concurrent resume sessions cannot race.
+  `migrateSchema1to2` is behaviorally a label bump (+ `updated_at`
+  refresh). Schema 1 and 2 are field-compatible at the
+  always-required-frontmatter level — the semantic differences live
+  in how hooks and commands interpret existing fields (children
+  operationalization, parent_workflow generalization, hierarchical
+  shards). Unknown user fields survive verbatim.
+- **Archive**: rename `workflows/<id>.md` →
+  `archive/<id>-legacy-schema1-<timestamp>.md` unchanged. Remove the
+  active.md entry and scrub the parent children back-ref per B2.3.
+  User may inspect / recover manually.
+- **Abort**: leave state untouched; exit with a diagnostic that cites
+  this section.
+
+The migration is one-directional — there is no `migrateSchema2to1`.
+Users on schema-2 hooks who need to roll back should reinstall the
+prior omcc-dev version and restore from `<file>.bak` or git.
+
+Batch semantics: multiple schema-1 workflows are migrated per-file
+(each gets its own atomicModifyFile + its own user choice). Partial
+success is acceptable — failed / declined files stay at schema 1 and
+the hook layer continues to silent-skip them until the next resume.
+
+---
+
 ## Legacy design-context.md Migration
 
 When a command's Phase 0 detects a file at `<cwd>/.claude/design-context.md`:

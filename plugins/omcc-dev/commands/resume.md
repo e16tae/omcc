@@ -81,11 +81,27 @@ active registry and workflow files directly for every decision.
 
 1. Read `<cwd>/.claude/omcc-dev/workflows/<selected_id>.md`.
 2. Parse YAML frontmatter per `continuity-protocol.md` Parser rules.
-3. Validate:
+3. **Schema-1 legacy detection**: if `schema === 1`, enter the Schema
+   1 → 2 Migration flow per `continuity-protocol.md` §Schema 1 → 2
+   Migration. Offer the user **Import / Archive / Abort**:
+   - **Import**: acquire the migration lock
+     `.claude/omcc-dev/.schema-migrate.lock` (10s timeout). Call
+     `migrateSchema1to2(content)` against this workflow file AND
+     against the `active.md` entry that points to it. Write each via
+     `atomicModifyFile`. On success, reload the migrated file and
+     continue from step 4 below.
+   - **Archive**: rename the file to
+     `archive/<selected_id>-legacy-schema1-<timestamp>.md` unchanged;
+     remove the active.md entry (and scrub the parent children
+     back-ref via `removeChildFromParentRegistry` if the entry had a
+     valid `parent` per B2.3); inform the user and exit.
+   - **Abort**: leave state untouched; exit with a diagnostic citing
+     the migration section.
+4. Validate (schema 2):
    - `schema` within current range
    - `workflow_id` matches the regex
    - All always-required fields present and well-formed
-4. On validation failure, follow `continuity-protocol.md` Failure
+5. On validation failure, follow `continuity-protocol.md` Failure
    Handling for the corrupt-state case:
    - Try `<file>.bak`. If it passes the same validation, show a diff
      vs the corrupt primary and ask the user whether to restore.

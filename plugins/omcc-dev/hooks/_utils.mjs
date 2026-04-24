@@ -620,3 +620,27 @@ export function updateUpdatedAt(fmBody, isoTimestamp) {
   }
   return fmBody;
 }
+
+// Schema 1 → 2 migration. Rewrites the top-level `schema:` scalar
+// from 1 to 2 and refreshes `updated_at`. Schema 1 and schema 2 are
+// field-compatible at the always-required-frontmatter level — the
+// semantic differences are in how hooks and commands interpret
+// existing fields (children operationalization, parent_workflow
+// generalization, hierarchical shards). So migration is a label bump,
+// not a field transformation.
+//
+// Unknown / user-added frontmatter fields are preserved verbatim per
+// continuity-protocol.md Parser rules.
+//
+// Returns the rewritten content, or null if the input is not a
+// schema-1 file (caller may distinguish corrupt vs already-migrated).
+export function migrateSchema1to2(content) {
+  const parsed = parseFrontmatter(content);
+  if (!parsed) return null;
+  const rawSchema = parsed.fields.schema;
+  const schema = rawSchema !== undefined ? Number(rawSchema) : undefined;
+  if (schema !== 1) return null;
+  let fmBody = parsed.fmBody.replace(/^(\s*schema:\s*)1(\s*)$/m, "$12$2");
+  fmBody = updateUpdatedAt(fmBody, new Date().toISOString());
+  return parsed.prefix + fmBody + parsed.suffix + parsed.body;
+}
