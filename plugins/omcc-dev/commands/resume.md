@@ -61,6 +61,21 @@ active registry and workflow files directly for every decision.
    - Exactly one active workflow → use it.
    - Multiple active → list them (id / type / phase / next_action) and
      wait for user selection.
+6. **Shard selection (schema-2 hierarchical)**: once the root workflow
+   is chosen, check whether the root is sharded (directory
+   `workflows/<root_id>/` exists via `resolveShardDirectoryPath`). If
+   sharded:
+   - Read the root's `plan.deliverables[]` to list shards with their
+     cached `status` / `phase` / `next_action`.
+   - Resume targets the **active shard** — the first shard with
+     `status: in_progress`, or if none, the next `status: pending` in
+     order. If the user prefers a different shard, let them select by
+     `deliverable_id`. Reject invalid ids (must pass `SHARD_ID_REGEX`).
+   - All subsequent Steps operate on the selected shard (its
+     `resolveShardPath` result) rather than the root file, **except**
+     where the root's frontmatter is explicitly needed (decision /
+     architecture / plan.deliverables cache — read frontmatter only).
+   Non-sharded roots skip this step.
 
 ## Step 2: Load and Validate State File
 
@@ -93,11 +108,18 @@ prompts per `orchestration.md`.
    - `git rev-parse HEAD`
    - `status_digest` computed per `continuity-protocol.md` pipeline
    - `git log --oneline <git_baseline.head>..HEAD` (commits since baseline)
-   - For each file path referenced in the body, detect renames or
-     deletions via `git log --follow --oneline -- <path>` AND
+   - **For sharded roots**: scan ONLY the active shard's body for
+     file references (not the root body, and NOT dormant shards).
+     This keeps drift detection O(shard) instead of O(entire tree)
+     and matches the Re-contextualize scope documented in
+     `/omcc-dev:start` Phase 4 Deliverable mode. For each referenced
+     file path, detect renames or deletions via
+     `git log --follow --oneline -- <path>` AND
      `git log --diff-filter=R --name-status <baseline.head>..HEAD`.
      (The explicit `-- <path>` argument is required; omitting it
      scans repository-wide history and can miss per-file renames.)
+   - **For non-sharded (flat) workflows**: scan the workflow's own
+     body for file references, same command set.
 2. Classify per `continuity-protocol.md` Drift Classification:
    - **clean**: HEAD and digest unchanged → proceed to Step 5.
    - **compatible**: HEAD advanced on same branch, no state-referenced
@@ -152,7 +174,15 @@ session features:
 
 ## Step 6: Rehydrate and Resume
 
-1. Rebuild TaskCreate checklist from the `tasks` frontmatter array:
+For sharded roots the **scope of rehydration is the active shard**,
+not the root. The root's frontmatter (decision, architecture,
+plan.deliverables[] cache) is loaded as context but the root body
+and dormant shards are NOT read. This is the load-bearing decision
+behind B4 — main-context rehydration cost is O(shard) rather than
+O(entire tree), closing Phase 2 Heavy-read Hotspot #2.
+
+1. Rebuild TaskCreate checklist from the `tasks` frontmatter array
+   of the active shard (or the flat workflow if non-sharded):
    - For each entry, call `TaskCreate` with its recorded subject.
    - Call `TaskUpdate` to restore each task's recorded status and any
      `blocked_by` edges.
@@ -160,11 +190,15 @@ session features:
      `status: in_progress` mark the last active point — the originating
      command picks up there. Tasks with `status: pending` run next in
      dependency order.
-2. Re-apply the recorded `presentation_mode` (if present in frontmatter)
-   per `presentation-protocol.md` so the user is not re-asked the
-   batch-vs-interview question.
-3. Read the code files referenced in the state body to restore context.
-4. Identify the target phase from `current_phase` and `next_action`.
+2. Re-apply the recorded `presentation_mode` (if present in the root's
+   frontmatter) per `presentation-protocol.md` so the user is not
+   re-asked the batch-vs-interview question. (Shards do not carry
+   their own `presentation_mode` — the root is authoritative.)
+3. Read the code files referenced in the active shard's body (or the
+   flat workflow's body) to restore context. Root body and dormant
+   shards stay on disk unless explicitly requested.
+4. Identify the target phase from the active shard's `current_phase`
+   and `next_action` (or the flat workflow's, if non-sharded).
 5. Hand back control to the originating command at the recorded phase:
    - `workflow_type=start` → continue from `commands/start.md` at the
      recorded phase. The target command's Phase 0 continuity check
