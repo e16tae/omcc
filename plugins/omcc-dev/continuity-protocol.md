@@ -47,14 +47,77 @@ to each checkout and never committed.
 <cwd>/.claude/omcc-dev/        # created with mode 0700
 ├── active.md                  # registry of currently-active workflows  (0600)
 ├── workflows/
-│   └── <workflow_id>.md       # one file per active workflow             (0600)
+│   ├── <workflow_id>.md       # flat (non-sharded) root workflow         (0600)
+│   └── <root_id>/             # sharded root directory                   (0700)
+│       ├── <root_id>.md       # root frontmatter + plan.deliverables[]   (0600)
+│       └── deliverable-A.md   # shard file (shard-id regex below)        (0600)
 └── archive/
-    └── <workflow_id>.md       # completed workflows                      (0600)
+    ├── <workflow_id>.md       # completed flat workflow                  (0600)
+    └── <root_id>/             # completed sharded root                   (0700)
+        └── ...
 ```
 
 The first command creates the directory with `mkdir -p` followed by explicit
 `chmod 0700`. All state files are written with `chmod 0600`. Commands and
 hooks MUST apply these permissions explicitly — do not rely on umask.
+
+### Hierarchical workflow shards (schema 2+)
+
+When `/start` enters deliverable mode (plan Phase 3 with 2+
+deliverables approved by the user), the root workflow is **sharded**:
+`workflows/<root_id>.md` retains root-level frontmatter
+(decision / architecture / plan.deliverables[]) and each deliverable
+owns its own **shard file** at `workflows/<root_id>/<shard_id>.md`.
+Non-sharded workflows (`/fix`, `/audit`, `/start` single-pass mode)
+keep the flat `workflows/<id>.md` layout indefinitely.
+
+**Shard id format pin**: `^deliverable-[A-Z]$` (e.g., `deliverable-A`,
+`deliverable-B`). Shard ids are scoped to the owning root; two sibling
+roots may each have a `deliverable-A` without collision.
+
+**Shard frontmatter** (required on every shard):
+
+```yaml
+---
+schema: 2
+shard_type: deliverable                    # required; pinned value
+root_workflow: <root_id>                   # required; workflow-id regex
+deliverable_id: A                          # required; matches SHARD_ID_REGEX
+started_at: <ISO 8601 UTC, Z suffix>
+updated_at: <ISO 8601 UTC, Z suffix>
+current_phase: <per workflow_type phase enum>   # inherits the owning root's type
+next_action: <short imperative sentence>
+tasks: []                                  # empty at shard bootstrap
+---
+```
+
+`root_workflow` MUST pass the workflow-id regex before any filesystem
+resolution. Shard files are meaningless outside their root — a shard
+whose `root_workflow` does not exist in `workflows/` OR `archive/`
+is treated as orphaned (see Failure Handling).
+
+**Root's `plan.deliverables[]`** caches each shard's status for quick
+listing without reading every shard:
+
+```yaml
+plan:
+  deliverables:
+    - id: A
+      shard_path: deliverable-A.md         # relative to workflows/<root_id>/
+      status: pending | in_progress | completed | archived
+      phase: <cached from the shard>
+      next_action: <cached from the shard>
+```
+
+Reconciliation rule: `phase` and `next_action` in the root's
+deliverables list are advisory caches; the shard file is authoritative
+on disagreement. `/omcc-dev:resume` re-syncs on next read.
+
+**Path-safety invariant** (shards): consumers MUST resolve shard
+paths via a `resolveShardPath(cwd, rootId, shardId)` helper that
+validates both ids against their respective regexes AND confirms the
+resolved path is a subpath of `<cwd>/.claude/omcc-dev/workflows/`.
+Values that fail ANY check MUST be rejected before use.
 
 ### Workflow IDs
 
@@ -550,6 +613,22 @@ no-op with specific error code; hooks handle this case explicitly).
 **Manual archive**: `/omcc-dev:resume archive <id>` moves any workflow
 into `archive/` with user confirmation, bypassing all auto-archive
 conditions — including the "no active children" check (with a warning).
+
+**Sharded root archive**: a sharded root (see Hierarchical workflow
+shards) terminates only when every deliverable shard has reached
+`current_phase: "commit-complete"` AND the root itself has
+`current_phase: "commit-complete"`. The archive operation is a
+**two-target atomic move** via `atomicUpdateDirectory`:
+
+1. `workflows/<root_id>.md` → `archive/<root_id>.md`
+2. `workflows/<root_id>/` → `archive/<root_id>/`
+
+Both moves are recorded in a transient journal so a partial archive
+(file renamed but directory rename failed, or vice versa) rolls back
+to the pre-archive state — the root must not be split across
+`workflows/` and `archive/`. If rollback itself fails, a
+`.journal-incomplete` marker is left for the user; manual recovery is
+the fallback per Failure Handling.
 
 ---
 
