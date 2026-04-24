@@ -13,6 +13,7 @@ import {
   resolveWorkflowPath,
   parseActiveRegistry,
   parseFrontmatter,
+  getNestedMap,
   getGitInfo,
   filterSensitiveStatus,
   atomicUpdateFile,
@@ -55,6 +56,15 @@ async function processWorkflow(cwd, id) {
   const schema = schemaRaw !== undefined ? Number(schemaRaw) : undefined;
   if (handleLegacySchema(schema, id, "pre-compact")) return;
   const now = Date.now();
+  // Fresh user-initiated checkpoint within the idempotency window
+  // supersedes the mechanical snapshot — the user just told us what
+  // mattered, don't paper it over with a git-status dump.
+  // Per continuity-protocol.md §Conditionally-required frontmatter.
+  const checkpointMap = getNestedMap(parsed.fmBody, "latest_checkpoint");
+  if (checkpointMap && checkpointMap.at) {
+    const checkpointMs = new Date(checkpointMap.at).getTime();
+    if (!isNaN(checkpointMs) && now - checkpointMs < IDEMPOTENT_WINDOW_MS) return;
+  }
   const lastMs = latestSnapshotMs(parsed.body);
   if (lastMs !== null && now - lastMs < IDEMPOTENT_WINDOW_MS) return;
   const git = getGitInfo(cwd);

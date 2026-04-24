@@ -13,6 +13,7 @@ import {
   resolveWorkflowPath,
   parseActiveRegistry,
   parseFrontmatter,
+  getNestedMap,
   sanitizeField,
   isValidWorkflowId,
   handleLegacySchema,
@@ -46,7 +47,19 @@ async function main() {
     const phase = sanitizeField("phase", fields.current_phase || e.phase || "unknown");
     const nextAction = sanitizeField("next_action", fields.next_action || "");
     const type = sanitizeField("type", e.type || fields.workflow_type || "?");
-    lines.push(`- ${e.id} (${type}) phase=${phase} next="${nextAction}"`);
+    // Optional latest_checkpoint.summary injection — user-initiated
+    // digest from /omcc-dev:checkpoint, per continuity-protocol.md
+    // §Conditionally-required frontmatter.
+    const checkpointMap = getNestedMap(parsed.fmBody, "latest_checkpoint");
+    const rawSummary = checkpointMap && checkpointMap.summary ? checkpointMap.summary : "";
+    const checkpoint = rawSummary ? sanitizeField("checkpoint_summary", rawSummary) : "";
+    if (checkpoint) {
+      lines.push(
+        `- ${e.id} (${type}) phase=${phase} next="${nextAction}" checkpoint="${checkpoint}"`
+      );
+    } else {
+      lines.push(`- ${e.id} (${type}) phase=${phase} next="${nextAction}"`);
+    }
   }
   if (lines.length === 1) process.exit(0);
   lines.push("If this hook did not fire, run /omcc-dev:resume for full rehydration.");

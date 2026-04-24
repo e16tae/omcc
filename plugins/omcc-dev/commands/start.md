@@ -223,6 +223,13 @@ owns its own shard file):
 6. **Update**: Write state via `atomicModifyFile` on the shard path;
    refresh the root's `plan.deliverables[i]` cache under the root's
    lock. Unknown fields on either file are preserved verbatim.
+7. **Checkpoint prompt (opt-in)**: at the deliverable boundary, ask
+   the user: *"A checkpoint is recommended at this deliverable
+   boundary. Proceed? (y/N)"*. On `y`, invoke `/omcc-dev:checkpoint`
+   with a short summary of what the deliverable accomplished —
+   SessionStart will surface the digest on re-entry and PreCompact
+   will suppress its mechanical snapshot for 60s. On `N` or no
+   response, continue without a checkpoint. Do NOT auto-checkpoint.
 
 After all deliverables complete: proceed to Cross-deliverable Final
 Review (Phase 5b). Archive of the sharded root on terminal commit is
