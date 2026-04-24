@@ -59,7 +59,7 @@ def _init_cwd(tmp_path):
     return tmp_path
 
 
-def _write_active(cwd, active_list):
+def _write_active(cwd, active_list, schema=2):
     """Write the active registry with the given list of workflow entries."""
     path = cwd / ".claude" / "omcc-dev" / "active.md"
     entry_blocks = []
@@ -77,9 +77,9 @@ def _write_active(cwd, active_list):
             else:
                 lines.append("    children: []")
         entry_blocks.append("\n".join(lines))
-    header = dedent("""\
+    header = dedent(f"""\
         ---
-        schema: 1
+        schema: {schema}
         updated_at: 2026-04-22T00:00:00Z
         active:
         """)
@@ -98,7 +98,7 @@ def _current_head(cwd):
 
 
 def _write_workflow(cwd, workflow_id, phase, next_action, workflow_type=None,
-                    baseline_head=None, body_extra=""):
+                    baseline_head=None, body_extra="", schema=2):
     wtype = workflow_type or workflow_id.split("-")[0]
     bh = baseline_head or _current_head(cwd)
     path = cwd / ".claude" / "omcc-dev" / "workflows" / f"{workflow_id}.md"
@@ -107,7 +107,7 @@ def _write_workflow(cwd, workflow_id, phase, next_action, workflow_type=None,
     # force dedent to remove zero columns and leave the frontmatter indented).
     frontmatter = (
         "---\n"
-        "schema: 1\n"
+        f"schema: {schema}\n"
         f"workflow_id: {workflow_id}\n"
         f"workflow_type: {wtype}\n"
         "original_request: test\n"
@@ -181,17 +181,31 @@ class TestSessionStart:
         # No valid entries survive regex check → silent
         assert out == ""
 
-    def test_backticks_are_stripped_from_output(self, tmp_path):
+    def test_backticks_cause_row_rejection(self, tmp_path):
+        """Schema-2 Backtick rule: a field value containing a backtick
+        rejects the entire entry (not the character). One-line stderr
+        diagnostic identifies the workflow and the field. No stripped
+        fragment is ever echoed to stdout."""
         cwd = _init_cwd(tmp_path)
         wf_id = "start-20260422T120000Z-111111"
         _write_workflow(cwd, wf_id, "brainstorm", "try `whoami`", "start")
         _write_active(cwd, [{"id": wf_id, "type": "start", "phase": "brainstorm",
                              "parent": None, "children": []}])
-        rc, out, _ = _run_hook(
+        rc, out, err = _run_hook(
             "session-start.mjs", {"cwd": str(cwd), "source": "compact"}, cwd
         )
         assert rc == 0
-        assert "`" not in out, f"backticks should be sanitized; got {out!r}"
+        # No stripped fragment — whole entry dropped
+        assert wf_id not in out
+        assert "`" not in out
+        # stderr identifies the rejected entry; summary counts skipped
+        assert wf_id in err
+        assert "contains backticks" in err
+        assert "next_action" in err or "phase" in err
+        # When every entry is rejected, stdout is empty and a one-line
+        # skip-count summary lands on stderr
+        assert out == ""
+        assert "entries skipped (backtick)" in err
 
     def test_corrupt_workflow_file_skipped(self, tmp_path):
         cwd = _init_cwd(tmp_path)
@@ -208,6 +222,27 @@ class TestSessionStart:
         assert rc == 0
         # Corrupt file handled gracefully; workflow id still appears but with default phase
         # (or is skipped depending on parser robustness — either is acceptable).
+
+    def test_legacy_schema1_workflow_is_skipped_with_diagnostic(self, tmp_path):
+        """Legacy schema-1 files are silently skipped by SessionStart; the
+        hook writes a stderr diagnostic suggesting /omcc-dev:resume migration
+        rather than echoing a potentially mis-interpreted summary back into
+        Claude's context."""
+        cwd = _init_cwd(tmp_path)
+        wf_id = "fix-20260422T120000Z-abcdef"
+        _write_workflow(cwd, wf_id, "investigate", "do thing", "fix", schema=1)
+        _write_active(cwd, [{"id": wf_id, "type": "fix", "phase": "investigate",
+                             "parent": None, "children": []}])
+        rc, out, err = _run_hook(
+            "session-start.mjs", {"cwd": str(cwd), "source": "compact"}, cwd
+        )
+        assert rc == 0
+        # entry is skipped — no output line at all when it's the only workflow
+        assert wf_id not in out
+        assert out == ""
+        # diagnostic on stderr points user at the migration path
+        assert "legacy schema 1" in err
+        assert "/omcc-dev:resume" in err
 
 
 # ---------------------------------------------------------------------------
@@ -354,6 +389,128 @@ class TestStop:
         _run_hook("stop.mjs", {"cwd": str(cwd)}, cwd)
         assert parent_path.exists(), "A4 must block parent archive while child active"
 
+    def test_non_audit_parent_a4_blocks_archive(self, tmp_path):
+        """A4 transitive closure is parent-type-agnostic: a non-audit
+        parent (start) is also blocked from archive while a child (fix)
+        is still active, matching B3 parent generalization."""
+        cwd = _init_cwd(tmp_path)
+        parent_id = "start-20260424T120000Z-aaaaaa"
+        child_id = "fix-20260424T120100Z-bbbbbb"
+        parent_path = _write_workflow(
+            cwd, parent_id, "commit-complete", "archive", "start"
+        )
+        _write_workflow(cwd, child_id, "fix-and-verify", "work", "fix")
+        _write_active(cwd, [
+            {"id": parent_id, "type": "start", "phase": "commit-complete",
+             "parent": None, "children": [child_id]},
+            {"id": child_id, "type": "fix", "phase": "fix-and-verify",
+             "parent": parent_id, "children": []},
+        ])
+        # feat-subject commit so the start parent would satisfy A2+A3 on its own
+        (cwd / "feat.txt").write_text("x")
+        subprocess.run(["git", "add", "-A"], cwd=str(cwd), check=True)
+        subprocess.run(
+            ["git", "commit", "-m", "feat(test): new thing", "-q"],
+            cwd=str(cwd), check=True,
+        )
+        _run_hook("stop.mjs", {"cwd": str(cwd)}, cwd)
+        assert parent_path.exists(), (
+            "A4 must block non-audit (start) parent archive while a "
+            "fix child is still active"
+        )
+
+    def test_non_audit_parent_archive_scrubs_children_backref(self, tmp_path):
+        """When a fix child terminates, its id is scrubbed from its
+        non-audit (start) parent's children list, same as audit-parent
+        case but via the generalized path."""
+        cwd = _init_cwd(tmp_path)
+        parent_id = "start-20260424T120000Z-aaaaaa"
+        child_id = "fix-20260424T120100Z-bbbbbb"
+        # parent non-terminal so it doesn't auto-archive
+        _write_workflow(cwd, parent_id, "implement", "work", "start")
+        _write_workflow(cwd, child_id, "commit-complete", "archive", "fix")
+        _write_active(cwd, [
+            {"id": parent_id, "type": "start", "phase": "implement",
+             "parent": None, "children": [child_id]},
+            {"id": child_id, "type": "fix", "phase": "commit-complete",
+             "parent": parent_id, "children": []},
+        ])
+        (cwd / "fix.txt").write_text("x")
+        subprocess.run(["git", "add", "-A"], cwd=str(cwd), check=True)
+        subprocess.run(
+            ["git", "commit", "-m", "fix(test): resolve", "-q"],
+            cwd=str(cwd), check=True,
+        )
+        _run_hook("stop.mjs", {"cwd": str(cwd)}, cwd)
+        assert (cwd / ".claude" / "omcc-dev" / "archive"
+                / f"{child_id}.md").exists()
+        registry = (cwd / ".claude" / "omcc-dev" / "active.md").read_text()
+        assert parent_id in registry
+        assert child_id not in registry
+
+    def test_auto_archive_cleans_parent_children_backref(self, tmp_path):
+        """When a child workflow auto-archives, its id is removed from the
+        parent entry's `children` list — not just from the registry's
+        entry list."""
+        cwd = _init_cwd(tmp_path)
+        parent_id = "audit-20260423T120000Z-aaaaaa"
+        child_id = "fix-20260423T120100Z-bbbbbb"
+        # Parent stays non-terminal so only the child auto-archives
+        _write_workflow(cwd, parent_id, "remediation-discussion",
+                        "discuss", "audit")
+        _write_workflow(cwd, child_id, "commit-complete", "archive", "fix")
+        _write_active(cwd, [
+            {"id": parent_id, "type": "audit",
+             "phase": "remediation-discussion",
+             "parent": None, "children": [child_id]},
+            {"id": child_id, "type": "fix", "phase": "commit-complete",
+             "parent": parent_id, "children": []},
+        ])
+        # Add a fix-subject commit so A2 + A3 pass for the child
+        (cwd / "fix.txt").write_text("x")
+        subprocess.run(["git", "add", "-A"], cwd=str(cwd), check=True)
+        subprocess.run(
+            ["git", "commit", "-m", "fix(test): resolve issue", "-q"],
+            cwd=str(cwd), check=True,
+        )
+        _run_hook("stop.mjs", {"cwd": str(cwd)}, cwd)
+        # child is archived
+        assert (cwd / ".claude" / "omcc-dev" / "archive"
+                / f"{child_id}.md").exists()
+        # parent entry remains; its `children` no longer lists the archived id
+        registry = (cwd / ".claude" / "omcc-dev" / "active.md").read_text()
+        assert parent_id in registry
+        assert child_id not in registry, \
+            "archived child id must be scrubbed from parent.children"
+
+    def test_active_grandchild_blocks_root_archive(self, tmp_path):
+        """Transitive A4: an active grandchild blocks the root's archive even
+        though the root's direct child is also non-terminal. Pre-hierarchical
+        A4 was 1-level; walkWorkflowTree now walks the full descendant tree."""
+        cwd = _init_cwd(tmp_path)
+        root_id = "audit-20260423T120000Z-aaaaaa"
+        mid_id = "fix-20260423T120100Z-bbbbbb"
+        leaf_id = "fix-20260423T120200Z-cccccc"
+        root_path = _write_workflow(
+            cwd, root_id, "summary-complete", "archive", "audit"
+        )
+        _write_workflow(cwd, mid_id, "investigate", "working", "fix")
+        _write_workflow(cwd, leaf_id, "investigate", "working", "fix")
+        _write_active(cwd, [
+            {"id": root_id, "type": "audit", "phase": "summary-complete",
+             "parent": None, "children": [mid_id]},
+            {"id": mid_id, "type": "fix", "phase": "investigate",
+             "parent": root_id, "children": [leaf_id]},
+            {"id": leaf_id, "type": "fix", "phase": "investigate",
+             "parent": mid_id, "children": []},
+        ])
+        _run_hook("stop.mjs", {"cwd": str(cwd)}, cwd)
+        assert root_path.exists(), \
+            "transitive A4 must block root archive while any descendant is active"
+        assert not (
+            cwd / ".claude" / "omcc-dev" / "archive" / f"{root_id}.md"
+        ).exists()
+
     def test_stale_registry_entry_reconciled(self, tmp_path):
         """If a workflow file is already in archive/ but the active registry
         still lists it, Stop hook should reconcile by removing the entry."""
@@ -361,7 +518,7 @@ class TestStop:
         wf_id = "audit-20260422T120000Z-abcdef"
         # Place file directly in archive/, not workflows/
         archive_path = cwd / ".claude" / "omcc-dev" / "archive" / f"{wf_id}.md"
-        archive_path.write_text("---\nschema: 1\n---\n")
+        archive_path.write_text("---\nschema: 2\n---\n")
         _write_active(cwd, [{"id": wf_id, "type": "audit", "phase": "summary-complete",
                              "parent": None, "children": []}])
         _run_hook("stop.mjs", {"cwd": str(cwd)}, cwd)

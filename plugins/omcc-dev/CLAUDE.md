@@ -8,7 +8,7 @@ End-user behavior lives in canonical components: `commands/`, `skills/`,
 
 ## Plugin layout
 
-- `commands/` — thin orchestrators (`start`, `fix`, `audit`, `resume`)
+- `commands/` — thin orchestrators (`start`, `fix`, `audit`, `resume`, `checkpoint`)
 - `skills/` — reusable skill bodies (`brainstorm`, `explore`, `investigate`, `parallel-review`, `plan`)
 - `agents/` — subagent definitions (`architecture-mapper`, `flow-tracer`, `hypothesis-tracer`, `reviewer`)
 - `hooks/` — plugin-level hook scripts registered via `hooks/hooks.json`
@@ -45,3 +45,30 @@ required.
 
 All documentation in this plugin uses English: CLAUDE.md, commands, skills,
 agents, and framework docs.
+
+---
+
+## Schema version
+
+Current state schema: **2** (bumped from 1 in this release). See
+`continuity-protocol.md` §Schema 1 → 2 Migration for the one-way
+upgrade path that `/omcc-dev:resume` offers when it encounters a
+legacy schema-1 file. Key schema-2 features:
+
+- **Hierarchical workflow shards**: `/start` deliverable mode sharp:s
+  the root state into `workflows/<root>/<deliverable-A>.md` etc so
+  re-contextualization cost is per-deliverable instead of per-root.
+- **Operational `children:`**: the active-registry field is actually
+  maintained now (append on child bootstrap, remove on child
+  archive); Stop-hook A4 walks the transitive closure.
+- **Generalized `parent_workflow`**: any workflow type may be a
+  parent, not only `/audit`. Writeback dispatches on parent type —
+  audit keeps `findings[]`, non-audit uses a new `child_completions[]`.
+- **`/omcc-dev:checkpoint`**: user-initiated intra-session context
+  milestone; SessionStart injects the digest on re-entry, PreCompact
+  skips its mechanical snapshot for 60s after a fresh checkpoint.
+
+Schema drift is guarded by `tests/test_schema_drift.py` — any
+spec-vs-code divergence (SUPPORTED_SCHEMA_VERSION, TERMINAL_PHASES,
+WORKFLOW_ID_REGEX, SHARD_ID_REGEX, SANITIZE_FIELD_CAPS, Backtick rule
+wording) fails CI.

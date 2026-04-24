@@ -52,28 +52,45 @@ section.
    orchestration). Apply the secrets-hygiene regex scrub to
    `$ARGUMENTS` before writing `original_request`. Write the file with
    mode `0600`.
-5. If `$ARGUMENTS` indicates this `/start` is spawned from an `/audit`
-   finding (cross-workflow handoff — typically a `fix-now` decision
-   routed to `/start` because the scope exceeds `/fix`'s domain),
-   validate the finding id against the finding-id regex
+5. If `$ARGUMENTS` indicates this `/start` is spawned from a parent
+   workflow (cross-workflow handoff per `continuity-protocol.md`
+   §Cross-workflow Handoff) — typically a `fix-now` decision or a
+   deliverable-level scope split — validate the parent workflow id
+   against the workflow-id regex. If the parent is an `/audit`,
+   additionally validate the finding id against the finding-id regex
    (`^finding-[0-9]+$` per `continuity-protocol.md` §Finding IDs) and
-   validate the audit workflow id against the workflow-id regex. If
-   either validation fails, reject the handoff with a diagnostic and
-   proceed as a root workflow. Otherwise set `parent_workflow` to the
-   audit workflow id and `originating_finding` to the finding id.
-   Acquire a lock on the parent audit file and update its
-   `findings[i].decision = "fix-now"` and `findings[i].child_workflow
-   = <this id>`. If the parent file is in
-   `<cwd>/.claude/omcc-dev/archive/`, write a warning and proceed
-   without the parent update (parent state is static).
+   record `originating_finding`. If validation fails at any step,
+   reject the handoff with a diagnostic and proceed as a root workflow.
+
+   Set `parent_workflow` to the parent workflow id. Dispatch the
+   parent writeback by parent `workflow_type`:
+   - Parent is `audit`: acquire a lock on the parent file; set
+     `findings[i].decision = "fix-now"` and
+     `findings[i].child_workflow = <this id>` keyed by
+     `originating_finding`.
+   - Parent is `start` or `fix` (non-audit): acquire a lock on the
+     parent file; append
+     `{child_id: <this id>, spawned_at: <ISO-8601 UTC>}` to the
+     parent's `child_completions:` frontmatter list (initialize to
+     `[]` if missing).
+
+   If the parent file is in `<cwd>/.claude/omcc-dev/archive/`, **skip
+   the parent writeback with a stderr warning** — the parent state is
+   frozen. `parent_workflow` (and, for audit parents,
+   `originating_finding`) are still recorded on this workflow so
+   provenance resolution via the archive fallback works.
 6. Add or update the entry in the active registry with all required
    fields per `continuity-protocol.md` §Active Registry: `id` = this
    workflow id, `type: start`, `phase: "brainstorm"` (mirrors
    `current_phase`), `parent: <parent_workflow if step 5 set one, else
    null>`, `children: []`, `originating_finding: <finding id if step 5
-   set one, else null>`. The Stop hook's A4 active-children check
-   relies on the `parent` field, so omitting it can cause a parent
-   audit to auto-archive prematurely.
+   set one, else null>`. **If step 5 set `parent_workflow`, also call
+   `appendChildToParentRegistry(activePath, parent_workflow, <this id>)`**
+   so the parent's `children:` list operationally reflects this child
+   (schema-2 requires the two-way `parent` ↔ `children` link; the
+   Stop hook's transitive A4 gate walks `walkWorkflowTree` over the
+   registry, but manual audit UX and cross-tooling rely on a correct
+   `children:` field).
 7. Run `git check-ignore <cwd>/.claude/omcc-dev/` and warn if the
    directory is not gitignored (per `continuity-protocol.md` Security
    Considerations).
@@ -133,9 +150,23 @@ Evaluate whether the plan should be executed as a single pass or in deliverables
 > "Can the full implementation be completed in one pass while maintaining context
 > quality for all tasks?"
 
-- YES → single pass (maximum coherence)
-- NO → group tasks into independently completable deliverables, present grouping
-  to user for approval
+- YES → single pass (maximum coherence). Workflow stays flat:
+  `workflows/<root_id>.md` only; no shards.
+- NO → group tasks into independently completable deliverables,
+  present grouping to user for approval. On approval, the root
+  transitions to **sharded layout** per `continuity-protocol.md`
+  §Hierarchical workflow shards:
+  - Root's `plan.deliverables[]` is populated with one entry per
+    deliverable (id = `A`, `B`, …) carrying `shard_path`, `status`,
+    cached `phase`/`next_action`.
+  - One shard file per deliverable is bootstrapped at
+    `workflows/<root_id>/<shard_id>.md` via `resolveShardPath`, with
+    frontmatter `{schema, shard_type, root_workflow, deliverable_id,
+    timestamps, current_phase, next_action, tasks: []}`.
+  - Each shard-file write goes through `atomicModifyFile` on the
+    shard path; the root's cache update and the shard bootstrap are
+    serialized by the root's `<root_id>.md.lock` to preserve the
+    `continuity-protocol.md` lock-order contract (root → shard).
 
 This is a quality judgment, not a cost optimization. Present the assessment
 and reasoning to the user for final decision.
@@ -164,21 +195,46 @@ Execute the plan task by task:
 
 ### Deliverable mode
 
-For each deliverable:
+For each deliverable (schema-2 hierarchical layout — each deliverable
+owns its own shard file):
 
-1. **Re-contextualize**: Read the active workflow file at
-   `<cwd>/.claude/omcc-dev/workflows/<workflow_id>.md` (both frontmatter
-   and body) and the code files this deliverable depends on. This
-   restores full context regardless of conversation compression. If the
-   SessionStart compact hook ran, its stdout already injected a summary;
-   read the file itself for full detail.
-2. **Implement**: Execute tasks in this deliverable following TDD cycle
-3. **Review**: Follow Phase 5 (full parallel-review + Codex)
-4. **Resolve**: Follow Phase 6 (Resolve & Converge)
-5. **Commit**: Commit this deliverable
-6. **Update**: Update the workflow state file per `continuity-protocol.md` (progress status + any new discoveries)
+1. **Re-contextualize (shard-scoped)**:
+   - Read the **active shard** file at the `shard_path` recorded in
+     the root's `plan.deliverables[i]` — resolve via
+     `resolveShardPath(cwd, root_id, deliverable_id)`. Load both the
+     shard's frontmatter and body.
+   - Read the **root file's frontmatter only** — `decision`,
+     `architecture`, `plan.deliverables[]` cache. The root's body
+     (pre-compact snapshots, prior deliverables' narrative) is NOT
+     re-read; completed shards' detail stays in `archive/` when those
+     shards have terminated, or in their own shard file when they
+     are dormant.
+   - Read the code files referenced in the active shard's body.
+   This is the load-bearing change that makes re-contextualization
+   O(shard) instead of O(root+all-shards), per Phase 2 Heavy-read
+   Hotspot #1 (Codex plan-verify gap tracker).
+2. **Implement**: Execute tasks in this deliverable following TDD cycle.
+3. **Review**: Follow Phase 5 (full parallel-review + Codex) on the
+   shard-scoped diff.
+4. **Resolve**: Follow Phase 6 (Resolve & Converge).
+5. **Commit**: Commit this deliverable. Update
+   `plan.deliverables[i].status = "completed"` on the root (cache
+   only — the shard file retains the authoritative `current_phase`).
+6. **Update**: Write state via `atomicModifyFile` on the shard path;
+   refresh the root's `plan.deliverables[i]` cache under the root's
+   lock. Unknown fields on either file are preserved verbatim.
+7. **Checkpoint prompt (opt-in)**: at the deliverable boundary, ask
+   the user: *"A checkpoint is recommended at this deliverable
+   boundary. Proceed? (y/N)"*. On `y`, invoke `/omcc-dev:checkpoint`
+   with a short summary of what the deliverable accomplished —
+   SessionStart will surface the digest on re-entry and PreCompact
+   will suppress its mechanical snapshot for 60s. On `N` or no
+   response, continue without a checkpoint. Do NOT auto-checkpoint.
 
-After all deliverables: proceed to Cross-deliverable Final Review (Phase 5b).
+After all deliverables complete: proceed to Cross-deliverable Final
+Review (Phase 5b). Archive of the sharded root on terminal commit is
+handled by the Stop hook through `moveWorkflowToArchive`
+(root .md + shard directory, atomic).
 
 ### Plan Adjustment
 
@@ -264,11 +320,20 @@ If the changes warrant a PR, ask the user whether to create one.
 ### Cleanup
 
 Set `current_phase: "commit-complete"` and `next_action: "archive"` in
-the workflow file per `continuity-protocol.md`. If this workflow has a
-`parent_workflow` (spawned from `/audit` as a `fix-now` transition),
-acquire a lock on the parent's file and update
-`findings[i].resolved_commit` with the new commit SHA. If the parent
-is in `<cwd>/.claude/omcc-dev/archive/`, skip with a warning.
+the workflow file per `continuity-protocol.md`. If this workflow has
+a `parent_workflow`, dispatch the terminal writeback by parent
+`workflow_type`:
+
+- Parent is `audit`: acquire a lock on the parent file and update
+  `findings[i].resolved_commit` with the new commit SHA.
+- Parent is `start` or `fix` (non-audit): acquire a lock on the parent
+  file and update the matching `child_completions[i]` entry (keyed by
+  `child_id`) with `commit: <sha>` and `closed_at: <ISO-8601 UTC>`.
+
+If the parent is in `<cwd>/.claude/omcc-dev/archive/`, **skip the
+writeback with a stderr warning** — the parent state is frozen; the
+archive fallback still resolves the provenance link per
+`continuity-protocol.md` §Cross-workflow Handoff.
 
 The Stop hook auto-archives when all four conditions (A1–A4) are met;
 no manual cleanup is needed in normal cases. If hooks did not fire,

@@ -5,7 +5,7 @@
 // Exits 0 on stop_hook_active to prevent infinite loops.
 
 import { existsSync } from "node:fs";
-import { readFile, rename } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import {
   readStdinJson,
@@ -18,12 +18,14 @@ import {
   acquireLock,
   releaseLock,
   atomicModifyFile,
-  archiveCleanupPolicy,
+  moveWorkflowToArchive,
+  removeChildFromParentRegistry,
   isValidWorkflowId,
+  walkWorkflowTree,
   TERMINAL_PHASES,
   COMMIT_SUBJECT_REGEX,
   KNOWN_WORKFLOW_TYPES,
-  SUPPORTED_SCHEMA_VERSION,
+  handleLegacySchema,
 } from "./_utils.mjs";
 
 function getCommitSubjectsInRange(cwd, baselineHead) {
@@ -46,8 +48,12 @@ function getCurrentHead(cwd) {
   } catch { return null; }
 }
 
+// Transitive: any descendant (child, grandchild, deeper) in the
+// active registry blocks the workflow's archive under hierarchical
+// workflows. Cycle-safe via walkWorkflowTree's visited set.
+// continuity-protocol.md §Cross-workflow Handoff — Parent archive gating.
 function hasActiveChildren(entries, workflowId) {
-  return entries.some((e) => e.parent === workflowId);
+  return walkWorkflowTree(entries, workflowId).length > 0;
 }
 
 async function validateFields(filePath) {
@@ -90,12 +96,7 @@ async function maybeAutoArchive(cwd, entry, entries) {
     return { archive: false };
   }
   // Schema-version gate per continuity-protocol.md §Parser rules.
-  if (typeof meta.schema === "number" && meta.schema > SUPPORTED_SCHEMA_VERSION) {
-    process.stderr.write(
-      `[omcc-dev/stop] workflow ${entry.id}: schema ${meta.schema} newer than supported (${SUPPORTED_SCHEMA_VERSION}); not archiving\n`
-    );
-    return { archive: false };
-  }
+  if (handleLegacySchema(meta.schema, entry.id, "stop")) return { archive: false };
   // A1
   if (!TERMINAL_PHASES.includes(meta.current_phase)) return { archive: false };
   const type = meta.workflow_type;
@@ -126,24 +127,17 @@ async function maybeAutoArchive(cwd, entry, entries) {
 }
 
 async function moveToArchive(cwd, workflowId) {
+  // Acquire the `<src>.lock` sentinel to serialize with atomicModifyFile /
+  // atomicUpdateFile writers — see commit 7e3b96a rationale. The
+  // moveWorkflowToArchive helper then handles the flat-vs-sharded
+  // split atomically (both the root file AND any shard directory move,
+  // with rollback-on-partial-failure via a .journal-incomplete marker).
   const src = resolveWorkflowPath(cwd, workflowId);
-  const dst = resolveArchivePath(cwd, workflowId);
-  // Acquire the same `<src>.lock` sentinel that atomicModifyFile /
-  // atomicUpdateFile use so archive rename cannot interleave with a
-  // concurrent PreCompact (or any other writer) between its
-  // rename(src, bak) and rename(tmp, src) pair. Without this lock the
-  // archiver can see the file momentarily absent and fail with ENOENT,
-  // or worse replace the freshly-written snapshot with an archived
-  // copy whose active-registry entry has not yet been removed.
   const lockPath = `${src}.lock`;
   const acquired = await acquireLock(lockPath);
   if (!acquired) return false;
   try {
-    try {
-      await rename(src, dst);
-    } catch { return false; }
-    await archiveCleanupPolicy(src);
-    return true;
+    return await moveWorkflowToArchive(cwd, workflowId);
   } finally {
     await releaseLock(lockPath);
   }
@@ -210,13 +204,22 @@ async function main() {
     if (!isValidWorkflowId(e.id)) continue;
     const verdict = await maybeAutoArchive(cwd, e, entries).catch(() => ({ archive: false }));
     if (verdict.staleRegistryEntry) {
-      // Workflow file already in archive/ — reconcile registry.
+      // Workflow file already in archive/ — reconcile registry and
+      // clean the back-pointer from the parent's children list (if any).
+      if (e.parent && isValidWorkflowId(e.parent)) {
+        await removeChildFromParentRegistry(activePath, e.parent, e.id);
+      }
       await removeFromActiveRegistry(cwd, e.id);
       continue;
     }
     if (!verdict.archive) continue;
     const moved = await moveToArchive(cwd, e.id);
-    if (moved) await removeFromActiveRegistry(cwd, e.id);
+    if (moved) {
+      if (e.parent && isValidWorkflowId(e.parent)) {
+        await removeChildFromParentRegistry(activePath, e.parent, e.id);
+      }
+      await removeFromActiveRegistry(cwd, e.id);
+    }
   }
   process.exit(0);
 }

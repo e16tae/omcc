@@ -47,14 +47,77 @@ to each checkout and never committed.
 <cwd>/.claude/omcc-dev/        # created with mode 0700
 ├── active.md                  # registry of currently-active workflows  (0600)
 ├── workflows/
-│   └── <workflow_id>.md       # one file per active workflow             (0600)
+│   ├── <workflow_id>.md       # flat (non-sharded) root workflow         (0600)
+│   └── <root_id>/             # sharded root directory                   (0700)
+│       ├── <root_id>.md       # root frontmatter + plan.deliverables[]   (0600)
+│       └── deliverable-A.md   # shard file (shard-id regex below)        (0600)
 └── archive/
-    └── <workflow_id>.md       # completed workflows                      (0600)
+    ├── <workflow_id>.md       # completed flat workflow                  (0600)
+    └── <root_id>/             # completed sharded root                   (0700)
+        └── ...
 ```
 
 The first command creates the directory with `mkdir -p` followed by explicit
 `chmod 0700`. All state files are written with `chmod 0600`. Commands and
 hooks MUST apply these permissions explicitly — do not rely on umask.
+
+### Hierarchical workflow shards (schema 2+)
+
+When `/start` enters deliverable mode (plan Phase 3 with 2+
+deliverables approved by the user), the root workflow is **sharded**:
+`workflows/<root_id>.md` retains root-level frontmatter
+(decision / architecture / plan.deliverables[]) and each deliverable
+owns its own **shard file** at `workflows/<root_id>/<shard_id>.md`.
+Non-sharded workflows (`/fix`, `/audit`, `/start` single-pass mode)
+keep the flat `workflows/<id>.md` layout indefinitely.
+
+**Shard id format pin**: `^deliverable-[A-Z]$` (e.g., `deliverable-A`,
+`deliverable-B`). Shard ids are scoped to the owning root; two sibling
+roots may each have a `deliverable-A` without collision.
+
+**Shard frontmatter** (required on every shard):
+
+```yaml
+---
+schema: 2
+shard_type: deliverable                    # required; pinned value
+root_workflow: <root_id>                   # required; workflow-id regex
+deliverable_id: A                          # required; matches SHARD_ID_REGEX
+started_at: <ISO 8601 UTC, Z suffix>
+updated_at: <ISO 8601 UTC, Z suffix>
+current_phase: <per workflow_type phase enum>   # inherits the owning root's type
+next_action: <short imperative sentence>
+tasks: []                                  # empty at shard bootstrap
+---
+```
+
+`root_workflow` MUST pass the workflow-id regex before any filesystem
+resolution. Shard files are meaningless outside their root — a shard
+whose `root_workflow` does not exist in `workflows/` OR `archive/`
+is treated as orphaned (see Failure Handling).
+
+**Root's `plan.deliverables[]`** caches each shard's status for quick
+listing without reading every shard:
+
+```yaml
+plan:
+  deliverables:
+    - id: A
+      shard_path: deliverable-A.md         # relative to workflows/<root_id>/
+      status: pending | in_progress | completed | archived
+      phase: <cached from the shard>
+      next_action: <cached from the shard>
+```
+
+Reconciliation rule: `phase` and `next_action` in the root's
+deliverables list are advisory caches; the shard file is authoritative
+on disagreement. `/omcc-dev:resume` re-syncs on next read.
+
+**Path-safety invariant** (shards): consumers MUST resolve shard
+paths via a `resolveShardPath(cwd, rootId, shardId)` helper that
+validates both ids against their respective regexes AND confirms the
+resolved path is a subpath of `<cwd>/.claude/omcc-dev/workflows/`.
+Values that fail ANY check MUST be rejected before use.
 
 ### Workflow IDs
 
@@ -95,15 +158,15 @@ of currently-active workflows. Schema:
 
 ```yaml
 ---
-schema: 1
+schema: 2
 updated_at: 2026-04-22T14:30:00Z
 active:                                  # required; empty list when no workflows active
   - id: <workflow_id>                    # required
     type: start | fix | audit            # required
     phase: <phase-state-enum value>      # required; cached from workflow file
     parent: <workflow_id or null>        # required (null when no parent)
-    children: []                         # required (empty list when no children)
-    originating_finding: <string or null># required for fix with parent=audit; null otherwise (registry uses explicit null for tabular uniformity, distinct from workflow-file omit-vs-null rule)
+    children: []                         # required; operationally maintained (child bootstrap appends, child archive removes). Empty list when no children.
+    originating_finding: <string or null># required when parent is /audit; null otherwise (registry uses explicit null for tabular uniformity, distinct from workflow-file omit-vs-null rule)
 ---
 ```
 
@@ -126,7 +189,13 @@ body is human/agent context.
 
 ### YAML subset
 
-Frontmatter MUST be parseable as **YAML 1.2 core schema** (JSON-compat).
+Frontmatter MUST be parseable as a **strict subset of YAML 1.2 core
+schema** (JSON-compat). Specifically, the parser layer in
+`hooks/_utils.mjs` (`parseFrontmatter` + `getNestedMap` +
+`parseNestedList`) supports: top-level scalar key: value pairs,
+single-level nested maps, and list-of-maps blocks with optional
+nested scalar lists (e.g., `children:`) — not the full YAML grammar.
+Writers MUST stay inside this subset.
 Timestamps use the `Z` suffix (UTC). All `id` fields throughout the schema
 are **opaque strings**; consumers MUST NOT parse them as integers.
 
@@ -140,7 +209,7 @@ across implementations.
 
 ```yaml
 ---
-schema: 1                              # integer; protocol version
+schema: 2                              # integer; protocol version
 workflow_id: <type>-<timestamp>-<shortid>
 workflow_type: start | fix | audit
 original_request: <summary; see Security>
@@ -165,12 +234,16 @@ task_profile:                          # built during orchestration.md Step 1
 
 ### Conditionally-required frontmatter (present iff condition holds)
 
-- `parent_workflow`: string OR absent. Required with a workflow_id value
-  when this workflow was spawned from another — either `/fix` from
-  `/audit` (normal fix-now transition) or `/start` from `/audit`
-  (scope-exceeding fix-now transition). Absent otherwise.
+- `parent_workflow`: string OR absent. Required with a workflow_id
+  value when this workflow was spawned from another. The parent MAY be
+  any workflow type — including non-`audit` parents (e.g., a `/start`
+  deliverable spawns a child `/fix`). The child's writeback shape to
+  the parent is dispatched by parent `workflow_type` (see
+  Cross-workflow Handoff).
 - `originating_finding`: string OR absent. Required with a finding id
-  when `parent_workflow` is present AND parent is `/audit`. Absent otherwise.
+  **iff** `parent_workflow` is set AND the parent's `workflow_type` is
+  `audit`. Omitted for all non-audit parents — they have no `findings[]`
+  array to key into.
 - `presentation_mode`: string OR absent. Required as `batch` or
   `interview` once the user has chosen at the first presentation point
   (per `presentation-protocol.md`). Absent until then. On resume,
@@ -185,6 +258,25 @@ task_profile:                          # built during orchestration.md Step 1
   `ensemble_type` enum (from `ensemble-protocol.md` Ensemble Point Types):
   `brainstorm | explore | plan-verify | review | investigate | fix-verify | audit-scan`.
   Absent when no Codex job is in flight.
+- `latest_checkpoint`: map OR absent. Written by `/omcc-dev:checkpoint`
+  as a user-initiated in-session context milestone. Shape:
+  ```yaml
+  latest_checkpoint:
+    at: <ISO 8601 UTC, Z suffix>
+    summary: <sanitized digest string, per SANITIZE_FIELD_CAPS.checkpoint_summary=200>
+  ```
+  Consumers:
+  - `hooks/session-start.mjs` injects `checkpoint="<summary>"` into the
+    active-workflow summary line when `at` is present AND `summary`
+    passes sanitization (no backticks, no control chars).
+  - `hooks/pre-compact.mjs` treats a `latest_checkpoint` whose `at` is
+    within `IDEMPOTENT_WINDOW_MS` (60s) of `now` as "fresh" and skips
+    appending a mechanical snapshot — the user-provided checkpoint
+    supersedes the git-status snapshot for that window.
+  Absent when the user has not yet invoked `/omcc-dev:checkpoint`.
+  Timestamps that fail to parse (invalid ISO-8601, future, missing)
+  are treated as **absent** rather than as errors so the hook-layer
+  invariants stay non-blocking.
 
 **Rule**: optional/conditional fields MUST NOT be written as literal `null`.
 If the condition does not hold, omit the field entirely.
@@ -332,8 +424,18 @@ append-only shortcut exists.)
 - Frontmatter fields not in the schema: consumers MUST **preserve them
   verbatim on round-trip write** (no silent drop). Writers MUST NOT
   introduce new frontmatter fields without bumping `schema`.
-- Unknown `schema` version `schema > 1`: `/omcc-dev:resume` and hooks MUST
-  warn the user and offer archive/abort — never silently proceed.
+- `schema` outside the supported range: hooks MUST skip the file with a
+  stderr diagnostic. `/omcc-dev:resume` MUST offer Import / Archive /
+  Abort — never silently proceed.
+  - **Future** (`schema > SUPPORTED_SCHEMA_VERSION`): the reader does
+    not understand the file. Diagnostic names the schema and the
+    supported ceiling.
+  - **Legacy** (`schema < SUPPORTED_SCHEMA_VERSION`, currently
+    `schema === 1`): file is carryover from an earlier protocol
+    version. Hook-layer diagnostic points the user at
+    `/omcc-dev:resume` which provides the migration path
+    (see Schema 1 → 2 Migration below, implemented in the schema-2
+    resume handoff).
 - Older `schema < 1` is undefined (1 is the initial); treat as corrupt.
 - Missing required field: treat as corrupt; fall back to `<file>.bak` if
   available AND `.bak` passes validation (schema + workflow_id regex +
@@ -344,8 +446,10 @@ append-only shortcut exists.)
 - **Minor bump** (schema stays integer; documentation tracks minor
   revision): new field added to existing section; new non-terminal
   `current_phase` value; new `ensemble_type` entry. Backward compatible.
-- **Major bump** (`schema: 1` → `schema: 2`): field renamed or removed;
-  terminal state added; `workflow_id` format changed. Non-backward-compatible.
+- **Major bump** (e.g., `schema: 2` → `schema: 3`): field renamed or
+  removed; terminal state added; `workflow_id` format changed.
+  Non-backward-compatible. Legacy files are skipped at the hook layer
+  and migrated via `/omcc-dev:resume`.
 - Readers of schema `N` MAY read files where `schema <= N` and SHOULD
   migrate on write. Readers MUST NOT read files where `schema > N`.
 
@@ -529,38 +633,83 @@ no-op with specific error code; hooks handle this case explicitly).
 into `archive/` with user confirmation, bypassing all auto-archive
 conditions — including the "no active children" check (with a warning).
 
+**Sharded root archive**: a sharded root (see Hierarchical workflow
+shards) terminates only when every deliverable shard has reached
+`current_phase: "commit-complete"` AND the root itself has
+`current_phase: "commit-complete"`. The archive operation is a
+**two-target atomic move** via `atomicUpdateDirectory`:
+
+1. `workflows/<root_id>.md` → `archive/<root_id>.md`
+2. `workflows/<root_id>/` → `archive/<root_id>/`
+
+Both moves are recorded in a transient journal so a partial archive
+(file renamed but directory rename failed, or vice versa) rolls back
+to the pre-archive state — the root must not be split across
+`workflows/` and `archive/`. If rollback itself fails, a
+`.journal-incomplete` marker is left for the user; manual recovery is
+the fallback per Failure Handling.
+
 ---
 
 ## Cross-workflow Handoff
 
-Scenario: during `/audit` Phase 5 remediation, a finding is marked
-`fix-now` and the user transitions to `/fix`.
+Scenarios:
+- `/audit` Phase 5 remediation marks a finding `fix-now` — user
+  transitions to `/fix` (child) or `/start` (child, scope-exceeding).
+- `/start` deliverable mode spawns a child `/fix` when a deliverable
+  uncovers a bug needing separate root-cause treatment.
+- Any workflow may spawn a child of any type. Parent type drives the
+  writeback dispatch below; the lock discipline is uniform.
 
-**Write ownership** (pinned):
+**Active registry maintenance** (pinned):
+
+On child bootstrap, the child command MUST append its id to the
+parent registry entry's `children: []` list. On child terminal
+archive, the Stop hook MUST remove the id from the parent entry's
+`children`. Both operations run under the active-registry lock via
+the RMW `atomicModifyFile` helper so concurrent child bootstraps do
+not lose updates. Stop's A4 "no active children" gate queries the
+transitive closure of the parent registry entries (via
+`walkWorkflowTree`) — a grandchild also blocks the root's archive.
+
+**Write ownership — parent workflow file** (pinned, dispatched by
+parent `workflow_type`):
 
 1. Child `/fix` or `/start` command owns **both** writes — bootstrap of
-   the child file AND update of the parent's `findings[i].decision`.
-   This avoids requiring the parent `/audit` to be actively running.
-2. Child's parent write:
-   - Acquires a separate lock on the parent file
-   - Sets `findings[i].decision = "fix-now"` and
-     `findings[i].child_workflow = <child_id>`
-   - Releases the lock
-3. If the parent file is not in `workflows/`, child checks `archive/` as a
-   fallback. If parent is found in `archive/`, child writes a warning to
-   stderr and proceeds with bootstrap but `parent_workflow` is recorded as
-   `<parent_id>` and `originating_finding` recorded — the parent's
-   findings field is NOT updated (parent already archived).
-4. On child's terminal archive, child updates the parent's
-   `findings[i].resolved_commit` with the child's commit SHA.
+   the child file AND update of the parent's workflow file. This
+   avoids requiring the parent to be actively running.
+2. Child's parent write depends on parent `workflow_type`:
+   - Parent is `audit` (legacy case): acquires the parent-file lock,
+     sets `findings[i].decision = "fix-now"` and
+     `findings[i].child_workflow = <child_id>` keyed by
+     `originating_finding`, releases the lock.
+   - Parent is non-audit (`start` or `fix`): acquires the parent-file
+     lock, appends `{child_id: <child_id>, spawned_at: <timestamp>}`
+     to the parent's `child_completions:` frontmatter list (initialized
+     to `[]` on parent bootstrap when this field is present).
+3. If the parent file is in `archive/` (not `workflows/`), child writes a
+   stderr warning and proceeds with its own bootstrap but **skips the
+   parent writeback** — the parent state is frozen. `parent_workflow`
+   and (for audit parents) `originating_finding` are still recorded on
+   the child so provenance is preserved.
+4. On child's terminal archive:
+   - Audit parent: child updates the parent's
+     `findings[i].resolved_commit` with the child's commit SHA.
+   - Non-audit parent: child updates the matching
+     `child_completions[i]` entry with `commit: <sha>` and
+     `closed_at: <timestamp>`.
+   The "parent is archived" skip-with-warning rule in step 3 applies
+   equally here.
 
 **Lock acquisition order** (pinned to avoid deadlock under concurrent
-sessions): active registry → parent workflow file → child workflow file.
-Each lock is released in reverse order. Commands MUST NOT hold multiple
-locks simultaneously except in this exact order. The active registry
-lock is short-lived (read-modify-write) and released before the parent
-lock is acquired in normal flow; only the cross-workflow handoff path
-holds both parent and child locks, in the stated order.
+sessions): active registry → root workflow file → child → grandchild
+(descending tree depth). Locks MUST be acquired in depth-ascending
+order (ancestor before descendant) and released in reverse. Commands
+MUST NOT hold multiple locks simultaneously except in this exact
+order. The active registry lock is short-lived (read-modify-write)
+and released before the root lock is acquired in normal flow; only
+the cross-workflow handoff path holds both ancestor and descendant
+locks, in the stated order.
 
 **Parent archive gating**: when Stop hook evaluates a parent workflow for
 auto-archive, condition A4 checks the active registry for entries with
@@ -619,9 +768,19 @@ invoke other git subcommands such as `check-ignore` during Phase 0):
   fires on every compaction, so the silent path is the common case.
 
 - **Frontmatter sanitization** (applied to every string value before
-  injection): length cap 512 chars, strip control characters (`\x00-\x08`,
-  `\x0b-\x1f`, `\x7f`), refuse to echo backtick-quoted shell content
-  (reject backticks).
+  injection): length cap (see `SANITIZE_FIELD_CAPS` in `hooks/_utils.mjs`
+  — phase=64, next_action=120, type=16, checkpoint_summary=200; default
+  SANITIZE_CAP=512 for unregistered field names), strip control
+  characters (`\x00-\x08`, `\x0b-\x1f`, `\x7f`).
+- **Backtick rule**: if any sanitized value in an entry contains a
+  backtick (U+0060), that entire entry is rejected (skipped from the
+  output) and a one-line stderr diagnostic names the workflow id and
+  field. Rationale: backtick-quoted content in a summary that later
+  lands in Claude's context is a prompt-injection surface; the
+  conservative posture is to drop the row rather than emit a stripped
+  fragment. When every surviving entry is dropped this way, the hook
+  emits a one-line stderr summary "N entries skipped" and exits with
+  no stdout (matches the silent-no-workflows path).
 - **Body content is NOT injected** via SessionStart.
 
 ### PreCompact (no matcher)
@@ -673,6 +832,43 @@ they smooth UX only.
 
 ---
 
+## Schema 1 → 2 Migration
+
+Schema 2 treats schema-1 state files as legacy — hooks silent-skip
+them with a stderr diagnostic pointing the user at `/omcc-dev:resume`
+(see §Parser rules). On `/omcc-dev:resume` Step 2, a workflow file
+whose `schema: 1` is detected presents a three-way prompt:
+
+- **Import**: run `migrateSchema1to2(content)` against the workflow
+  file AND the active.md registry entry that points to it. Each
+  write goes through `atomicModifyFile`; the migration pair is
+  serialized by the migration lock
+  `.claude/omcc-dev/.schema-migrate.lock` (10s timeout, legacy
+  pattern) so two concurrent resume sessions cannot race.
+  `migrateSchema1to2` is behaviorally a label bump (+ `updated_at`
+  refresh). Schema 1 and 2 are field-compatible at the
+  always-required-frontmatter level — the semantic differences live
+  in how hooks and commands interpret existing fields (children
+  operationalization, parent_workflow generalization, hierarchical
+  shards). Unknown user fields survive verbatim.
+- **Archive**: rename `workflows/<id>.md` →
+  `archive/<id>-legacy-schema1-<timestamp>.md` unchanged. Remove the
+  active.md entry and scrub the parent children back-ref per B2.3.
+  User may inspect / recover manually.
+- **Abort**: leave state untouched; exit with a diagnostic that cites
+  this section.
+
+The migration is one-directional — there is no `migrateSchema2to1`.
+Users on schema-2 hooks who need to roll back should reinstall the
+prior omcc-dev version and restore from `<file>.bak` or git.
+
+Batch semantics: multiple schema-1 workflows are migrated per-file
+(each gets its own atomicModifyFile + its own user choice). Partial
+success is acceptable — failed / declined files stay at schema 1 and
+the hook layer continues to silent-skip them until the next resume.
+
+---
+
 ## Legacy design-context.md Migration
 
 When a command's Phase 0 detects a file at `<cwd>/.claude/design-context.md`:
@@ -684,7 +880,7 @@ When a command's Phase 0 detects a file at `<cwd>/.claude/design-context.md`:
    - **Import**: parse the four sections (Decision / Architecture / Plan /
      Deliverable Progress) and create a new workflow file at
      `<cwd>/.claude/omcc-dev/workflows/start-<now-timestamp>-migrated-<shortid>.md`.
-     Required fields on the new file: `schema: 1`; `workflow_type: start`;
+     Required fields on the new file: `schema: 2`; `workflow_type: start`;
      `workflow_id` follows the migration exception format; `started_at`
      and `updated_at` = migration time; `git_baseline` = current repo
      state (baseline is unknowable from legacy); imported sections are

@@ -110,6 +110,8 @@ Register approved tasks with TaskCreate for progress tracking.
 ### State write (when invoked by /start)
 
 After approval and TaskCreate registration, write the plan snapshot to
-the active workflow file per `continuity-protocol.md` Phase-boundary
-Write Rules (fields: `tasks` and, in deliverable mode,
-`plan.deliverables`).
+the invoking command's target workflow file per `continuity-protocol.md`
+Phase-boundary Write Rules (fields: `tasks` and, in deliverable mode,
+`plan.deliverables`). Under hierarchical workflows the target is the
+specific node the command is driving (root or a shard), not
+ambiguously "the active workflow".

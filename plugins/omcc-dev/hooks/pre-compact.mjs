@@ -13,12 +13,13 @@ import {
   resolveWorkflowPath,
   parseActiveRegistry,
   parseFrontmatter,
+  getNestedMap,
   getGitInfo,
   filterSensitiveStatus,
   atomicUpdateFile,
   updateUpdatedAt,
   isValidWorkflowId,
-  SUPPORTED_SCHEMA_VERSION,
+  handleLegacySchema,
 } from "./_utils.mjs";
 
 const IDEMPOTENT_WINDOW_MS = 60 * 1000;
@@ -49,17 +50,21 @@ async function processWorkflow(cwd, id) {
   const content = await readFile(filePath, "utf8");
   const parsed = parseFrontmatter(content);
   if (!parsed) return;
-  // Schema-version gate: skip files with a schema version we do not
-  // understand, to avoid corrupting forward-compat data on write-back.
+  // Schema-version gate: skip files outside the supported range
+  // (legacy OR future) to avoid corrupting data on write-back.
   const schemaRaw = parsed.fields && parsed.fields.schema;
   const schema = schemaRaw !== undefined ? Number(schemaRaw) : undefined;
-  if (schema !== undefined && schema > SUPPORTED_SCHEMA_VERSION) {
-    process.stderr.write(
-      `[omcc-dev/pre-compact] workflow ${id}: schema ${schema} newer than supported (${SUPPORTED_SCHEMA_VERSION}); skipping snapshot\n`
-    );
-    return;
-  }
+  if (handleLegacySchema(schema, id, "pre-compact")) return;
   const now = Date.now();
+  // Fresh user-initiated checkpoint within the idempotency window
+  // supersedes the mechanical snapshot — the user just told us what
+  // mattered, don't paper it over with a git-status dump.
+  // Per continuity-protocol.md §Conditionally-required frontmatter.
+  const checkpointMap = getNestedMap(parsed.fmBody, "latest_checkpoint");
+  if (checkpointMap && checkpointMap.at) {
+    const checkpointMs = new Date(checkpointMap.at).getTime();
+    if (!isNaN(checkpointMs) && now - checkpointMs < IDEMPOTENT_WINDOW_MS) return;
+  }
   const lastMs = latestSnapshotMs(parsed.body);
   if (lastMs !== null && now - lastMs < IDEMPOTENT_WINDOW_MS) return;
   const git = getGitInfo(cwd);

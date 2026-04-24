@@ -2,7 +2,9 @@
 // Pure Node.js built-ins — no external dependencies.
 // See continuity-protocol.md for the contract this file implements.
 
-import { readFile, rename, chmod, unlink, open } from "node:fs/promises";
+import {
+  readFile, rename, chmod, unlink, open, writeFile,
+} from "node:fs/promises";
 import { openSync, closeSync, existsSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
@@ -17,10 +19,36 @@ export const TERMINAL_PHASES = ["commit-complete", "summary-complete"];
 
 export const KNOWN_WORKFLOW_TYPES = ["start", "fix", "audit"];
 
-// Schema version this hook layer understands. Files with higher
-// `schema` are skipped with a stderr diagnostic per
-// continuity-protocol.md §Parser rules.
-export const SUPPORTED_SCHEMA_VERSION = 1;
+// Schema version this hook layer understands. Files with `schema`
+// either higher (future) or lower (legacy) are skipped with a stderr
+// diagnostic per continuity-protocol.md §Parser rules. Legacy schema
+// files are carried across the migration window — `/omcc-dev:resume`
+// offers the user an Import / Archive / Abort choice to migrate them.
+export const SUPPORTED_SCHEMA_VERSION = 2;
+
+// Returns true if the file's schema version is not actively supported
+// (either legacy `schema < SUPPORTED` or future `schema > SUPPORTED`).
+// Writes a one-line stderr diagnostic identifying the workflow and the
+// calling hook. Callers should skip the workflow entirely when this
+// returns true. `schema` may be `undefined` (field missing) — that
+// case returns false so existing call sites keep their pre-schema-gate
+// behavior.
+export function handleLegacySchema(schema, workflowId, hookName) {
+  if (typeof schema !== "number") return false;
+  if (schema < SUPPORTED_SCHEMA_VERSION) {
+    process.stderr.write(
+      `[omcc-dev/${hookName}] workflow ${workflowId}: legacy schema ${schema}; run /omcc-dev:resume to migrate\n`
+    );
+    return true;
+  }
+  if (schema > SUPPORTED_SCHEMA_VERSION) {
+    process.stderr.write(
+      `[omcc-dev/${hookName}] workflow ${workflowId}: schema ${schema} newer than supported (${SUPPORTED_SCHEMA_VERSION})\n`
+    );
+    return true;
+  }
+  return false;
+}
 
 export const COMMIT_SUBJECT_REGEX = {
   start: /^feat(\([^)]+\))?!?:/,
@@ -28,9 +56,17 @@ export const COMMIT_SUBJECT_REGEX = {
   audit: null,
 };
 
+// Per continuity-protocol.md §SessionStart Backtick rule:
+// - non-string input → empty string (defensive)
+// - backtick in input → null (caller MUST treat as "reject entry")
+// - otherwise → control-char-stripped, length-capped string
+// Callers that want the pre-B6 strip semantics should implement their
+// own replace loop — the default sanitize is now conservative against
+// prompt-injection surfaces.
 export function sanitize(value, cap = SANITIZE_CAP) {
   if (typeof value !== "string") return "";
-  let s = value.replace(CTRL_CHARS, "").replace(/`/g, "");
+  if (value.includes("`")) return null;
+  let s = value.replace(CTRL_CHARS, "");
   if (s.length > cap) s = s.slice(0, cap);
   return s;
 }
@@ -64,6 +100,15 @@ export const FINDING_ID_REGEX = /^finding-[0-9]+$/;
 
 export function isValidFindingId(id) {
   return typeof id === "string" && FINDING_ID_REGEX.test(id);
+}
+
+// Shard IDs are sibling-scoped identifiers under a sharded root at
+// workflows/<root_id>/<shard_id>.md per continuity-protocol.md
+// §Hierarchical workflow shards. Format pin: ^deliverable-[A-Z]$.
+export const SHARD_ID_REGEX = /^deliverable-[A-Z]$/;
+
+export function isValidShardId(id) {
+  return typeof id === "string" && SHARD_ID_REGEX.test(id);
 }
 
 // Secret scrub patterns per continuity-protocol.md §Secrets hygiene.
@@ -247,6 +292,103 @@ export function parseActiveRegistry(content) {
   return parseNestedList(parsed.fmBody, "active", ["children"]);
 }
 
+// Re-serialize active.md content from its schema/updated_at and the
+// entries list. Fields are emitted in the canonical order
+// (id, type, phase, parent, children, originating_finding) and any
+// unknown scalar keys are appended verbatim after originating_finding
+// so round-trip preserves fields the parser didn't anticipate.
+// Active entries are sorted by `id` ASCII ascending per spec.
+function serializeActiveRegistry(entries, schema, updatedAt) {
+  const lines = [
+    "---",
+    `schema: ${schema}`,
+    `updated_at: ${updatedAt}`,
+    "active:",
+  ];
+  const sorted = [...entries].sort((a, b) =>
+    a.id < b.id ? -1 : a.id > b.id ? 1 : 0
+  );
+  const known = new Set([
+    "id", "type", "phase", "parent", "children", "originating_finding",
+  ]);
+  const emitScalar = (k, v) => {
+    lines.push(`    ${k}: ${v === null || v === undefined ? "null" : v}`);
+  };
+  for (const e of sorted) {
+    lines.push(`  - id: ${e.id}`);
+    if ("type" in e) emitScalar("type", e.type);
+    if ("phase" in e) emitScalar("phase", e.phase);
+    if ("parent" in e) emitScalar("parent", e.parent);
+    const children = Array.isArray(e.children) ? e.children : [];
+    if (children.length === 0) {
+      lines.push("    children: []");
+    } else {
+      lines.push("    children:");
+      for (const c of children) lines.push(`      - ${c}`);
+    }
+    if ("originating_finding" in e) {
+      emitScalar("originating_finding", e.originating_finding);
+    }
+    // Unknown scalars preserved at the end of the entry block
+    for (const k of Object.keys(e)) {
+      if (known.has(k)) continue;
+      emitScalar(k, e[k]);
+    }
+  }
+  lines.push("---");
+  lines.push("");
+  return lines.join("\n");
+}
+
+// Append childId to parentId's `children:` list in the active registry.
+// Dedupes (no-op if already present). Maintains ASCII-ascending order
+// for diff stability. No-op if the parent entry is absent or either
+// id fails the workflow-id regex. Writes via atomicModifyFile so the
+// read-modify-write sequence is serialized with all other writers.
+export async function appendChildToParentRegistry(activePath, parentId, childId) {
+  if (!isValidWorkflowId(parentId) || !isValidWorkflowId(childId)) return;
+  await atomicModifyFile(activePath, async (content) => {
+    if (content === null) return null;
+    const parsed = parseFrontmatter(content);
+    if (!parsed) return null;
+    const entries = parseActiveRegistry(content);
+    const parent = entries.find((e) => e.id === parentId);
+    if (!parent) return null;
+    const children = Array.isArray(parent.children) ? parent.children : [];
+    if (children.includes(childId)) return null;
+    children.push(childId);
+    children.sort();
+    parent.children = children;
+    const schema = parsed.fields.schema ?? "2";
+    const updatedAt = new Date().toISOString();
+    return serializeActiveRegistry(entries, schema, updatedAt);
+  });
+}
+
+// Remove childId from parentId's `children:` list. No-op if parent is
+// absent, child is not currently in the list, or either id fails
+// validation. When the last child is removed, the block collapses to
+// the inline empty-list literal `children: []`.
+export async function removeChildFromParentRegistry(activePath, parentId, childId) {
+  if (!isValidWorkflowId(parentId) || !isValidWorkflowId(childId)) return;
+  await atomicModifyFile(activePath, async (content) => {
+    if (content === null) return null;
+    const parsed = parseFrontmatter(content);
+    if (!parsed) return null;
+    const entries = parseActiveRegistry(content);
+    const parent = entries.find((e) => e.id === parentId);
+    if (!parent) return null;
+    const children = Array.isArray(parent.children) ? parent.children : [];
+    const idx = children.indexOf(childId);
+    if (idx < 0) return null;
+    children.splice(idx, 1);
+    parent.children = children;
+    const schema = parsed.fields.schema ?? "2";
+    const updatedAt = new Date().toISOString();
+    return serializeActiveRegistry(entries, schema, updatedAt);
+  });
+}
+
 export function getGitInfo(cwd) {
   const env = { ...process.env, LC_ALL: "C" };
   const opts = { cwd, env, encoding: "utf8" };
@@ -382,6 +524,86 @@ export async function archiveCleanupPolicy(archivedSrcPath) {
   try { await unlink(`${archivedSrcPath}.bak`); } catch {}
 }
 
+// Resolve a shard file path. Rejects ids that fail their regex and
+// confirms the resolved path stays under workflows/<root_id>/ so a
+// crafted shard id cannot escape into sibling workspaces.
+export function resolveShardPath(cwd, rootId, shardId) {
+  if (!isValidWorkflowId(rootId)) {
+    throw new Error(`invalid root workflow id: ${rootId}`);
+  }
+  if (!isValidShardId(shardId)) {
+    throw new Error(`invalid shard id: ${shardId}`);
+  }
+  const rootDir = resolve(cwd, ".claude", "omcc-dev", "workflows", rootId);
+  const full = resolve(rootDir, `${shardId}.md`);
+  if (!full.startsWith(`${rootDir}/`)) {
+    throw new Error(`resolved shard path escapes root: ${full}`);
+  }
+  return full;
+}
+
+export function resolveShardDirectoryPath(cwd, rootId) {
+  if (!isValidWorkflowId(rootId)) {
+    throw new Error(`invalid root workflow id: ${rootId}`);
+  }
+  return resolve(cwd, ".claude", "omcc-dev", "workflows", rootId);
+}
+
+export function resolveArchivedShardDirectoryPath(cwd, rootId) {
+  if (!isValidWorkflowId(rootId)) {
+    throw new Error(`invalid root workflow id: ${rootId}`);
+  }
+  return resolve(cwd, ".claude", "omcc-dev", "archive", rootId);
+}
+
+// Move a workflow into archive/. For flat (non-sharded) workflows this
+// is a single rename of the .md file. For sharded roots both the root
+// .md AND the shard directory move atomically — if the directory
+// rename fails, the root file rename is rolled back so the root is
+// never split across workflows/ and archive/.
+// Returns true on success, false on any failure (caller may retry).
+export async function moveWorkflowToArchive(cwd, workflowId) {
+  if (!isValidWorkflowId(workflowId)) return false;
+  const src = resolveWorkflowPath(cwd, workflowId);
+  const dst = resolveArchivePath(cwd, workflowId);
+  const shardDir = resolveShardDirectoryPath(cwd, workflowId);
+  const archiveShardDir = resolveArchivedShardDirectoryPath(cwd, workflowId);
+  try {
+    await rename(src, dst);
+  } catch {
+    return false;
+  }
+  if (existsSync(shardDir)) {
+    try {
+      await rename(shardDir, archiveShardDir);
+    } catch (dirErr) {
+      // Roll back root-file move so the workflow is not split.
+      try {
+        await rename(dst, src);
+        return false;
+      } catch (rollbackErr) {
+        // Double failure: leave a journal marker next to the shard
+        // directory so the user can recover manually.
+        try {
+          await writeFile(
+            `${shardDir}.journal-incomplete`,
+            `pre-archive root file is at ${dst}\n` +
+              `intended archive directory is ${archiveShardDir}\n` +
+              `directory rename error: ${dirErr.message}\n` +
+              `rollback error: ${rollbackErr.message}\n`,
+            { mode: 0o600 }
+          );
+        } catch {
+          // Best-effort journal; suppress secondary failures.
+        }
+        return false;
+      }
+    }
+  }
+  await archiveCleanupPolicy(src);
+  return true;
+}
+
 export function resolveActivePath(cwd) {
   return resolve(cwd, ".claude", "omcc-dev", "active.md");
 }
@@ -397,4 +619,28 @@ export function updateUpdatedAt(fmBody, isoTimestamp) {
     return fmBody.replace(/^(\s*updated_at:\s*).*$/m, `$1${isoTimestamp}`);
   }
   return fmBody;
+}
+
+// Schema 1 → 2 migration. Rewrites the top-level `schema:` scalar
+// from 1 to 2 and refreshes `updated_at`. Schema 1 and schema 2 are
+// field-compatible at the always-required-frontmatter level — the
+// semantic differences are in how hooks and commands interpret
+// existing fields (children operationalization, parent_workflow
+// generalization, hierarchical shards). So migration is a label bump,
+// not a field transformation.
+//
+// Unknown / user-added frontmatter fields are preserved verbatim per
+// continuity-protocol.md Parser rules.
+//
+// Returns the rewritten content, or null if the input is not a
+// schema-1 file (caller may distinguish corrupt vs already-migrated).
+export function migrateSchema1to2(content) {
+  const parsed = parseFrontmatter(content);
+  if (!parsed) return null;
+  const rawSchema = parsed.fields.schema;
+  const schema = rawSchema !== undefined ? Number(rawSchema) : undefined;
+  if (schema !== 1) return null;
+  let fmBody = parsed.fmBody.replace(/^(\s*schema:\s*)1(\s*)$/m, "$12$2");
+  fmBody = updateUpdatedAt(fmBody, new Date().toISOString());
+  return parsed.prefix + fmBody + parsed.suffix + parsed.body;
 }

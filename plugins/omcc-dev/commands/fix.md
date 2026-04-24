@@ -52,22 +52,38 @@ section.
    with mode `0600`.
 5. If `$ARGUMENTS` indicates this `/fix` is spawned from an `/audit`
    finding (cross-workflow handoff), validate the finding id against
-   the finding-id regex (`^finding-[0-9]+$` per
-   `continuity-protocol.md` §Finding IDs) and the audit workflow id
-   against the workflow-id regex. Reject the handoff with a diagnostic
-   and proceed as a root workflow if validation fails. Otherwise set
-   `parent_workflow` to the audit workflow id and `originating_finding`
-   to the finding id per `continuity-protocol.md` Cross-workflow
-   Handoff. Acquire a lock on the parent audit file and update its
-   `findings[i].decision = "fix-now"` and `findings[i].child_workflow
-   = <this id>`. If the parent file is in
-   `<cwd>/.claude/omcc-dev/archive/`, write a warning and proceed
-   without the parent update (parent state is static).
+   the parent workflow id against the workflow-id regex. If the parent
+   is an `/audit`, additionally validate the finding id against the
+   finding-id regex (`^finding-[0-9]+$` per `continuity-protocol.md`
+   §Finding IDs) and record `originating_finding`. Reject the handoff
+   with a diagnostic and proceed as a root workflow if validation
+   fails.
+
+   Set `parent_workflow` to the parent workflow id. Dispatch the
+   parent writeback by parent `workflow_type`:
+   - Parent is `audit`: acquire a lock on the parent file; set
+     `findings[i].decision = "fix-now"` and
+     `findings[i].child_workflow = <this id>` keyed by
+     `originating_finding`.
+   - Parent is `start` or `fix` (non-audit): acquire a lock on the
+     parent file; append
+     `{child_id: <this id>, spawned_at: <ISO-8601 UTC>}` to the
+     parent's `child_completions:` frontmatter list (initialize to
+     `[]` if missing).
+
+   If the parent file is in `<cwd>/.claude/omcc-dev/archive/`, **skip
+   the writeback with a stderr warning** — the parent state is frozen;
+   `parent_workflow` (and, for audit parents, `originating_finding`)
+   are still recorded on this workflow so provenance resolution via
+   the archive fallback works.
 6. Add or update the entry in the active registry with all required
    fields per `continuity-protocol.md` §Active Registry: `id` = this
    workflow id, `type: fix`, `phase: "investigate"`, `parent:
    <parent_workflow if step 5 set one, else null>`, `children: []`,
    `originating_finding: <finding id if step 5 set one, else null>`.
+   **If step 5 set `parent_workflow`, also call
+   `appendChildToParentRegistry(activePath, parent_workflow, <this id>)`**
+   so the parent's `children:` list operationally reflects this child.
 7. Run `git check-ignore <cwd>/.claude/omcc-dev/` and warn if the
    directory is not gitignored (per `continuity-protocol.md` Security
    Considerations).
@@ -164,10 +180,18 @@ After the commit:
 
 1. Set `current_phase: "commit-complete"` and `next_action: "archive"`
    in the workflow file per `continuity-protocol.md`.
-2. If this workflow has a `parent_workflow` (spawned from `/audit`),
-   acquire a lock on the parent's file and update
-   `findings[i].resolved_commit` with the new commit SHA. If the parent
-   is in `<cwd>/.claude/omcc-dev/archive/`, skip with a warning.
+2. If this workflow has a `parent_workflow`, dispatch the terminal
+   writeback by parent `workflow_type`:
+   - Parent is `audit`: acquire a lock on the parent file and update
+     `findings[i].resolved_commit` with the new commit SHA.
+   - Parent is `start` or `fix` (non-audit): acquire a lock on the
+     parent file and update the matching `child_completions[i]` entry
+     (keyed by `child_id`) with `commit: <sha>` and `closed_at:
+     <ISO-8601 UTC>`.
+   If the parent is in `<cwd>/.claude/omcc-dev/archive/`, **skip the
+   writeback with a stderr warning** — the parent state is frozen;
+   the archive fallback still resolves the provenance link per
+   `continuity-protocol.md` §Cross-workflow Handoff.
 3. The Stop hook auto-archives when conditions A1–A4 are met (see
    `continuity-protocol.md` Archive and Completion Lifecycle). If hooks
    did not fire, the user can run `/omcc-dev:resume archive
