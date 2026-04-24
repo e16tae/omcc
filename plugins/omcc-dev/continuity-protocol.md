@@ -258,6 +258,25 @@ task_profile:                          # built during orchestration.md Step 1
   `ensemble_type` enum (from `ensemble-protocol.md` Ensemble Point Types):
   `brainstorm | explore | plan-verify | review | investigate | fix-verify | audit-scan`.
   Absent when no Codex job is in flight.
+- `latest_checkpoint`: map OR absent. Written by `/omcc-dev:checkpoint`
+  as a user-initiated in-session context milestone. Shape:
+  ```yaml
+  latest_checkpoint:
+    at: <ISO 8601 UTC, Z suffix>
+    summary: <sanitized digest string, per SANITIZE_FIELD_CAPS.checkpoint_summary=200>
+  ```
+  Consumers:
+  - `hooks/session-start.mjs` injects `checkpoint="<summary>"` into the
+    active-workflow summary line when `at` is present AND `summary`
+    passes sanitization (no backticks, no control chars).
+  - `hooks/pre-compact.mjs` treats a `latest_checkpoint` whose `at` is
+    within `IDEMPOTENT_WINDOW_MS` (60s) of `now` as "fresh" and skips
+    appending a mechanical snapshot — the user-provided checkpoint
+    supersedes the git-status snapshot for that window.
+  Absent when the user has not yet invoked `/omcc-dev:checkpoint`.
+  Timestamps that fail to parse (invalid ISO-8601, future, missing)
+  are treated as **absent** rather than as errors so the hook-layer
+  invariants stay non-blocking.
 
 **Rule**: optional/conditional fields MUST NOT be written as literal `null`.
 If the condition does not hold, omit the field entirely.
