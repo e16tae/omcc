@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.0](https://github.com/e16tae/omcc/compare/v1.0.0...v1.1.0) (2026-04-24)
+
+
+### Features
+
+* **omcc-dev:** pin max effort on primary subagents ([a491671](https://github.com/e16tae/omcc/commit/a491671b31ea299e81623cc1887bcf9da7647864))
+* **omcc-dev:** pin max effort on primary subagents ([c030007](https://github.com/e16tae/omcc/commit/c0300073fe20d247ce31d57e1a8cbba2dc04817b))
+
 ## [1.0.0](https://github.com/e16tae/omcc/compare/v0.10.0...v1.0.0) (2026-04-24)
 
 
