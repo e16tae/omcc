@@ -56,9 +56,17 @@ export const COMMIT_SUBJECT_REGEX = {
   audit: null,
 };
 
+// Per continuity-protocol.md §SessionStart Backtick rule:
+// - non-string input → empty string (defensive)
+// - backtick in input → null (caller MUST treat as "reject entry")
+// - otherwise → control-char-stripped, length-capped string
+// Callers that want the pre-B6 strip semantics should implement their
+// own replace loop — the default sanitize is now conservative against
+// prompt-injection surfaces.
 export function sanitize(value, cap = SANITIZE_CAP) {
   if (typeof value !== "string") return "";
-  let s = value.replace(CTRL_CHARS, "").replace(/`/g, "");
+  if (value.includes("`")) return null;
+  let s = value.replace(CTRL_CHARS, "");
   if (s.length > cap) s = s.slice(0, cap);
   return s;
 }

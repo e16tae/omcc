@@ -31,6 +31,7 @@ async function main() {
   if (!entries.length) process.exit(0);
 
   const lines = ["Active omcc-dev workflow(s):"];
+  let backtickSkipped = 0;
   for (const e of entries) {
     if (!isValidWorkflowId(e.id)) continue;
     const wfPath = resolveWorkflowPath(cwd, e.id);
@@ -53,6 +54,22 @@ async function main() {
     const checkpointMap = getNestedMap(parsed.fmBody, "latest_checkpoint");
     const rawSummary = checkpointMap && checkpointMap.summary ? checkpointMap.summary : "";
     const checkpoint = rawSummary ? sanitizeField("checkpoint_summary", rawSummary) : "";
+    // Backtick rule: if ANY sanitized field returned null, the value
+    // contained a backtick and the whole entry is rejected per
+    // continuity-protocol.md §SessionStart Backtick rule. One diag
+    // per entry identifies which field triggered the reject.
+    if (phase === null || nextAction === null || type === null || checkpoint === null) {
+      const culprit =
+        phase === null ? "phase"
+        : nextAction === null ? "next_action"
+        : type === null ? "type"
+        : "checkpoint_summary";
+      process.stderr.write(
+        `[omcc-dev/session-start] workflow ${e.id}: field ${culprit} contains backticks; entry skipped\n`
+      );
+      backtickSkipped++;
+      continue;
+    }
     if (checkpoint) {
       lines.push(
         `- ${e.id} (${type}) phase=${phase} next="${nextAction}" checkpoint="${checkpoint}"`
@@ -61,7 +78,16 @@ async function main() {
       lines.push(`- ${e.id} (${type}) phase=${phase} next="${nextAction}"`);
     }
   }
-  if (lines.length === 1) process.exit(0);
+  if (lines.length === 1) {
+    // All entries filtered — if any were backtick-rejected, emit a one-line
+    // summary so the operator knows why the injection is silent this time.
+    if (backtickSkipped > 0) {
+      process.stderr.write(
+        `[omcc-dev/session-start] ${backtickSkipped} entries skipped (backtick)\n`
+      );
+    }
+    process.exit(0);
+  }
   lines.push("If this hook did not fire, run /omcc-dev:resume for full rehydration.");
   process.stdout.write(lines.join("\n") + "\n");
 }

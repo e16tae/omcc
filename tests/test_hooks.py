@@ -181,17 +181,31 @@ class TestSessionStart:
         # No valid entries survive regex check → silent
         assert out == ""
 
-    def test_backticks_are_stripped_from_output(self, tmp_path):
+    def test_backticks_cause_row_rejection(self, tmp_path):
+        """Schema-2 Backtick rule: a field value containing a backtick
+        rejects the entire entry (not the character). One-line stderr
+        diagnostic identifies the workflow and the field. No stripped
+        fragment is ever echoed to stdout."""
         cwd = _init_cwd(tmp_path)
         wf_id = "start-20260422T120000Z-111111"
         _write_workflow(cwd, wf_id, "brainstorm", "try `whoami`", "start")
         _write_active(cwd, [{"id": wf_id, "type": "start", "phase": "brainstorm",
                              "parent": None, "children": []}])
-        rc, out, _ = _run_hook(
+        rc, out, err = _run_hook(
             "session-start.mjs", {"cwd": str(cwd), "source": "compact"}, cwd
         )
         assert rc == 0
-        assert "`" not in out, f"backticks should be sanitized; got {out!r}"
+        # No stripped fragment — whole entry dropped
+        assert wf_id not in out
+        assert "`" not in out
+        # stderr identifies the rejected entry; summary counts skipped
+        assert wf_id in err
+        assert "contains backticks" in err
+        assert "next_action" in err or "phase" in err
+        # When every entry is rejected, stdout is empty and a one-line
+        # skip-count summary lands on stderr
+        assert out == ""
+        assert "entries skipped (backtick)" in err
 
     def test_corrupt_workflow_file_skipped(self, tmp_path):
         cwd = _init_cwd(tmp_path)

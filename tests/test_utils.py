@@ -316,16 +316,30 @@ console.log(sanitizeField('nonexistent_field_name', long).length);
     assert stdout.strip() == "512"
 
 
-def test_sanitize_field_strips_control_chars_and_backticks():
-    """sanitizeField inherits sanitize() stripping behavior."""
+def test_sanitize_field_strips_control_chars():
+    """sanitizeField inherits sanitize() control-char stripping.
+    Backtick handling is covered by the separate reject test below."""
     rc, stdout, stderr = _call_util(
         """
-console.log(sanitizeField('phase', 'helloworld`cmd`'));
+console.log(sanitizeField('phase', 'hello\\u0001world\\u0007').length);
 """,
         imports=["sanitizeField"],
     )
     assert rc == 0, stderr
-    assert stdout.strip() == "helloworldcmd"
+    # \\u0001 and \\u0007 both stripped -> "helloworld" (10 chars)
+    assert stdout.strip() == "10"
+
+
+def test_sanitize_field_rejects_backticks_with_null():
+    """B6: a backtick anywhere in the input causes sanitize() /
+    sanitizeField() to return null so callers can reject the entry
+    entirely rather than leak a stripped fragment into Claude context."""
+    rc, stdout, stderr = _call_util(
+        "console.log(JSON.stringify(sanitizeField('phase', 'hello`cmd`')));",
+        imports=["sanitizeField"],
+    )
+    assert rc == 0, stderr
+    assert stdout.strip() == "null"
 
 
 # --- walkWorkflowTree (1.7) -------------------------------------------------
