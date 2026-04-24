@@ -52,20 +52,33 @@ section.
    orchestration). Apply the secrets-hygiene regex scrub to
    `$ARGUMENTS` before writing `original_request`. Write the file with
    mode `0600`.
-5. If `$ARGUMENTS` indicates this `/start` is spawned from an `/audit`
-   finding (cross-workflow handoff — typically a `fix-now` decision
-   routed to `/start` because the scope exceeds `/fix`'s domain),
-   validate the finding id against the finding-id regex
+5. If `$ARGUMENTS` indicates this `/start` is spawned from a parent
+   workflow (cross-workflow handoff per `continuity-protocol.md`
+   §Cross-workflow Handoff) — typically a `fix-now` decision or a
+   deliverable-level scope split — validate the parent workflow id
+   against the workflow-id regex. If the parent is an `/audit`,
+   additionally validate the finding id against the finding-id regex
    (`^finding-[0-9]+$` per `continuity-protocol.md` §Finding IDs) and
-   validate the audit workflow id against the workflow-id regex. If
-   either validation fails, reject the handoff with a diagnostic and
-   proceed as a root workflow. Otherwise set `parent_workflow` to the
-   audit workflow id and `originating_finding` to the finding id.
-   Acquire a lock on the parent audit file and update its
-   `findings[i].decision = "fix-now"` and `findings[i].child_workflow
-   = <this id>`. If the parent file is in
-   `<cwd>/.claude/omcc-dev/archive/`, write a warning and proceed
-   without the parent update (parent state is static).
+   record `originating_finding`. If validation fails at any step,
+   reject the handoff with a diagnostic and proceed as a root workflow.
+
+   Set `parent_workflow` to the parent workflow id. Dispatch the
+   parent writeback by parent `workflow_type`:
+   - Parent is `audit`: acquire a lock on the parent file; set
+     `findings[i].decision = "fix-now"` and
+     `findings[i].child_workflow = <this id>` keyed by
+     `originating_finding`.
+   - Parent is `start` or `fix` (non-audit): acquire a lock on the
+     parent file; append
+     `{child_id: <this id>, spawned_at: <ISO-8601 UTC>}` to the
+     parent's `child_completions:` frontmatter list (initialize to
+     `[]` if missing).
+
+   If the parent file is in `<cwd>/.claude/omcc-dev/archive/`, **skip
+   the parent writeback with a stderr warning** — the parent state is
+   frozen. `parent_workflow` (and, for audit parents,
+   `originating_finding`) are still recorded on this workflow so
+   provenance resolution via the archive fallback works.
 6. Add or update the entry in the active registry with all required
    fields per `continuity-protocol.md` §Active Registry: `id` = this
    workflow id, `type: start`, `phase: "brainstorm"` (mirrors
@@ -268,11 +281,20 @@ If the changes warrant a PR, ask the user whether to create one.
 ### Cleanup
 
 Set `current_phase: "commit-complete"` and `next_action: "archive"` in
-the workflow file per `continuity-protocol.md`. If this workflow has a
-`parent_workflow` (spawned from `/audit` as a `fix-now` transition),
-acquire a lock on the parent's file and update
-`findings[i].resolved_commit` with the new commit SHA. If the parent
-is in `<cwd>/.claude/omcc-dev/archive/`, skip with a warning.
+the workflow file per `continuity-protocol.md`. If this workflow has
+a `parent_workflow`, dispatch the terminal writeback by parent
+`workflow_type`:
+
+- Parent is `audit`: acquire a lock on the parent file and update
+  `findings[i].resolved_commit` with the new commit SHA.
+- Parent is `start` or `fix` (non-audit): acquire a lock on the parent
+  file and update the matching `child_completions[i]` entry (keyed by
+  `child_id`) with `commit: <sha>` and `closed_at: <ISO-8601 UTC>`.
+
+If the parent is in `<cwd>/.claude/omcc-dev/archive/`, **skip the
+writeback with a stderr warning** — the parent state is frozen; the
+archive fallback still resolves the provenance link per
+`continuity-protocol.md` §Cross-workflow Handoff.
 
 The Stop hook auto-archives when all four conditions (A1–A4) are met;
 no manual cleanup is needed in normal cases. If hooks did not fire,

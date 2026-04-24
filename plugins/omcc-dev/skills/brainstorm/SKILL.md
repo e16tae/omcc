@@ -172,7 +172,9 @@ without explicit approval.
 
 ### State write (when invoked by /start)
 
-After user approval, write the decision to the active workflow file per
-`continuity-protocol.md` Phase-boundary Write Rules (fields:
-`decision.chosen`, `decision.rationale`, `decision.rejected`) before
-the phase transitions.
+After user approval, write the decision to the invoking command's
+target workflow file per `continuity-protocol.md` Phase-boundary Write
+Rules (fields: `decision.chosen`, `decision.rationale`,
+`decision.rejected`) before the phase transitions. Under hierarchical
+workflows the target is the specific node the command is driving
+(root or a shard), not ambiguously "the active workflow".

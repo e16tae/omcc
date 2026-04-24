@@ -72,7 +72,9 @@ Present unified findings to user.
 
 ### State write (when invoked by /start)
 
-After synthesis, write the architecture findings to the active workflow
-file per `continuity-protocol.md` Phase-boundary Write Rules (fields:
-`architecture.patterns`, `architecture.integration_points`,
-`architecture.pitfalls`).
+After synthesis, write the architecture findings to the invoking
+command's target workflow file per `continuity-protocol.md`
+Phase-boundary Write Rules (fields: `architecture.patterns`,
+`architecture.integration_points`, `architecture.pitfalls`). Under
+hierarchical workflows the target is the specific node the command is
+driving (root or a shard), not ambiguously "the active workflow".

@@ -109,7 +109,9 @@ Do not fix issues in this skill. Fixing is handled by the invoking command
 
 ### State write (when invoked by /start or /audit)
 
-After synthesis, the invoking command writes the review result into the
-active workflow file per `continuity-protocol.md` Phase-boundary Write
-Rules. This skill does not write state itself — it hands findings to
+After synthesis, the invoking command writes the review result into its
+target workflow file per `continuity-protocol.md` Phase-boundary Write
+Rules. Under hierarchical workflows the target is the specific node the
+command is driving (root or a shard), not ambiguously "the active
+workflow". This skill does not write state itself — it hands findings to
 the command, which owns the write.
