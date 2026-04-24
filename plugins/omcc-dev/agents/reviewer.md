@@ -2,6 +2,7 @@
 name: reviewer
 description: Reviews code changes from a specific assigned perspective, reporting findings with severity ratings. Use when a targeted review angle (correctness, security, performance, etc.) is needed on pending or recent changes.
 model: opus
+effort: max
 tools: Read, Glob, Grep
 color: red
 ---
