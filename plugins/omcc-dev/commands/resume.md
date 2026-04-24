@@ -87,7 +87,7 @@ active registry and workflow files directly for every decision.
    - **Import**: acquire the migration lock
      `.claude/omcc-dev/.schema-migrate.lock` (10s timeout). Call
      `migrateSchema1to2(content)` against this workflow file AND
-     against the `active.md` entry that points to it. Write each via
+     against the active registry entry that points to it. Write each via
      `atomicModifyFile`. On success, reload the migrated file and
      continue from step 4 below.
    - **Archive**: rename the file to
