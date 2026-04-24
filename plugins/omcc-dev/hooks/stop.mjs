@@ -5,7 +5,7 @@
 // Exits 0 on stop_hook_active to prevent infinite loops.
 
 import { existsSync } from "node:fs";
-import { readFile, rename } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import {
   readStdinJson,
@@ -18,7 +18,7 @@ import {
   acquireLock,
   releaseLock,
   atomicModifyFile,
-  archiveCleanupPolicy,
+  moveWorkflowToArchive,
   removeChildFromParentRegistry,
   isValidWorkflowId,
   walkWorkflowTree,
@@ -127,24 +127,17 @@ async function maybeAutoArchive(cwd, entry, entries) {
 }
 
 async function moveToArchive(cwd, workflowId) {
+  // Acquire the `<src>.lock` sentinel to serialize with atomicModifyFile /
+  // atomicUpdateFile writers — see commit 7e3b96a rationale. The
+  // moveWorkflowToArchive helper then handles the flat-vs-sharded
+  // split atomically (both the root file AND any shard directory move,
+  // with rollback-on-partial-failure via a .journal-incomplete marker).
   const src = resolveWorkflowPath(cwd, workflowId);
-  const dst = resolveArchivePath(cwd, workflowId);
-  // Acquire the same `<src>.lock` sentinel that atomicModifyFile /
-  // atomicUpdateFile use so archive rename cannot interleave with a
-  // concurrent PreCompact (or any other writer) between its
-  // rename(src, bak) and rename(tmp, src) pair. Without this lock the
-  // archiver can see the file momentarily absent and fail with ENOENT,
-  // or worse replace the freshly-written snapshot with an archived
-  // copy whose active-registry entry has not yet been removed.
   const lockPath = `${src}.lock`;
   const acquired = await acquireLock(lockPath);
   if (!acquired) return false;
   try {
-    try {
-      await rename(src, dst);
-    } catch { return false; }
-    await archiveCleanupPolicy(src);
-    return true;
+    return await moveWorkflowToArchive(cwd, workflowId);
   } finally {
     await releaseLock(lockPath);
   }

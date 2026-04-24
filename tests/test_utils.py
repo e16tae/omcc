@@ -748,3 +748,126 @@ def test_remove_child_noop_when_absent(tmp_path):
     assert rc == 0, stderr
     content = active.read_text()
     assert _CHILD_A in content
+
+
+# --- SHARD_ID_REGEX / isValidShardId / resolveShardPath (B4.3) --------------
+
+
+def test_shard_id_regex_accepts_deliverable_tokens():
+    rc, stdout, stderr = _call_util(
+        """
+for (const id of ['deliverable-A', 'deliverable-B', 'deliverable-Z']) {
+  console.log(id + ':' + isValidShardId(id));
+}
+""",
+        imports=["isValidShardId"],
+    )
+    assert rc == 0, stderr
+    lines = stdout.strip().split("\n")
+    assert all(l.endswith(":true") for l in lines), lines
+
+
+def test_shard_id_regex_rejects_malformed():
+    rc, stdout, stderr = _call_util(
+        """
+for (const id of [
+  'deliverable-a', 'deliverable-AA', 'deliverable-1', 'deliverable',
+  'deliverable-', 'Deliverable-A', '../escape', 'deliverable-A/..',
+]) {
+  console.log(id + ':' + isValidShardId(id));
+}
+console.log('null:' + isValidShardId(null));
+console.log('number:' + isValidShardId(42));
+""",
+        imports=["isValidShardId"],
+    )
+    assert rc == 0, stderr
+    for line in stdout.strip().split("\n"):
+        assert line.endswith(":false"), f"expected false, got: {line}"
+
+
+def test_resolve_shard_path_returns_under_workflows(tmp_path):
+    root_id = "start-20260424T120000Z-aaaaaa"
+    rc, stdout, stderr = _call_util(
+        f"console.log(resolveShardPath({json.dumps(str(tmp_path))}, "
+        f"{json.dumps(root_id)}, 'deliverable-A'));",
+        imports=["resolveShardPath"],
+    )
+    assert rc == 0, stderr
+    expected = str(
+        tmp_path / ".claude" / "omcc-dev" / "workflows" / root_id / "deliverable-A.md"
+    )
+    assert stdout.strip() == expected
+
+
+def test_resolve_shard_path_rejects_invalid_root_id(tmp_path):
+    rc, _, stderr = _call_util(
+        f"""
+try {{
+  resolveShardPath({json.dumps(str(tmp_path))}, '../evil', 'deliverable-A');
+  console.log('no-throw');
+}} catch (e) {{ console.log('threw:' + e.message); }}
+""",
+        imports=["resolveShardPath"],
+    )
+    assert rc == 0, stderr
+
+
+def test_resolve_shard_path_rejects_invalid_shard_id(tmp_path):
+    root_id = "start-20260424T120000Z-aaaaaa"
+    rc, stdout, stderr = _call_util(
+        f"""
+try {{
+  resolveShardPath({json.dumps(str(tmp_path))}, {json.dumps(root_id)}, '../evil');
+  console.log('no-throw');
+}} catch (e) {{ console.log('threw:' + e.message); }}
+""",
+        imports=["resolveShardPath"],
+    )
+    assert rc == 0, stderr
+    assert stdout.strip().startswith("threw:")
+
+
+def test_move_workflow_to_archive_handles_flat(tmp_path):
+    """Non-sharded workflow: moves the .md file; no shard dir to touch."""
+    wf_id = "fix-20260424T120000Z-aaaaaa"
+    workflows = tmp_path / ".claude" / "omcc-dev" / "workflows"
+    archive = tmp_path / ".claude" / "omcc-dev" / "archive"
+    workflows.mkdir(parents=True)
+    archive.mkdir(parents=True)
+    wf_path = workflows / f"{wf_id}.md"
+    wf_path.write_text("---\nschema: 2\n---\n")
+    rc, stdout, stderr = _call_util(
+        f"console.log(await moveWorkflowToArchive({json.dumps(str(tmp_path))}, "
+        f"{json.dumps(wf_id)}));",
+        imports=["moveWorkflowToArchive"],
+    )
+    assert rc == 0, stderr
+    assert stdout.strip() == "true"
+    assert not wf_path.exists()
+    assert (archive / f"{wf_id}.md").exists()
+
+
+def test_move_workflow_to_archive_handles_sharded(tmp_path):
+    """Sharded root: both the root .md AND the shard directory move."""
+    root_id = "start-20260424T120000Z-aaaaaa"
+    workflows = tmp_path / ".claude" / "omcc-dev" / "workflows"
+    archive = tmp_path / ".claude" / "omcc-dev" / "archive"
+    workflows.mkdir(parents=True)
+    archive.mkdir(parents=True)
+    root_path = workflows / f"{root_id}.md"
+    root_path.write_text("---\nschema: 2\n---\n")
+    shard_dir = workflows / root_id
+    shard_dir.mkdir()
+    (shard_dir / "deliverable-A.md").write_text("---\nshard_type: deliverable\n---\n")
+    rc, stdout, stderr = _call_util(
+        f"console.log(await moveWorkflowToArchive({json.dumps(str(tmp_path))}, "
+        f"{json.dumps(root_id)}));",
+        imports=["moveWorkflowToArchive"],
+    )
+    assert rc == 0, stderr
+    assert stdout.strip() == "true"
+    assert not root_path.exists()
+    assert not shard_dir.exists()
+    assert (archive / f"{root_id}.md").exists()
+    assert (archive / root_id / "deliverable-A.md").exists()

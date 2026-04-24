@@ -2,7 +2,9 @@
 // Pure Node.js built-ins — no external dependencies.
 // See continuity-protocol.md for the contract this file implements.
 
-import { readFile, rename, chmod, unlink, open } from "node:fs/promises";
+import {
+  readFile, rename, chmod, unlink, open, writeFile,
+} from "node:fs/promises";
 import { openSync, closeSync, existsSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
@@ -90,6 +92,15 @@ export const FINDING_ID_REGEX = /^finding-[0-9]+$/;
 
 export function isValidFindingId(id) {
   return typeof id === "string" && FINDING_ID_REGEX.test(id);
+}
+
+// Shard IDs are sibling-scoped identifiers under a sharded root at
+// workflows/<root_id>/<shard_id>.md per continuity-protocol.md
+// §Hierarchical workflow shards. Format pin: ^deliverable-[A-Z]$.
+export const SHARD_ID_REGEX = /^deliverable-[A-Z]$/;
+
+export function isValidShardId(id) {
+  return typeof id === "string" && SHARD_ID_REGEX.test(id);
 }
 
 // Secret scrub patterns per continuity-protocol.md §Secrets hygiene.
@@ -503,6 +514,86 @@ export async function atomicUpdateFile(filePath, newContent) {
 // lock sentinel would let a second writer enter the critical section.
 export async function archiveCleanupPolicy(archivedSrcPath) {
   try { await unlink(`${archivedSrcPath}.bak`); } catch {}
+}
+
+// Resolve a shard file path. Rejects ids that fail their regex and
+// confirms the resolved path stays under workflows/<root_id>/ so a
+// crafted shard id cannot escape into sibling workspaces.
+export function resolveShardPath(cwd, rootId, shardId) {
+  if (!isValidWorkflowId(rootId)) {
+    throw new Error(`invalid root workflow id: ${rootId}`);
+  }
+  if (!isValidShardId(shardId)) {
+    throw new Error(`invalid shard id: ${shardId}`);
+  }
+  const rootDir = resolve(cwd, ".claude", "omcc-dev", "workflows", rootId);
+  const full = resolve(rootDir, `${shardId}.md`);
+  if (!full.startsWith(`${rootDir}/`)) {
+    throw new Error(`resolved shard path escapes root: ${full}`);
+  }
+  return full;
+}
+
+export function resolveShardDirectoryPath(cwd, rootId) {
+  if (!isValidWorkflowId(rootId)) {
+    throw new Error(`invalid root workflow id: ${rootId}`);
+  }
+  return resolve(cwd, ".claude", "omcc-dev", "workflows", rootId);
+}
+
+export function resolveArchivedShardDirectoryPath(cwd, rootId) {
+  if (!isValidWorkflowId(rootId)) {
+    throw new Error(`invalid root workflow id: ${rootId}`);
+  }
+  return resolve(cwd, ".claude", "omcc-dev", "archive", rootId);
+}
+
+// Move a workflow into archive/. For flat (non-sharded) workflows this
+// is a single rename of the .md file. For sharded roots both the root
+// .md AND the shard directory move atomically — if the directory
+// rename fails, the root file rename is rolled back so the root is
+// never split across workflows/ and archive/.
+// Returns true on success, false on any failure (caller may retry).
+export async function moveWorkflowToArchive(cwd, workflowId) {
+  if (!isValidWorkflowId(workflowId)) return false;
+  const src = resolveWorkflowPath(cwd, workflowId);
+  const dst = resolveArchivePath(cwd, workflowId);
+  const shardDir = resolveShardDirectoryPath(cwd, workflowId);
+  const archiveShardDir = resolveArchivedShardDirectoryPath(cwd, workflowId);
+  try {
+    await rename(src, dst);
+  } catch {
+    return false;
+  }
+  if (existsSync(shardDir)) {
+    try {
+      await rename(shardDir, archiveShardDir);
+    } catch (dirErr) {
+      // Roll back root-file move so the workflow is not split.
+      try {
+        await rename(dst, src);
+        return false;
+      } catch (rollbackErr) {
+        // Double failure: leave a journal marker next to the shard
+        // directory so the user can recover manually.
+        try {
+          await writeFile(
+            `${shardDir}.journal-incomplete`,
+            `pre-archive root file is at ${dst}\n` +
+              `intended archive directory is ${archiveShardDir}\n` +
+              `directory rename error: ${dirErr.message}\n` +
+              `rollback error: ${rollbackErr.message}\n`,
+            { mode: 0o600 }
+          );
+        } catch {
+          // Best-effort journal; suppress secondary failures.
+        }
+        return false;
+      }
+    }
+  }
+  await archiveCleanupPolicy(src);
+  return true;
 }
 
 export function resolveActivePath(cwd) {
