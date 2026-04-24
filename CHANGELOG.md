@@ -1,5 +1,53 @@
 # Changelog
 
+## [1.0.0](https://github.com/e16tae/omcc/compare/v0.10.0...v1.0.0) (2026-04-24)
+
+
+### ⚠ BREAKING CHANGES
+
+* **omcc-dev:** state file schema bumped from 1 to 2. Hooks silent-skip legacy schema-1 files with a stderr diagnostic; `/omcc-dev:resume` offers Import / Archive / Abort migration per `continuity-protocol.md` §Schema 1 → 2 Migration. All in-repo state is greenfield so no local migration is needed. Users of installed omcc-dev with active schema-1 state should run `/omcc-dev:resume` on each to migrate, or archive.
+* **omcc-dev:** migrateSchema1to2 helper + resume.md Schema 1→2 migration UX
+* **omcc-dev:** backtick reject rule lands in sanitize() and SessionStart
+* **omcc-dev:** /omcc-dev:resume Steps 1/3/6 shard-aware
+* **omcc-dev:** rewrite /start deliverable mode for shard-aware re-contextualize
+* **omcc-dev:** spec hierarchical workflow shards and sharded root archive
+* **omcc-dev:** generalize parent_workflow in commands + skill wording
+* **omcc-dev:** generalize parent/child + operationalize children + 4-level lock order
+* **omcc-dev:** schema 2 examples and parser-subset clarification
+* **omcc-dev:** bump SUPPORTED_SCHEMA_VERSION to 2 with legacy handling
+
+### Features
+
+* **omcc-dev:** /omcc-dev:checkpoint command + latest_checkpoint spec ([8ce8af9](https://github.com/e16tae/omcc/commit/8ce8af96aa640f7a451c8f5dfdcb2b3efbd2e0cd))
+* **omcc-dev:** /omcc-dev:resume Steps 1/3/6 shard-aware ([547c603](https://github.com/e16tae/omcc/commit/547c6032e5ce1849d21cea4e0e81b310ea558302))
+* **omcc-dev:** appendChildToParentRegistry / removeChildFromParentRegistry ([f463ce5](https://github.com/e16tae/omcc/commit/f463ce5450c3ca35033109f6be5cee07b81e7b38))
+* **omcc-dev:** backtick reject rule lands in sanitize() and SessionStart ([408a0e1](https://github.com/e16tae/omcc/commit/408a0e1c276c620414e6c9d9e821e2646b256b58))
+* **omcc-dev:** bump SUPPORTED_SCHEMA_VERSION to 2 with legacy handling ([c504b2c](https://github.com/e16tae/omcc/commit/c504b2c4d00a6153d90b1410b2d72652d3818315))
+* **omcc-dev:** commands prose calls child-registry helpers at 4 archive paths ([bc8aed6](https://github.com/e16tae/omcc/commit/bc8aed6d8abc39202da165fb778cdcd645c97e0c))
+* **omcc-dev:** finalize schema 2 release ([ade1cdf](https://github.com/e16tae/omcc/commit/ade1cdfe79ecb6dad25d55394a776878d038ccf3))
+* **omcc-dev:** generalize parent_workflow in commands + skill wording ([bbb1876](https://github.com/e16tae/omcc/commit/bbb18768eca131715c0ff17f4e136810766d1383))
+* **omcc-dev:** generalize parent/child + operationalize children + 4-level lock order ([3d06c9c](https://github.com/e16tae/omcc/commit/3d06c9c5e859f7327076aa724531c709a8e56ddb))
+* **omcc-dev:** migrateSchema1to2 helper + resume.md Schema 1→2 migration UX ([798d41e](https://github.com/e16tae/omcc/commit/798d41e43023c5aa409f3c520023c644148be0fe))
+* **omcc-dev:** rewrite /start deliverable mode for shard-aware re-contextualize ([df4eb35](https://github.com/e16tae/omcc/commit/df4eb357ec91331c88a58c430e2bade513174c16))
+* **omcc-dev:** rewrite backtick rule as row rejection + schema drift tests ([e76b199](https://github.com/e16tae/omcc/commit/e76b199ac7bf1c67303d29fb68c6531426059712))
+* **omcc-dev:** schema 2 examples and parser-subset clarification ([88c87f4](https://github.com/e16tae/omcc/commit/88c87f433f981455912a64ad4d8e6d16efa24f7b))
+* **omcc-dev:** scrub parent.children on Stop auto-archive / stale reconcile ([e8a81e2](https://github.com/e16tae/omcc/commit/e8a81e280488399be0f9835d12c2385dbfae87e4))
+* **omcc-dev:** SHARD_ID_REGEX + resolveShardPath + moveWorkflowToArchive ([9b000f5](https://github.com/e16tae/omcc/commit/9b000f517f633cf863d51c76b2df12ecc7587997))
+* **omcc-dev:** spec hierarchical workflow shards and sharded root archive ([4bf6bdb](https://github.com/e16tae/omcc/commit/4bf6bdb2064dad35f7a9cfebcddfa42a394703b3))
+* **omcc-dev:** transitive A4 via walkWorkflowTree ([4e8a20a](https://github.com/e16tae/omcc/commit/4e8a20ae1b7f30dde3933d72c1d83e0b1775955d))
+* **omcc-dev:** wire SessionStart + PreCompact to latest_checkpoint ([3044e00](https://github.com/e16tae/omcc/commit/3044e001e132cc90ea6f0573c20e0df2e7967a55))
+
+
+### Bug Fixes
+
+* **omcc-dev:** lock moveToArchive to serialize with atomicModifyFile ([7e3b96a](https://github.com/e16tae/omcc/commit/7e3b96a10fede0ccb1622c7cbdf63e824f54b8f9))
+* **omcc-dev:** remove bare backtick-active.md in resume.md Step 2 ([88dfab3](https://github.com/e16tae/omcc/commit/88dfab36aa00edb036217fced2826013ede0e3f6))
+
+
+### Documentation
+
+* **omcc-dev:** contributor CLAUDE.md + README updates for schema 2 ([48bbd28](https://github.com/e16tae/omcc/commit/48bbd280454feacf125f9d87e476a1eef357ba9d))
+
 ## [0.10.0](https://github.com/e16tae/omcc/compare/v0.9.1...v0.10.0) (2026-04-22)
 
 
