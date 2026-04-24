@@ -150,9 +150,23 @@ Evaluate whether the plan should be executed as a single pass or in deliverables
 > "Can the full implementation be completed in one pass while maintaining context
 > quality for all tasks?"
 
-- YES → single pass (maximum coherence)
-- NO → group tasks into independently completable deliverables, present grouping
-  to user for approval
+- YES → single pass (maximum coherence). Workflow stays flat:
+  `workflows/<root_id>.md` only; no shards.
+- NO → group tasks into independently completable deliverables,
+  present grouping to user for approval. On approval, the root
+  transitions to **sharded layout** per `continuity-protocol.md`
+  §Hierarchical workflow shards:
+  - Root's `plan.deliverables[]` is populated with one entry per
+    deliverable (id = `A`, `B`, …) carrying `shard_path`, `status`,
+    cached `phase`/`next_action`.
+  - One shard file per deliverable is bootstrapped at
+    `workflows/<root_id>/<shard_id>.md` via `resolveShardPath`, with
+    frontmatter `{schema, shard_type, root_workflow, deliverable_id,
+    timestamps, current_phase, next_action, tasks: []}`.
+  - Each shard-file write goes through `atomicModifyFile` on the
+    shard path; the root's cache update and the shard bootstrap are
+    serialized by the root's `<root_id>.md.lock` to preserve the
+    `continuity-protocol.md` lock-order contract (root → shard).
 
 This is a quality judgment, not a cost optimization. Present the assessment
 and reasoning to the user for final decision.
@@ -181,21 +195,39 @@ Execute the plan task by task:
 
 ### Deliverable mode
 
-For each deliverable:
+For each deliverable (schema-2 hierarchical layout — each deliverable
+owns its own shard file):
 
-1. **Re-contextualize**: Read the active workflow file at
-   `<cwd>/.claude/omcc-dev/workflows/<workflow_id>.md` (both frontmatter
-   and body) and the code files this deliverable depends on. This
-   restores full context regardless of conversation compression. If the
-   SessionStart compact hook ran, its stdout already injected a summary;
-   read the file itself for full detail.
-2. **Implement**: Execute tasks in this deliverable following TDD cycle
-3. **Review**: Follow Phase 5 (full parallel-review + Codex)
-4. **Resolve**: Follow Phase 6 (Resolve & Converge)
-5. **Commit**: Commit this deliverable
-6. **Update**: Update the workflow state file per `continuity-protocol.md` (progress status + any new discoveries)
+1. **Re-contextualize (shard-scoped)**:
+   - Read the **active shard** file at the `shard_path` recorded in
+     the root's `plan.deliverables[i]` — resolve via
+     `resolveShardPath(cwd, root_id, deliverable_id)`. Load both the
+     shard's frontmatter and body.
+   - Read the **root file's frontmatter only** — `decision`,
+     `architecture`, `plan.deliverables[]` cache. The root's body
+     (pre-compact snapshots, prior deliverables' narrative) is NOT
+     re-read; completed shards' detail stays in `archive/` when those
+     shards have terminated, or in their own shard file when they
+     are dormant.
+   - Read the code files referenced in the active shard's body.
+   This is the load-bearing change that makes re-contextualization
+   O(shard) instead of O(root+all-shards), per Phase 2 Heavy-read
+   Hotspot #1 (Codex plan-verify gap tracker).
+2. **Implement**: Execute tasks in this deliverable following TDD cycle.
+3. **Review**: Follow Phase 5 (full parallel-review + Codex) on the
+   shard-scoped diff.
+4. **Resolve**: Follow Phase 6 (Resolve & Converge).
+5. **Commit**: Commit this deliverable. Update
+   `plan.deliverables[i].status = "completed"` on the root (cache
+   only — the shard file retains the authoritative `current_phase`).
+6. **Update**: Write state via `atomicModifyFile` on the shard path;
+   refresh the root's `plan.deliverables[i]` cache under the root's
+   lock. Unknown fields on either file are preserved verbatim.
 
-After all deliverables: proceed to Cross-deliverable Final Review (Phase 5b).
+After all deliverables complete: proceed to Cross-deliverable Final
+Review (Phase 5b). Archive of the sharded root on terminal commit is
+handled by the Stop hook through `moveWorkflowToArchive`
+(root .md + shard directory, atomic).
 
 ### Plan Adjustment
 
