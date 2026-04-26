@@ -110,11 +110,9 @@ Advance `current_phase: "scan"` when dispatching.
 If ensemble active (Affinity MEDIUM or HIGH):
 - Simultaneously launch Codex **audit-scan** ensemble point (background) per `ensemble-protocol.md`
 - Focus text is derived from the audit type per `ensemble-protocol.md` audit-scan definition
-- **Immediately after launch returns a job id**: append an entry to
-  `pending_ensemble` in state per `continuity-protocol.md`
-  (`job_id` from the launch result, `ensemble_type: audit-scan`,
-  `dispatched_at`). If launch fails, no entry is written.
-- On collection: remove the `pending_ensemble` entry by `job_id`.
+- State bookkeeping per `ensemble-protocol.md` §State Bookkeeping
+  (append `pending_ensemble` entry on launch with `ensemble_type:
+  audit-scan`; remove on collect)
 
 After agent results are collected, write the initial `findings` list
 (one entry per finding with `id`, `severity`, `location`, and
@@ -148,9 +146,8 @@ If ensemble active (Affinity MEDIUM or HIGH — launched in Phase 2):
 
 If ensemble not active (LOW affinity):
 - Launch Codex **audit-scan** ensemble point now (review-phase ensemble for LOW affinity)
-- Immediately after launch returns a job id, append an entry to
-  `pending_ensemble` in state (same shape as the MEDIUM/HIGH path).
-- Collect results; remove the `pending_ensemble` entry by `job_id`.
+- State bookkeeping per `ensemble-protocol.md` §State Bookkeeping
+- Collect results
 - Synthesize into findings.
 
 Follow the Presentation Mode Protocol (`presentation-protocol.md`) before presenting.

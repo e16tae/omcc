@@ -32,7 +32,7 @@ Every ensemble point follows three steps: Launch, Collect, Synthesize.
 
 1. Determine the ensemble point type (see Ensemble Point Types below)
 2. Select the codex-companion subcommand:
-   - `task --wait` for analysis, diagnosis, brainstorm, plan verification
+   - `task` for analysis, diagnosis, brainstorm, plan verification
    - `review --wait` for code review
    - `adversarial-review --wait` for challenging review with focus text
 3. Construct the Codex prompt (see Prompt Construction Rules)
@@ -49,7 +49,7 @@ Every ensemble point follows three steps: Launch, Collect, Synthesize.
        command -v node >/dev/null 2>&1 && \
        CLAUDE_PLUGIN_ROOT="$CODEX_HOME" \
        node "${CODEX_HOME}scripts/codex-companion.mjs" \
-       <subcommand> --wait [args]`,
+       <subcommand> [args]`,
      run_in_background: true
    })
    ```
@@ -85,6 +85,33 @@ into one of four categories:
 Synthesis output replaces the standard single-model output.
 Follow the Presentation Mode Protocol (`presentation-protocol.md`)
 for the synthesized result.
+
+### State Bookkeeping (mandatory)
+
+Whenever an ensemble point is launched from inside a workflow file
+(`/start`, `/fix`, `/audit`, `/resume`, or any skill executing inside
+one of those workflows), the orchestrator MUST record the in-flight
+job in the workflow file per `continuity-protocol.md` `pending_ensemble`
+schema. This makes the "Absent when no Codex job is in flight" invariant
+hold and lets `/omcc-dev:resume` recover correctly across compaction.
+
+- After Step 1 Launch returns the background Bash task id, append an
+  entry `{job_id, ensemble_type, dispatched_at}` to `pending_ensemble`.
+  `job_id` is the identifier returned by the launching Bash call.
+  `ensemble_type` is one of the Ensemble Point Types below. If the
+  launch failed (Bash exited non-zero before backgrounding, or the
+  preflight guard rejected codex-companion), no entry is written.
+- After Step 2 Collect completes (success, failure, or graceful
+  degradation), remove the entry by `job_id`.
+
+Consumer commands (`commands/audit.md`, `commands/fix.md`, etc.) and
+skill files MUST NOT redefine these rules; they cross-reference this
+section as the single source of truth.
+
+Stale entries left over by an interrupted session are cleared by
+`commands/resume.md` Step 5b before phase rehydration — Bash background
+task ids do not survive across sessions, so the recorded handle becomes
+uncollectable and the originating phase re-executes the launch on resume.
 
 ---
 
@@ -134,7 +161,7 @@ as explicit input, because the task is to find gaps in that specific plan.
 ### Brainstorm
 
 - **Purpose**: Independent approach generation
-- **Subcommand**: `task --wait`
+- **Subcommand**: `task`
 - **Prompt template**:
 
   ```xml
@@ -166,7 +193,7 @@ as explicit input, because the task is to find gaps in that specific plan.
 ### Explore
 
 - **Purpose**: Independent architecture and integration analysis
-- **Subcommand**: `task --wait`
+- **Subcommand**: `task`
 - **Prompt template**:
 
   ```xml
@@ -202,7 +229,7 @@ as explicit input, because the task is to find gaps in that specific plan.
 ### Plan-verify
 
 - **Purpose**: Find gaps in Claude's implementation plan
-- **Subcommand**: `task --wait`
+- **Subcommand**: `task`
 - **Independence exception**: Receives Claude's draft plan as input
 - **Prompt template**:
 
@@ -257,7 +284,7 @@ as explicit input, because the task is to find gaps in that specific plan.
 ### Investigate
 
 - **Purpose**: Independent root cause diagnosis
-- **Subcommand**: `task --wait`
+- **Subcommand**: `task`
 - **Prompt template**:
 
   ```xml

@@ -188,6 +188,25 @@ session features:
    - Archive the divergent state.
    - Proceed anyway (record the override in the workflow body).
 
+## Step 5b: Pending Ensemble Cleanup
+
+Read the active workflow's (or active shard's) `pending_ensemble:`
+frontmatter. Each entry's `job_id` is a Bash background task id from a
+prior session and is not collectable in the current session — Claude
+Code background tasks do not survive across sessions.
+
+For each entry:
+- Emit a stderr warning: `Discarding stale pending_ensemble entry
+  ensemble_type=<type> dispatched_at=<ts> — background task is not
+  recoverable across sessions.`
+- Remove the entry via atomic frontmatter update per
+  `continuity-protocol.md` State File Schema.
+
+When the list is empty after cleanup, omit the field entirely (per
+`continuity-protocol.md` "Absent when no Codex job is in flight"). The
+originating phase will re-execute the ensemble launch when Step 6
+hands control back to it — no work is lost, only the stale handle.
+
 ## Step 6: Rehydrate and Resume
 
 For sharded roots the **scope of rehydration is the active shard**,
