@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.2.0](https://github.com/e16tae/omcc/compare/v1.1.0...v1.2.0) (2026-04-26)
+
+
+### Features
+
+* **omcc-designer:** add poster-render chain-tail skill via codex imagegen ([7028605](https://github.com/e16tae/omcc/commit/7028605a69251a410fe2eba6ba3675e1bea31418))
+* **omcc-designer:** add poster-render chain-tail skill via codex imagegen ([ae5ca50](https://github.com/e16tae/omcc/commit/ae5ca505dae41837561e5de0371a92a7ca1fb357))
+
+
+### Bug Fixes
+
+* **omcc-dev:** correct codex invocation contract spec defects ([14451c2](https://github.com/e16tae/omcc/commit/14451c20360bd8f18b56fff02d03e3a84222fe7a))
+* **omcc-dev:** correct codex invocation contract spec defects ([b500ccb](https://github.com/e16tae/omcc/commit/b500ccb06e1702ee5aba6257ba88845975f0c8aa))
+
 ## [1.1.0](https://github.com/e16tae/omcc/compare/v1.0.0...v1.1.0) (2026-04-24)
 
 
