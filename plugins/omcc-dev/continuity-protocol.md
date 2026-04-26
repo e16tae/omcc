@@ -251,7 +251,7 @@ task_profile:                          # built during orchestration.md Step 1
 - `pending_ensemble`: list OR absent. When present, each entry:
   ```yaml
   pending_ensemble:
-    - job_id: <codex job id>
+    - job_id: <background task identifier returned by the launching Bash call>
       ensemble_type: <one of ensemble-protocol.md Ensemble Point Types>
       dispatched_at: <ISO 8601 UTC, Z suffix>
   ```
@@ -493,6 +493,8 @@ frontmatter (atomic full-file replace, not append).
 | 5 | Review complete | body: findings summary; `current_phase="review"` |
 | 6 | Convergence | body: findings resolution; `current_phase="resolve"` |
 | 7 | Commit complete | `current_phase="commit-complete"`, `next_action="archive"` |
+| 1/2/3/5/6 | Ensemble dispatch | `pending_ensemble` append per `ensemble-protocol.md` §State Bookkeeping (any of brainstorm / explore / plan-verify / review / re-review launch sites) |
+| 1/2/3/5/6 | Ensemble collected | `pending_ensemble` remove per `ensemble-protocol.md` §State Bookkeeping |
 
 ### `/fix` (4 phases)
 

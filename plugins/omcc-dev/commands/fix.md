@@ -146,12 +146,10 @@ advance `current_phase: "failing-test"` per `continuity-protocol.md`.
    sufficient; inform the user the full suite was skipped.
 4. Ensemble fix verification (all affinity levels):
    - Launch Codex **fix-verify** ensemble point (background) with `--scope working-tree`
-   - **Immediately after launch returns a job id**: append an entry to
-     `pending_ensemble` in state per `continuity-protocol.md`
-     (`job_id` from the launch result, `ensemble_type: fix-verify`,
-     `dispatched_at`). If launch fails, no entry is written.
+   - State bookkeeping per `ensemble-protocol.md` §State Bookkeeping
+     (append `pending_ensemble` entry on launch with `ensemble_type:
+     fix-verify`; remove on collect)
    - Collect Codex review of the patch
-   - On collection: remove the entry from `pending_ensemble` by `job_id`.
    - Synthesize: merge Codex findings into fix verification
    - Report any additional concerns Codex found in the patch
 5. Search for similar patterns: `Grep` for the same code pattern in other locations.
