@@ -218,13 +218,18 @@ When content exceeds thresholds:
 ### Image generation tools
 Ask which tools the user plans to use for image generation:
 > "Which image generation tools will you be using? For example, Midjourney,
-> NanoBanana, Hixfield, or others. This lets me optimize the image descriptions
-> for your specific tools."
+> NanoBanana, Hixfield, codex (the Codex CLI's built-in imagegen tool), or
+> others. This lets me optimize the image descriptions for your specific
+> tools, and listing `codex` enables an optional auto-render step after the
+> poster spec is saved (still subject to a per-session consent prompt)."
 
 If the user specifies tools: record in the brief for tool-specific prompt
 optimization during Phase 4.
 If the user is unsure or has no preference: mark as "none specified" —
-Phase 4 will provide the designer's vision description that works with any tool.
+Phase 4 will provide the designer's vision description that works with any
+tool. The optional `poster-render` chain still runs (with a per-session
+consent prompt) when the codex plugin is installed, regardless of this
+field's value.
 
 ---
 

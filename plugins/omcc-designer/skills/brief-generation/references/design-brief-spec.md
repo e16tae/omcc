@@ -75,7 +75,7 @@ decisions needed for Phase 4 to run independently in another session.
 - Safe area: [margin from edges for critical content]
 - Output format: [PDF / PNG / SVG / web / ...]
 - Platform: [print / social media / web / presentation / ...]
-- Image generation tools: [tool names, e.g., "Midjourney, Hixfield" or "none specified"]
+- Image generation tools: [tool names, e.g., "Midjourney, codex" or "none specified"]
 - Confirmation: [confirmed / unconfirmed]
 
 ## Supplementary Notes
@@ -179,7 +179,7 @@ Status values: confirmed / partial / unconfirmed / skipped
 | Bleed/Safe area | Phase 2 Step E | Conditional (print) | Print production safety |
 | Output format | Phase 2 Step E | Required | File delivery |
 | Platform | Phase 2 Step E | Required | Design constraints |
-| Image generation tools | Phase 2 Step E | Optional | Enables tool-specific prompt optimization via runtime research |
+| Image generation tools | Phase 2 Step E | Optional | Enables tool-specific prompt optimization via runtime research; this field's value (including `codex` or its absence) shapes the optional Phase 4 poster-render chain's consent prompt but never substitutes for user consent — see Phase 4 chain extensions below |
 | Confirmation | Auto-tracked | Required | Confirmed Decision Principle |
 
 ### Decision Log
@@ -200,6 +200,39 @@ Status values: confirmed / partial / unconfirmed / skipped
 
 Additional domains (brochure, infographic, frontend) will be mapped
 when their skills are implemented.
+
+### Phase 4 chain extensions
+
+Some domain skills support optional chain-tail extensions that produce
+additional artifacts. Chain triggers consult brief fields to shape the
+user-facing consent prompt — but never substitute for explicit consent.
+
+| Extension | Consulted field | Effect |
+|-----------|-----------------|--------|
+| poster-render | Image generation tools | After the poster spec is saved, optionally render raw zone PNGs via the codex CLI's imagegen tool. Always presents a one-time consent prompt before rendering. |
+
+Trigger semantics for `poster-render`:
+
+- The chain is **always offered after the poster spec is saved** (never
+  silently dispatched). The brief's `Image generation tools` field
+  shapes the consent-prompt wording — codex listed → straightforward
+  confirmation; non-codex tools listed → override confirmation noting
+  the tool mismatch; empty / `none specified` → confirmation with a
+  brief-update suggestion — but the user always answers explicitly.
+- The chain is also gated by the codex plugin's installation: if the
+  codex plugin is not installed (or its runtime is incomplete), the
+  chain skips silently with a one-line notice.
+
+Future chain extensions may consult different brief fields. The current
+overload of `Image generation tools` is intentional for poster-render —
+the field already declares which tool the user plans to use, so it
+naturally informs the prompt. New chains should not pile additional
+unrelated semantics onto this field; introduce a dedicated field if
+the consulted dimension is different.
+
+See `skills/poster-render/SKILL.md` for the full dispatch logic
+(including the codex pre-flight, the Tool dispatch decision text, and
+the per-zone gate).
 
 ---
 

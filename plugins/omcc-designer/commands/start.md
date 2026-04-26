@@ -45,6 +45,14 @@ skill. Currently available domain skills:
 
 - **poster** → follow `skills/poster/SKILL.md`; save to
   ./output/YYYY-MM-DD_project-name/poster_spec.md per output-file-rules.
+  After the poster spec is saved, unconditionally dispatch the
+  `poster-render` skill (`skills/poster-render/SKILL.md`) as a chain-tail.
+  poster-render owns the full dispatch logic: pre-flight (codex plugin
+  + runtime checks), one-time Tool dispatch decision (user consent
+  prompt regardless of brief field value), and graceful-skip path when
+  codex is unavailable or the user declines. This command does not
+  duplicate the trigger conditions — see poster-render's SKILL.md for
+  the canonical spec.
 
 For any other medium (brochure, infographic, frontend, etc.), the
 corresponding domain skill is not yet available. Inform the user: "The
@@ -52,12 +60,15 @@ corresponding domain skill is not yet available. Inform the user: "The
 and can be used when the skill is added." End the pipeline.
 
 When adding a new domain skill, extend the bullet list above with the
-medium-to-skill mapping.
+medium-to-skill mapping. Optional chain-tail extensions (like
+`poster-render`) follow their parent skill in the same bullet.
 
 ---
 
 ## Completion
 
-Output: "✓ Design pipeline complete." with the saved file paths (brief and
-any domain output). Offer to revise the brief, regenerate the domain output,
-or start another project.
+Output: "✓ Design pipeline complete." with the saved file paths (brief,
+domain output, and — when the chain ran — the rendered zone images under
+the project directory). Offer to revise the brief, regenerate the domain
+output, or start another project. If `poster-render` ran, also offer to
+re-render specific zones.

@@ -181,6 +181,31 @@ If the brief's Technical Specifications include image generation tools:
    - Include tool-specific parameters
 3. **Include research date** so the user knows how current the optimization is
 
+#### codex (handled by poster-render chain)
+
+When the brief's Image generation tools field includes `codex`, the
+poster_spec.md author still produces a Designer's Vision per zone, but
+**no separate "codex-specific prompt" is needed in the spec**. The codex
+prompts are constructed at render time by the `poster-render` skill
+(see `skills/poster-render/SKILL.md`) using the Designer's Vision text
+directly.
+
+Author guidance for codex-targeted zones:
+
+- Make the Designer's Vision read like a self-contained image generation
+  prompt — paragraphs the renderer can pass through verbatim.
+- Match the brief's Imagery approach (`photography`, `illustration`,
+  `mixed`) explicitly in the vision text. Codex inspects the request
+  and uses imagegen-model dispatch when raster intent is clear; for
+  simple shape / vector-friendly subjects (small flat icons, geometric
+  marks), the codex CLI may pick a deterministic script path instead.
+  The poster-render skill compensates by appending a "use the imagegen
+  tool" directive in those borderline cases — but framing the vision
+  in raster terms first is the cleanest path.
+- Do NOT include tool-specific syntax (`--ar`, parameter flags) or
+  Midjourney-style command tokens in the vision. Codex consumes
+  natural-language prompts.
+
 If no tools are specified in the brief, provide the Designer's Vision and
 Image Generation Guide only. The user can apply these to any tool.
 
@@ -206,7 +231,7 @@ Never include text content in image generation prompts.
 - [ ] No text content in the vision or prompts
 - [ ] Text overlay space specified if zone overlaps with text zones
 - [ ] Constraints from brief applied (what to avoid)
-- [ ] Tool-specific prompts generated (if tools specified in brief)
+- [ ] Tool-specific prompts generated (if tools specified in brief; for `codex`, see Tool-Specific Optimization > codex)
 - [ ] Research date included for tool-specific sections
 
 ---
