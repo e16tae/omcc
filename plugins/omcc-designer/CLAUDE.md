@@ -33,16 +33,19 @@ Built-in plugins follow the "Independence over uniformity" principle
 (see repo-root CLAUDE.md). Cross-plugin coupling is generally avoided.
 The exceptions below are explicit, documented dependencies.
 
-- **`poster-render` skill → `omcc/codex` plugin**. The `poster-render`
+- **`poster-render` skill → `codex` plugin** (canonical source: `omcc`
+  marketplace; detection is marketplace-agnostic). The `poster-render`
   skill (Phase 4 chain-tail to `poster`) invokes the codex plugin's
   `codex-companion.mjs` to render image zones. The dependency is
   optional at runtime — if the codex plugin is not installed, the
   skill emits a one-line notice and exits clean (the poster spec
   remains the user-facing artifact). Detection uses the
-  marketplace-agnostic glob `~/.claude/plugins/cache/*/codex/*/scripts/codex-companion.mjs`
-  so any marketplace fork installing the codex plugin is supported.
-  See `skills/poster-render/SKILL.md` "Optional dependency: codex
-  plugin" for the detection contract.
+  marketplace-agnostic glob `~/.claude/plugins/cache/*/codex/*/scripts/codex-companion.mjs`,
+  so any marketplace fork installing the codex plugin is supported —
+  the `omcc` prefix in colloquial references like "omcc/codex" is
+  documentary (canonical source), not a detection key. See
+  `skills/poster-render/SKILL.md` "Optional dependency: codex plugin"
+  for the detection contract.
 
 ## Plugin layout (cont'd)
 

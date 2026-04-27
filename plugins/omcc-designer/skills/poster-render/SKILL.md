@@ -3,7 +3,7 @@ name: poster-render
 description: "Renders raw zone images for a poster_spec.md by invoking codex-companion's image generation, with per-zone confirmation gates and versioned history. Use this skill (or its /omcc-designer:start / /omcc-designer:poster chain-tail dispatch) when the user wants automated image rendering for a poster spec produced by the poster skill, with the codex plugin installed."
 ---
 
-# Phase 4 Chain: Poster Image Rendering
+# Phase 4: Poster Image Rendering
 
 Render raw image assets for each image zone declared in poster_spec.md,
 using the codex CLI's built-in imagegen tool via the codex-companion
@@ -11,10 +11,10 @@ plugin. This skill is a Phase 4 chain-tail to `poster` — it runs after
 the poster skill returns, conditional on the user's opt-in via the
 Tool dispatch decision (always prompted; never silent).
 
-> Note on doc structure: because this skill is invoked as a chain-tail
-> in nearly every real session, the procedure below is the mainline
-> doc; the "When auto-activated" / "When invoked by command" sections
-> at the end describe entry-point variations.
+**Note on doc structure** — because this skill is invoked as a
+chain-tail in nearly every real session, the procedure below is the
+mainline doc; the "When auto-activated" / "When invoked by command"
+sections at the end describe entry-point variations.
 
 ## Scope and boundary
 
@@ -38,8 +38,10 @@ If the codex plugin is not installed, or its runtime is incomplete:
 
 - Do not error.
 - Leave poster_spec.md unchanged.
-- Output a one-line notice:
-  > "Codex plugin not installed or runtime incomplete — poster rendering skipped. The poster_spec.md contains image generation prompts for manual use with any image generation tool."
+- Output a one-line notice: `"Codex plugin not installed or runtime
+  incomplete — poster rendering skipped. The poster_spec.md contains
+  image generation prompts for manual use with any image generation
+  tool."`
 - Exit clean.
 
 Detection — three checks (all must pass):
@@ -74,12 +76,17 @@ or composed only of stop-words.
 
 Prompt wording by field state:
 
-- **Includes `codex`** (any tool list containing `codex`):
-  > "The brief lists codex among Image generation tools. Render zone images now via codex? (y) render with codex / (n) skip — the poster_spec.md prompts remain available for manual use."
+- **Includes `codex`** (any tool list containing `codex`): `"The brief
+  lists codex among Image generation tools. Render zone images now via
+  codex? (y) render with codex / (n) skip — the poster_spec.md prompts
+  remain available for manual use."`
 - **Lists only non-codex tools** (e.g., `Midjourney`, `Stable Diffusion`):
-  > "The brief lists [<tools>] but not codex. Render anyway via codex? (y) render — note: codex output may differ from the listed tools' style / (n) skip"
-- **Empty / missing / `none specified`**:
-  > "The brief has no Image generation tools specified. Render via codex now? (y) render / (n) skip — recommend updating the brief on next pass"
+  `"The brief lists [<tools>] but not codex. Render anyway via codex?
+  (y) render — note: codex output may differ from the listed tools'
+  style / (n) skip"`
+- **Empty / missing / `none specified`**: `"The brief has no Image
+  generation tools specified. Render via codex now? (y) render / (n)
+  skip — recommend updating the brief on next pass"`
 
 Input validation: accept `y`, `yes`, `n`, `no` (case-insensitive). Any
 other input → re-prompt with the prompt text. After 3 invalid attempts
