@@ -203,5 +203,25 @@ choose imagegen on its own).
 Each codex `task` call counts toward the user's codex usage limits.
 For larger images (512×512 or above), a single call commonly takes
 20–60 seconds. The `timeout 300` guard above bounds the worst case.
-The SKILL's per-zone gate naturally rate-limits user spend — do not
-auto-regenerate without an explicit user gate action.
+
+### Rule: no auto-regeneration
+
+The companion MUST be invoked **at most once per render attempt**,
+where each attempt is triggered by exactly one of:
+
+- The initial render call entering Step 5 for a zone (one attempt per
+  zone, per loop entry).
+- A user gate action of `r` / `redo` or `e` / `edit` (one attempt per
+  user keypress).
+
+Background re-runs, retry loops without intervening user input, or
+auto-redo on parse failure (mismatched SAVED_PATH, missing PNG, auth
+error) are forbidden. The two auto-exit paths in
+`skills/poster-render/SKILL.md` —
+- Step 6 imagegen escape (3 consecutive zones with no SAVED_PATH →
+  exit clean), and
+- Step 7 invalid-attempt counter (3 invalid gate inputs in a row →
+  treat as `f` / abort)
+— never call the companion. They terminate the loop instead of
+re-invoking it. This makes "one user action = at most one billed
+codex call" a hard guarantee, independent of failure modes.
