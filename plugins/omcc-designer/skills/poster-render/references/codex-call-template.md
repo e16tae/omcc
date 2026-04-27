@@ -7,7 +7,7 @@ verification.
 
 This document is the canonical source for the call mechanics referenced
 by `skills/poster-render/SKILL.md`. The per-zone lifecycle (gate, history
-versioning, accept/skip/load handling) lives in SKILL.md; this file does
+versioning, accept/skip handling) lives in SKILL.md; this file does
 not duplicate it.
 
 ---
@@ -143,13 +143,13 @@ After the companion exits, parse its stdout:
 5. Verify it is a real PNG: `file "$path"` should report
    `PNG image data, <W> x <H>, 8-bit/color RGB(A), non-interlaced`.
 6. If any check fails, treat as a render failure for this zone — see
-   `skills/poster-render/SKILL.md` per-zone gate Step 6 for the
-   recovery actions (offer redo / edit / skip; on N consecutive
-   failures, escape the loop).
+   `skills/poster-render/SKILL.md` per-zone gate Step 7's "Recovery
+   after a render failure" subsection (offers `e/s/d`, no `a`; on N
+   consecutive failures, escape the loop).
 
 Auth-failure pattern: if companion stdout/stderr contains tokens like
 `auth`, `login`, `401`, or `unauthorized`, treat the failure as
-**session-fatal** (do not loop on redo); see SKILL.md Step 6.
+**session-fatal** (do not retry or re-invoke); see SKILL.md Step 6.
 
 ## Two-step image storage (informational)
 
@@ -211,17 +211,19 @@ where each attempt is triggered by exactly one of:
 
 - The initial render call entering Step 5 for a zone (one attempt per
   zone, per loop entry).
-- A user gate action of `r` / `redo` or `e` / `edit` (one attempt per
-  user keypress).
+- A user gate action of `e` / `edit` (one attempt per gate decision —
+  see SKILL.md Step 7 for prefill semantics). This is the only
+  legitimate re-invocation trigger besides the initial render.
 
 Background re-runs, retry loops without intervening user input, or
-auto-redo on parse failure (mismatched SAVED_PATH, missing PNG, auth
-error) are forbidden. The two auto-exit paths in
+auto-regeneration on parse failure (mismatched SAVED_PATH, missing
+PNG, auth error) are forbidden. The two auto-exit paths in
 `skills/poster-render/SKILL.md` —
 - Step 6 imagegen escape (3 consecutive zones with no SAVED_PATH →
   exit clean), and
 - Step 7 invalid-attempt counter (3 invalid gate inputs in a row →
-  treat as `f` / abort)
-— never call the companion. They terminate the loop instead of
-re-invoking it. This makes "one user action = at most one billed
-codex call" a hard guarantee, independent of failure modes.
+  abort the loop, mirroring the Ctrl+C path)
+— never call the companion. They terminate the loop without
+re-invoking it. This makes "one user action =
+at most one billed codex call" a hard guarantee, independent of
+failure modes.
