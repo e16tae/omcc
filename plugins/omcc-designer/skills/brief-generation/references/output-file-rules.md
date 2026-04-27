@@ -52,7 +52,7 @@ Before using a project name as a directory component, apply these rules:
 
 ### Rendered zone images (`poster-render` chain only)
 
-- `<zone-id>.png` — final accepted version per zone (e.g., `zone_a.png`).
+- `<zone-id>.png` — current final version per zone (accepted render or manually replaced; e.g., `zone_a.png`).
 - `<zone-id>` is the lowercase identifier from the poster_spec.md zone
   table: Zone A → `zone_a`, Zone B → `zone_b`, etc.
 - `.history/<zone-id>/v1.png`, `v2.png`, ... — every render produces a
@@ -75,9 +75,31 @@ Per-asset overrides:
   prompt does not apply to this per-zone overwrite.
 - `.history/` files are append-only by spec design — every render
   writes a new `v<N>.png` and never overwrites an existing version.
-- Loaded external PNGs (`load` action) overwrite `<zone-id>.png` and
-  also record a `.history/<zone-id>/v<N+1>-loaded.png` snapshot — the
-  load action is itself an explicit user gesture.
+- Manual external-PNG drops at `<output-dir>/<zone-id>.png` (per the
+  post-render drop rule below) are an explicit user gesture and
+  override any prior render without prompting.
+
+## External PNG replacement (post-render drop rule)
+
+To replace a rendered zone with an external PNG, drop the file
+directly at `<output-dir>/<zone-id>.png`. This is a manual file
+operation, not a per-zone gate action.
+
+- **Timing**: drop the PNG **after** the render loop completes (or
+  after pressing `s`/skip on the specific zone). If dropped while
+  the loop is still running, the final summary may still report the
+  in-loop action (`accepted` / `skipped` / `deferred`) for that zone
+  — the summary reflects gate-time decisions, not later filesystem
+  state.
+- **Overwrite**: dropping a PNG at the top-level `<zone-id>.png`
+  overrides any previously accepted render. The corresponding
+  `.history/<zone-id>/v<N>.png` files are not touched by the drop.
+- **Rollback semantics**: on a future re-render of the same zone,
+  the per-zone gate's Step 2 will treat the dropped PNG as a
+  prior-session final and archive it as
+  `.history/<zone-id>/v<N>-prior.png`. (The legacy `-loaded` suffix
+  is no longer produced — see Step 1's backward-compat note in
+  `skills/poster-render/SKILL.md`.)
 
 ## Other
 
