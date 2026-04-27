@@ -9,6 +9,19 @@ Evaluate choices through evidence-based research and multi-perspective compariso
 The goal: the user can make an informed decision even in domains where they lack
 specialized knowledge.
 
+## Mandatory invocation conditions
+
+Invoke this skill — even without explicit user request — whenever you
+are about to make a meaningful design choice on the user's behalf:
+
+- Choosing between 2+ viable structural/architectural alternatives
+- Selecting a convention (naming, language, layout, dependency)
+- Deciding how to apply a fix to a flagged finding when 2+ viable approaches exist
+- Resolving any "should I do X or Y?" fork during implementation
+
+Do not act first and justify after. Even when the answer feels obvious,
+present the comparison and recommendation, then wait for user approval.
+
 ## When auto-activated (without /start or /audit command)
 
 ### Step 1: Clarify the choice

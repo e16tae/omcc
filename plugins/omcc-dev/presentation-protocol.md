@@ -122,3 +122,24 @@ The difference is purely in delivery format, not in content quality or completen
 Exception: When technical constraints (output token limits, context window pressure) force
 batch mode to compress content, interview mode may provide greater per-item detail since
 it spreads the output across multiple turns. This is the only permitted asymmetry.
+
+---
+
+## Use of `AskUserQuestion`
+
+The `AskUserQuestion` tool surfaces options as a multiple-choice UI.
+Reserve it for genuinely complex design decisions where all three hold:
+
+- 2+ substantive alternatives exist
+- The brainstorm skill has already produced a comparison
+- The body of the message has presented the **5-perspective comparison
+  + recommendation** in full detail before the tool call
+
+For trivial confirmations, yes/no follow-ups, or self-evident next
+steps, do **not** use `AskUserQuestion`. Use a plain text question
+instead, framed as: *"Recommended: X. Proceed?"*
+
+If the user replies with "what's the difference?" / "compare them
+specifically" after a multiple-choice prompt, drop the tool, present
+the detailed comparison + clear recommendation in the body, and ask
+for plain-text confirmation.

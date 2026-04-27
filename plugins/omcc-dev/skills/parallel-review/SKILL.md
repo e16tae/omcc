@@ -7,6 +7,18 @@ description: Reviews code changes from multiple independent perspectives (correc
 
 Review code changes from multiple independent perspectives to catch what single-perspective review misses.
 
+## Validity is Claude's judgment
+
+When synthesizing findings (in both modes below), judge each finding's
+validity yourself — do not ask the user "is this an issue?" or "should
+we fix this?". Drop invalid ones; surface valid ones by severity. The
+user reviews the consolidated, already-judged output.
+
+Scope: this applies to review/audit *evaluation* only. When the fix
+approach involves 2+ viable alternatives, route through the brainstorm
+skill. For straightforward fixes (single obvious approach), present the
+approach and confirm with the user before applying.
+
 ## When auto-activated (without /start or /audit command)
 
 Lightweight in-context review — Claude evaluates each selected perspective
