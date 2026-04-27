@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.2.2](https://github.com/e16tae/omcc/compare/v1.2.1...v1.2.2) (2026-04-27)
+
+
+### Documentation
+
+* **omcc-designer:** API consistency polish ([07a5488](https://github.com/e16tae/omcc/commit/07a5488926eba9a81e2cf548695a4fbfea001924))
+* **omcc-designer:** formalize cost/latency rule ([8f1681b](https://github.com/e16tae/omcc/commit/8f1681b939cec0cf6585949044ad9939991cb3f2))
+* **omcc-designer:** normalize convention drift across skills ([4b1669b](https://github.com/e16tae/omcc/commit/4b1669b98f649d81f28343837144910f1aaf7963))
+
 ## [1.2.1](https://github.com/e16tae/omcc/compare/v1.2.0...v1.2.1) (2026-04-27)
 
 
