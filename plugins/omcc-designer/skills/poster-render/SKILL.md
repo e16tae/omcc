@@ -88,15 +88,17 @@ in a row, treat as `n` and exit clean.
 If the user chooses `n`, exit clean with the same fallback message as
 the codex-not-installed path. Do not write any zone files.
 
-## Per-zone gate (seven actions)
+## Per-zone gate
 
-For each image zone listed in poster_spec.md Layer 3, in order:
+For each image zone listed in poster_spec.md Layer 3, in order. The
+action set is the gate table in Step 7 below — that table is the source
+of truth for the available keys and their effects.
 
 ### Step 1 — determine next version number `N`
 
 Scan `.history/<zone-id>/` for files matching `v<N>(-suffix)?\.png`
-(suffixes include `-skipped`, `-loaded`, `-prior`, `-orphan`). Set
-`N = max(<existing N values>) + 1`. If the directory is empty or
+(suffixes include `-skipped`, `-deferred`, `-loaded`, `-prior`,
+`-orphan`). Set `N = max(<existing N values>) + 1`. If the directory is empty or
 absent, `N = 1`. This rule is gap-tolerant (missing v2 between v1
 and v3 still yields N = 4).
 
@@ -116,17 +118,18 @@ and v3 still yields N = 4).
 ### Step 3 — compose the codex prompt
 
 From the zone's Designer's Vision and Image Generation Guide, append
-two literal lines:
-
-- `Save the result to the absolute path <output-dir>/.history/<zone-id>/v<N>.png — write to that exact absolute path; do not use a relative path.`
-- `At the end of your response, print exactly one line in this format: SAVED_PATH=<absolute path of the saved PNG>`
+the two literal trailer lines defined in the **Prompt template**
+section of `skills/poster-render/references/codex-call-template.md`
+(absolute-path save instruction + `SAVED_PATH=` return line). The
+template file is the canonical owner of the literal wording — this
+SKILL.md only specifies the absolute target value:
+`<output-dir>/.history/<zone-id>/v<N>.png`.
 
 **The absolute-path requirement is load-bearing.** Codex's app-server
 resolves `--cwd` to the enclosing git repository root (verified
 2026-04-26 in this repo), so a relative filename like `zone_a.png`
 writes to the repo root, not the project directory. The absolute path
-in the prompt bypasses this. See
-`skills/poster-render/references/codex-call-template.md` for the
+in the prompt bypasses this. See the same template file for the
 verification trace and the cwd-vs-absolute-path discussion.
 
 ### Step 4 — pick a prompt strategy
@@ -180,7 +183,7 @@ Parse the companion output:
 ### Step 7 — present and gate
 
 Present the version to the user (a preview of the rendered PNG) and
-wait for the gate decision. The gate accepts seven actions:
+wait for the gate decision via one of the actions below:
 
 | Key | Action | Effect |
 |---|---|---|
@@ -190,22 +193,20 @@ wait for the gate decision. The gate accepts seven actions:
 | `s` / `skip` | Skip this zone | Rename the latest version to `v<N>-skipped.png`. Do not create a final `<zone-id>.png` — the spec's prompt remains the canonical artifact for this zone. Proceed to the next zone. |
 | `l` / `load` | Load existing | Ask the user for an absolute path to an external PNG. Verify it is a PNG and copy it to `<output-dir>/<zone-id>.png` AND `.history/<zone-id>/v<N+1>-loaded.png`. Proceed to the next zone. |
 | `f` / `abort` | Abort all | Stop the render loop entirely. Already-accepted zones remain. Pending versions in `.history` are preserved. |
-| `d` / `defer` | Defer to end | Move the candidate into a deferred queue (latest version preserved in `.history/<zone-id>/v<N>.png`). Proceed to the next zone. |
+| `d` / `defer` | Defer (skip with reminder) | Rename the latest version to `v<N>-deferred.png`. Do not create a final `<zone-id>.png`. Append a "deferred — re-render recommended" row to the final summary table. Proceed to the next zone. |
 
 Input validation: accept the keys above (case-insensitive `a/r/e/s/l/f/d`,
 or the spelled-out word). Any other input → re-prompt the gate. After
 3 invalid attempts in a row, treat as `f` (abort all).
 
-### After all non-deferred zones complete
+### After all zones complete
 
-If the deferred queue is non-empty, re-enter the gate for each
-deferred zone in **original order**. **`d` (defer) is unavailable on
-re-entry** — the re-entry gate accepts only `a / r / e / s / l / f`
-(six actions). This bounds gate processing — the deferred queue is
-processed exactly once, never recursively.
-
-After all zones (and re-entered deferred zones) complete, present a
-summary table: zone → final action → final filename (or `skipped`).
+Present a summary table: zone → final action → final filename (or
+`skipped` / `deferred — re-render recommended`). Deferred zones share
+the no-final-PNG outcome with skipped zones; the difference is purely
+the reminder row, surfacing the user's intent to revisit them in a
+later session. There is no in-loop re-entry — the gate is single-pass
+across all zones.
 
 ## Concurrent renders not supported
 
@@ -231,7 +232,8 @@ Inside the project directory:
     │   ├── v1.png             # first codex render
     │   ├── v2.png             # second render after redo/edit
     │   ├── v3-skipped.png     # render after which user chose skip
-    │   ├── v4-loaded.png      # external PNG loaded after a render
+    │   ├── v4-deferred.png    # render after which user chose defer (re-render recommended)
+    │   ├── v5-loaded.png      # external PNG loaded after a render
     │   └── ...
     ├── zone_b/
     │   └── v1.png
@@ -246,11 +248,15 @@ Rules:
   `.history/<zone-id>/`. N is determined per per-zone gate Step 1
   (max-existing + 1, gap-tolerant, suffix-aware).
 - Existing versions are never overwritten; suffixed files (`-skipped`,
-  `-loaded`, `-prior`, `-orphan`) are also counted by Step 1.
+  `-deferred`, `-loaded`, `-prior`, `-orphan`) are also counted by
+  Step 1.
 - On `accept`: copy the latest `v<N>.png` to
   `<output-dir>/<zone-id>.png` (overwriting any previous final). The
   history file remains.
 - On `skip`: rename the latest version to `v<N>-skipped.png`.
+- On `defer`: rename the latest version to `v<N>-deferred.png`. No
+  final `<zone-id>.png`. The summary table appends a
+  "deferred — re-render recommended" row.
 - On `load`: copy the user-provided file to
   `<output-dir>/<zone-id>.png` AND record a
   `.history/<zone-id>/v<N+1>-loaded.png` snapshot.
