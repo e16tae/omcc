@@ -37,11 +37,8 @@ see poster-render's SKILL.md for the canonical spec.
 
 ## Completion
 
-If `poster-render` did not run, output: "✓ Poster specification complete."
-with the poster_spec.md path. Offer to adjust layout, swap AI-tool
-prompts, or regenerate specific zones.
-
-If `poster-render` ran, output: "✓ Poster pipeline complete." with the
-spec path AND the rendered zone image paths under the project directory.
-Offer to adjust layout, swap AI-tool prompts, regenerate specific zones,
-or re-render specific zones.
+Output: "✓ Poster pipeline complete." with the saved file paths
+(poster_spec.md, and — when the chain ran — the rendered zone images
+under the project directory). Offer to adjust layout, swap AI-tool
+prompts, or regenerate specific zones. If `poster-render` ran, also
+offer to re-render specific zones.

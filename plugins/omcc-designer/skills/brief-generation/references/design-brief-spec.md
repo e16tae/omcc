@@ -179,7 +179,7 @@ Status values: confirmed / partial / unconfirmed / skipped
 | Bleed/Safe area | Phase 2 Step E | Conditional (print) | Print production safety |
 | Output format | Phase 2 Step E | Required | File delivery |
 | Platform | Phase 2 Step E | Required | Design constraints |
-| Image generation tools | Phase 2 Step E | Optional | Enables tool-specific prompt optimization via runtime research; this field's value (including `codex` or its absence) shapes the optional Phase 4 poster-render chain's consent prompt but never substitutes for user consent — see Phase 4 chain extensions below |
+| Image generation tools | Phase 2 Step E | Optional input (also an optional Phase 4 chain trigger — see Phase 4 chain extensions) | Enables tool-specific prompt optimization via runtime research; this field's value (including `codex` or its absence) shapes the optional Phase 4 poster-render chain's consent prompt but never substitutes for user consent. The "Required" column carries two semantics for this row: the field is *optional as input* (a brief is valid without it), and *optional as a chain trigger* (the chain is always offered with explicit consent regardless of the value). |
 | Confirmation | Auto-tracked | Required | Confirmed Decision Principle |
 
 ### Decision Log
@@ -223,12 +223,14 @@ Trigger semantics for `poster-render`:
   codex plugin is not installed (or its runtime is incomplete), the
   chain skips silently with a one-line notice.
 
-Future chain extensions may consult different brief fields. The current
-overload of `Image generation tools` is intentional for poster-render —
+**Convention for new chain extensions**: introduce a dedicated trigger
+field rather than overloading an existing one. The current overload
+of `Image generation tools` is retained for backward compatibility —
 the field already declares which tool the user plans to use, so it
-naturally informs the prompt. New chains should not pile additional
-unrelated semantics onto this field; introduce a dedicated field if
-the consulted dimension is different.
+naturally informs the poster-render consent prompt, and the overload
+predates this convention. New chains that need a different signal
+should add a new brief field whose name reflects the chain's purpose,
+not its surface similarity to an existing field.
 
 See `skills/poster-render/SKILL.md` for the full dispatch logic
 (including the codex pre-flight, the Tool dispatch decision text, and
