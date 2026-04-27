@@ -371,6 +371,23 @@ as explicit input, because the task is to find gaps in that specific plan.
 - **Present**: "Codex output was partially parsed — some findings may be missing."
   List which sections were present and which were absent.
 
+### Codex review stall on very large branch diffs
+
+- **Detect**: `git diff <base>...HEAD | wc -l` exceeds ~1500 lines, or
+  the Codex review job log
+  (`~/.claude/plugins/data/codex-<marketplace>/state/.../jobs/<id>.log`)
+  shows no progress for >10 minutes after launch. Empirical threshold:
+  ~2400 lines across 22 files (schema-2 Branch 2 PR, observed twice)
+- **Action**: do not issue a single `review --scope branch`. Slice by
+  checking out each cut-point commit in turn and reviewing with
+  `--base <prev> --scope branch` against the previous cut point
+  (`--base` alone reviews `<base>...HEAD`, so without a checkout the
+  segments overlap). Keep each slice under ~800 lines; restore HEAD
+  with `git checkout <branch>` after the last slice. Cancel a stalled
+  job via `/codex:cancel <job-id>` before retrying
+- **Present**: "Branch diff exceeds slicing threshold — review issued
+  in K segments"
+
 ### Graceful degradation principle
 
 Ensemble failure must never block the workflow. Claude-only results are always

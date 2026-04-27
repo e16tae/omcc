@@ -47,12 +47,50 @@ Scope: plugin name or area
 - Remove plugin: `feat(name)!: remove ...` (BREAKING CHANGE)
 - Docs/CI: `docs(...)`, `ci(...)`
 
+## Git Workflow
+
+### Pull strategy
+Use **merge** for `git pull` — never rebase. Run `git pull --no-rebase`
+explicitly; do not rely on bare `git pull`, since `pull.rebase=true`
+in any config layer (global, system, or repo) silently turns it into
+a rebase. Resolve divergent branches via merge as well.
+
+### Branching
+Never commit directly to `main`. All changes go through:
+1. create a feature branch (`git checkout -b <type>/<scope>`)
+2. commit on the branch
+3. push to origin (`git push -u origin <branch>`)
+4. open a PR via `gh pr create`
+
+Apply this even when the user says "커밋해" / "commit" — assume PR
+workflow unless explicitly told otherwise (e.g., already on a feature
+branch, or amending an in-flight PR).
+
 ## Versioning
 - SemVer (MAJOR.MINOR.PATCH)
 - MAJOR: breaking change (plugin removal/rename)
 - MINOR: plugin addition
 - PATCH: description edits, etc.
 - release-please manages versions automatically based on commit messages
+
+## Audit Filter — Known External Constraints
+
+Some audit/review findings on this marketplace are non-actionable
+because they reference external constraints that omcc does not control.
+Treat the following as **Known — no action** and exclude from severity
+tallies during synthesis:
+
+- `marketplace.json` `$schema` field — references the Anthropic-managed
+  URL `https://anthropic.com/claude-code/marketplace.schema.json`;
+  hosting a project-local schema is out of scope.
+- `source.source` field name (nested `source` key inside the `source`
+  object) — dictated by the Anthropic marketplace schema, not an omcc
+  naming choice.
+- `marketplace.json` field structure being coupled to Claude Code's
+  schema — inherent to being a marketplace manifest, not a design flaw.
+
+Agents reporting these findings independently is normal; filtering
+happens at synthesis.
 
 ## Plugin Design Principles
 
@@ -73,6 +111,19 @@ end-user methodology rules.
 ### Independence over uniformity
 Each plugin optimizes for its own domain. Do not force structural or
 terminological consistency across plugins. Cross-plugin consistency is not a goal.
+
+### Repo conventions over domain rationale
+
+Established repo-wide conventions (language, structure, layout
+patterns) take precedence over domain-specific arguments. If a new
+plugin's domain seems to warrant a deviation, treat that deviation
+as a design decision requiring brainstorm — not as an assumption.
+
+Documentation language across all built-in plugins is **English**,
+independent of the plugin's runtime domain (e.g., `omcc-meeting`
+processes Korean meeting transcripts but its commands/skills/agents
+are written in English). Runtime output language to the user is
+determined by the user's interaction language, separately.
 
 ### Quality priority
 Fundamentals > Standards > Recommendations > Pragmatics. Favor canonical
