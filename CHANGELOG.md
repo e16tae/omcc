@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.1](https://github.com/e16tae/omcc/compare/v1.2.0...v1.2.1) (2026-04-27)
+
+
+### Documentation
+
+* codify user feedback rules into canonical mechanisms ([fa58ec8](https://github.com/e16tae/omcc/commit/fa58ec8207d88becb0d5b1f7368eda786d107010))
+* codify user feedback rules into canonical mechanisms ([8649f90](https://github.com/e16tae/omcc/commit/8649f90e4c07ff2efbbbbc19006d60d4d8ffe38b))
+
 ## [1.2.0](https://github.com/e16tae/omcc/compare/v1.1.0...v1.2.0) (2026-04-26)
 
 
