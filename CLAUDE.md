@@ -120,10 +120,9 @@ plugin's domain seems to warrant a deviation, treat that deviation
 as a design decision requiring brainstorm — not as an assumption.
 
 Documentation language across all built-in plugins is **English**,
-independent of the plugin's runtime domain (e.g., `omcc-meeting`
-processes Korean meeting transcripts but its commands/skills/agents
-are written in English). Runtime output language to the user is
-determined by the user's interaction language, separately.
+independent of the plugin's runtime domain. Runtime output language
+to the user is determined by the user's interaction language,
+separately.
 
 ### Quality priority
 Fundamentals > Standards > Recommendations > Pragmatics. Favor canonical

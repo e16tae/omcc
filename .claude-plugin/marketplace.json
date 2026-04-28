@@ -38,16 +38,6 @@
       "category": "development",
       "source": "./plugins/omcc-dev",
       "homepage": "https://github.com/e16tae/omcc"
-    },
-    {
-      "name": "omcc-meeting",
-      "description": "Meeting documentation pipeline that transforms STT transcripts into polished minutes and reports via interactive interview-based correction",
-      "author": {
-        "name": "e16tae"
-      },
-      "category": "productivity",
-      "source": "./plugins/omcc-meeting",
-      "homepage": "https://github.com/e16tae/omcc"
     }
   ]
 }

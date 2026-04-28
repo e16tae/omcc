@@ -26,11 +26,6 @@
           "type": "json",
           "path": "plugins/omcc-designer/.claude-plugin/plugin.json",
           "jsonpath": "$.version"
-        },
-        {
-          "type": "json",
-          "path": "plugins/omcc-meeting/.claude-plugin/plugin.json",
-          "jsonpath": "$.version"
         }
       ]
     }
