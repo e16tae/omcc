@@ -189,7 +189,12 @@ Then:
 1. Combine all variants' three-layer outputs into a single
    social_graphics_spec.md document, with one H2 sub-block per
    variant: `## Variant: <id> (<W>×<H>)` followed by Layer 1, Layer
-   2, Layer 3 sub-sections.
+   2, Layer 3 sub-sections. Inside each variant's Layer 3, every
+   image zone MUST appear as a real H4 markdown heading
+   (`#### Zone A: <Purpose>`, `#### Zone B: <Purpose>`, ...) — NOT
+   as fenced code text. The chain-tail render skill scans the spec
+   for `^####\s+Zone` lines outside fenced blocks; without real
+   H4 headings the render chain cannot discover the zones.
 2. Above the variant blocks, include shared sections (Project
    Reference, Brand Context) — these come from the brief and are
    identical across variants.

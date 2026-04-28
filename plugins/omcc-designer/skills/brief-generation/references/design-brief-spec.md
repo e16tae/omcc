@@ -225,7 +225,7 @@ to one of the canonical values below before validation.
 | `brochure`, `leaflet`, `pamphlet`, `브로슈어` | `brochure` | (none) |
 | `infographic`, `infographics`, `인포그래픽` | `infographic` | (none) |
 | `frontend`, `web`, `website`, `ui` | `frontend` | (none) |
-| `social-graphics`, `social media`, `social`, `sns`, `소셜` | `social-graphics` | (user picks variants in Step E) |
+| `social-graphics`, `social graphics`, `social graphic`, `social media`, `social`, `sns`, `소셜` | `social-graphics` | (user picks variants in Step E) |
 | `instagram post`, `ig post`, `인스타 포스트`, `인스타그램 포스트` | `social-graphics` | `[instagram-post]` |
 | `instagram story`, `ig story`, `인스타 스토리`, `인스타그램 스토리` | `social-graphics` | `[instagram-story]` |
 | `youtube thumbnail`, `yt thumbnail`, `유튜브 썸네일`, `썸네일` | `social-graphics` | `[youtube-thumbnail]` |

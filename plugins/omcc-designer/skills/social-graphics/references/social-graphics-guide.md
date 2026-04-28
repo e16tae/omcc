@@ -248,7 +248,15 @@ render skill (`social-graphics-render`) parses it to identify
 distinct zones, compute call counts, and derive output filenames.
 Without this heading the render skill cannot find any zones.
 
-```
+The two zone examples shown below as `#### Zone A: Hero` and
+`#### Zone B: Supporting visual` MUST appear in the saved spec
+as actual H4 markdown headings, NOT as fenced code text. The
+render skill scans the spec for `^####\s+Zone` lines outside
+any fenced code block.
+
+Authoring example (the following two `####` lines are themselves
+real H4 headings — the saved spec should look like this):
+
 #### Zone A: Hero
 - **Designer's Vision**: position & space, subject & elements,
   mood & atmosphere, lighting, color direction, composition &
@@ -259,8 +267,7 @@ Without this heading the render skill cannot find any zones.
   per-tool optimized prompts with research date.
 
 #### Zone B: Supporting visual
-- ...
-```
+- (additional zones in the same variant repeat the same shape)
 
 The zone id (e.g., `Zone A`) maps to the filesystem zone-id rule
 in `skills/brief-generation/references/output-file-rules.md`
