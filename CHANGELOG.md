@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.0.0](https://github.com/e16tae/omcc/compare/v1.2.3...v2.0.0) (2026-04-28)
+
+
+### ⚠ BREAKING CHANGES
+
+* **omcc-meeting:** omcc-meeting plugin removed from marketplace. Consumers who previously installed omcc-meeting@omcc will see /plugin install fail with "plugin not found".
+
+### Features
+
+* **omcc-meeting:** remove omcc-meeting plugin ([338dc86](https://github.com/e16tae/omcc/commit/338dc864be8fbda92552a0ddcf25ccae3fe812e0))
+
 ## [1.2.3](https://github.com/e16tae/omcc/compare/v1.2.2...v1.2.3) (2026-04-27)
 
 
