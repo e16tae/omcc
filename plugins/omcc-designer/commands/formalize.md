@@ -46,5 +46,16 @@ The brief is the final output of the formalize pipeline.
 ## Completion
 
 Output: "✓ Brief formalized from the provided input." with the
-design_brief.md path. Suggest the next step: run `/omcc-designer:poster`
-(or another domain command) with this brief as input.
+design_brief.md path. Suggest the appropriate domain command for
+the next step based on the brief's canonical `Target medium`:
+
+- `Target medium: poster` → `/omcc-designer:poster`
+- `Target medium: social-graphics` → `/omcc-designer:social-graphics`
+- Other media (`brochure`, `infographic`, `frontend`) — pipeline
+  ends here until their domain commands are implemented.
+
+If the brief's `Target medium` did not normalize to a canonical
+value, surface the alias table from
+`skills/brief-generation/references/design-brief-spec.md`
+"Target medium aliases" and ask the user to repair the brief
+before invoking a domain command.

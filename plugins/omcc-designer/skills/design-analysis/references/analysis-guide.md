@@ -99,29 +99,53 @@ Extract the following from the user's request:
 
 Evaluate the best-fit medium based on:
 
-| Signal | Poster | Brochure | Infographic | Frontend |
-|--------|--------|----------|-------------|----------|
-| Single key message | Strong | Weak | Weak | Weak |
-| Multiple topics | Weak | Strong | Medium | Strong |
-| Sequential data/process | Weak | Medium | Strong | Medium |
-| Interactive elements needed | N/A | N/A | N/A | Strong |
-| Physical distribution | Strong | Strong | Weak | N/A |
-| Online sharing | Medium | Weak | Strong | Strong |
-| Rich text content | Weak | Strong | Medium | Strong |
-| Visual impact priority | Strong | Medium | Medium | Medium |
+| Signal | Poster | Brochure | Infographic | Frontend | Social graphics |
+|--------|--------|----------|-------------|----------|-----------------|
+| Single key message | Strong | Weak | Weak | Weak | Strong |
+| Multiple topics | Weak | Strong | Medium | Strong | Medium (multi-variant) |
+| Sequential data/process | Weak | Medium | Strong | Medium | Weak |
+| Interactive elements needed | N/A | N/A | N/A | Strong | N/A |
+| Physical distribution | Strong | Strong | Weak | N/A | Weak |
+| Online sharing | Medium | Weak | Strong | Strong | Strong |
+| Rich text content | Weak | Strong | Medium | Strong | Weak (text overlay external) |
+| Visual impact priority | Strong | Medium | Medium | Medium | Strong |
+| Platform-specific aspect ratio | Weak | Weak | Medium | Weak | **Strong** (1:1, 9:16, 16:9) |
+| Multiple deliverables from one campaign | Weak | Weak | Weak | Weak | **Strong** (post + story + thumbnail) |
 
 ### Content volume assessment
-- **Low** (headline + few lines + 1-2 images): Poster is ideal
+- **Low** (headline + few lines + 1-2 images): Poster or single social variant
 - **Medium** (multiple sections, moderate text): Brochure or infographic
 - **High** (extensive text, multiple pages): Brochure or frontend
 - **Data-heavy** (statistics, processes, comparisons): Infographic
+- **Multi-platform single message** (one campaign across IG/YT): Social graphics
 
 ### Multi-medium detection
 - If content naturally spans multiple media, flag for interview discussion
 - Example: "I need materials for our product launch" → poster + brochure + frontend
+- Example: "Promote this event on Instagram and YouTube" → social-graphics with multiple variants
+
+### Target medium alias normalization
+
+When the user names a medium, normalize to a canonical value before
+recording the estimate. Refer to `skills/brief-generation/references/design-brief-spec.md`
+"Target medium aliases" section for the authoritative mapping.
+
+Highlights for analysis-time signal extraction:
+
+| User phrase (case-insensitive, multilingual) | Canonical Target medium | Implied Variants (if any) |
+|----------------------------------------------|-------------------------|---------------------------|
+| `Instagram post`, `IG post`, `인스타 포스트`, `인스타그램 포스트` | `social-graphics` | `[instagram-post]` |
+| `Instagram story`, `IG story`, `인스타 스토리`, `인스타그램 스토리` | `social-graphics` | `[instagram-story]` |
+| `YouTube thumbnail`, `YT thumbnail`, `유튜브 썸네일`, `썸네일` | `social-graphics` | `[youtube-thumbnail]` |
+| `social media`, `social`, `SNS`, `소셜` | `social-graphics` | (none implied — Step E asks user to pick) |
+
+If the user names multiple variants in one phrase ("Instagram post +
+YouTube thumbnail"), the implied Variants list is the union. The
+implied list is the **default selection** the interview's Step E
+will confirm — never silently locked in.
 
 ### Confidence criteria
-- **High**: User explicitly states medium ("I need a poster")
+- **High**: User explicitly states medium ("I need a poster", "Instagram post 만들어줘")
 - **Medium**: Content and purpose clearly fit one medium
 - **Low**: Content could work in multiple media — interview needed
 

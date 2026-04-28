@@ -21,9 +21,11 @@ Determine whether the input is a brief file path or a raw design request:
 
 1. Read the brief file.
 2. Validate per `skills/brief-generation/references/design-brief-spec.md` —
-   completeness, medium match (must include "poster"), and staleness. If the
-   brief's Target medium does not include "poster", inform the user and offer
-   to re-run the interview for poster.
+   completeness, medium match (canonical Target medium must equal "poster"
+   after alias normalization per the spec's "Target medium aliases"
+   table), and staleness. If the brief's Target medium does not normalize
+   to "poster", inform the user and offer to re-run the interview for
+   poster.
 3. **Confirmed field check**: Before using any brief field, verify it is not
    tagged `[unconfirmed]` — see
    `skills/design-interview/references/confirmed-decision-principle.md`. If a
@@ -129,10 +131,12 @@ English) per `skills/poster/references/poster-guide.md`.
 The brief is already generated in Phase 3. Skip input detection and
 brief mode — proceed directly from Step 1 with the Phase 3 brief.
 
-**Medium gate**: Before Step 1, verify the brief's Target medium includes
-"poster". If not: inform the user that the confirmed medium is different,
-the brief has been saved, and the corresponding domain skill is not yet
-available.
+**Medium gate**: Before Step 1, verify the brief's canonical Target
+medium equals "poster" (after alias normalization per
+`skills/brief-generation/references/design-brief-spec.md` "Target
+medium aliases"). If not: inform the user that the confirmed medium
+is different, the brief has been saved, and the corresponding domain
+skill is not yet available.
 
 ### When invoked by /poster
 

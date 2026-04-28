@@ -74,19 +74,24 @@ whitespace per token. Match `codex` case-insensitively. Treat the
 result as **empty** when it is missing, blank, `none`, `none specified`,
 or composed only of stop-words.
 
-Prompt wording by field state:
+Calculate the planned call count from the spec: K = number of
+zones in poster_spec.md Layer 3. Disclose this in the consent
+prompt so the user can weigh cost — parity with
+`social-graphics-render`'s consent prompt.
+
+Prompt wording by field state (substitute `<K zones>` from the spec):
 
 - **Includes `codex`** (any tool list containing `codex`): `"The brief
   lists codex among Image generation tools. Render zone images now via
-  codex? (y) render with codex / (n) skip — the poster_spec.md prompts
-  remain available for manual use."`
+  codex (<K zones>)? (y) render with codex / (n) skip — the poster_spec.md
+  prompts remain available for manual use."`
 - **Lists only non-codex tools** (e.g., `Midjourney`, `Stable Diffusion`):
-  `"The brief lists [<tools>] but not codex. Render anyway via codex?
-  (y) render — note: codex output may differ from the listed tools'
-  style / (n) skip"`
+  `"The brief lists [<tools>] but not codex. Render anyway via codex
+  (<K zones>)? (y) render — note: codex output may differ from the
+  listed tools' style / (n) skip"`
 - **Empty / missing / `none specified`**: `"The brief has no Image
-  generation tools specified. Render via codex now? (y) render / (n)
-  skip — recommend updating the brief on next pass"`
+  generation tools specified. Render via codex (<K zones>) now? (y)
+  render / (n) skip — recommend updating the brief on next pass"`
 
 Input validation: accept `y`, `yes`, `n`, `no` (case-insensitive). Any
 other input → re-prompt with the prompt text. After 3 invalid attempts

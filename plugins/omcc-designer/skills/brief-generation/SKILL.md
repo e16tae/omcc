@@ -33,7 +33,7 @@ Follow the structure defined in `skills/brief-generation/references/design-brief
 4. **Typography**: From Step C — include fonts, weights, pairing rationale
 5. **Visual Direction**: From Step C — mood, style, imagery approach
 6. **Content Map**: From Step D — text content, image zones, priority
-7. **Technical Specifications**: From Step E — dimensions, resolution, color mode
+7. **Technical Specifications**: From Step E — dimensions, resolution, color mode. For multi-variant briefs (Target medium normalized to `social-graphics` or any future multi-variant medium), additionally assemble the `Variants` block per `skills/brief-generation/references/design-brief-spec.md` — top-level fields act as shared defaults; per-variant entries override only the fields that differ. Variant ids must come from the canonical whitelist defined in the same spec's "Target medium aliases" section.
 8. **Supplementary Notes**: Any additional context from the interview
 9. **Decision Log**: Status tracking table for each section
 

@@ -253,12 +253,28 @@ For each identified zone, document:
 
 ### Medium identification
 
-Based on dimensions, content, and format:
-- **Poster**: Large format, single surface, visual impact-focused
-- **Brochure**: Multi-page/fold, text-heavy sections
-- **Infographic**: Vertical scroll, data-heavy, sequential sections
-- **Social media**: Platform-specific dimensions (1080x1080, 1200x630, etc.)
-- **Web/frontend**: Responsive indicators, navigation elements, interactive zones
+Based on dimensions, content, and format. Identify and immediately
+canonicalize per `skills/brief-generation/references/design-brief-spec.md`
+"Target medium aliases" — never record a non-canonical value.
+
+- **Poster**: Large format, single surface, visual impact-focused → `Target medium: poster`
+- **Brochure**: Multi-page/fold, text-heavy sections → `Target medium: brochure`
+- **Infographic**: Vertical scroll, data-heavy, sequential sections → `Target medium: infographic`
+- **Web/frontend**: Responsive indicators, navigation elements, interactive zones → `Target medium: frontend`
+- **Social graphics**: Platform-specific raster canvases. Canonical
+  `Target medium: social-graphics`. Identify the implied Variants
+  list from the canvas dimensions:
+  - 1080×1080 (1:1) → `instagram-post`
+  - 1080×1920 (9:16) → `instagram-story`
+  - 1280×720 (16:9, raster) → `youtube-thumbnail`
+  - Other raster dimensions matching a known social platform: flag
+    as `social-graphics` candidate but record the dimension
+    verbatim — let the interview's Step E confirm/widen the
+    Variants list. Do NOT silently coerce to a whitelisted variant.
+
+If a single extraction shows multiple distinct canvases (e.g., a
+campaign deck with one IG-post asset + one IG-story asset), record
+all matching variants as the implied Variants list.
 
 ### Confidence criteria
 

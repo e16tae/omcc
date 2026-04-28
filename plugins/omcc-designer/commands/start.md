@@ -1,6 +1,6 @@
 ---
-description: Full design pipeline — analysis, consultation interview, brief generation, poster specification
-argument-hint: Design request description (e.g., "conference poster for a tech event next month")
+description: Full design pipeline — analysis, consultation interview, brief generation, domain-specific output (poster / social-graphics / etc.)
+argument-hint: Design request description (e.g., "conference poster for a tech event next month" or "Instagram post and YouTube thumbnail for next week's launch")
 ---
 
 # Start
@@ -40,35 +40,48 @@ Save the design brief to ./output/YYYY-MM-DD_project-name/design_brief.md
 
 ## Phase 4: Domain-Specific Output
 
-Read the brief's Target medium field and dispatch to the matching domain
-skill. Currently available domain skills:
+Read the brief's Target medium field (after alias normalization per
+`skills/brief-generation/references/design-brief-spec.md` "Target
+medium aliases") and dispatch via the registry below.
 
-- **poster** → follow `skills/poster/SKILL.md`; save to
-  ./output/YYYY-MM-DD_project-name/poster_spec.md per output-file-rules.
-  After the poster spec is saved, unconditionally dispatch the
-  `poster-render` skill (`skills/poster-render/SKILL.md`) as a chain-tail.
-  poster-render owns the full dispatch logic: pre-flight (codex plugin
-  + runtime checks), one-time Tool dispatch decision (user consent
-  prompt regardless of brief field value), and graceful-skip path when
-  codex is unavailable or the user declines. This command does not
-  duplicate the trigger conditions — see poster-render's SKILL.md for
-  the canonical spec.
+| Canonical medium | Domain skill | Spec output filename | Optional chain-tail |
+|------------------|--------------|----------------------|---------------------|
+| `poster` | `skills/poster/SKILL.md` | poster_spec.md | `skills/poster-render/SKILL.md` |
+| `social-graphics` | `skills/social-graphics/SKILL.md` | social_graphics_spec.md (H2 variant sub-blocks) | `skills/social-graphics-render/SKILL.md` |
 
-For any other medium (brochure, infographic, frontend, etc.), the
-corresponding domain skill is not yet available. Inform the user: "The
-<medium> domain skill is not yet available. The design brief has been saved
-and can be used when the skill is added." End the pipeline.
+**Chain-tail dispatch rule**: when the row defines an optional
+chain-tail, dispatch it unconditionally after the domain skill
+returns. The chain-tail owns its own full dispatch logic
+(pre-flight, Tool dispatch decision with user consent, per-zone
+or per-variant loop, graceful-skip on codex absence / user
+decline) — see its SKILL.md for the canonical spec. This command
+does NOT duplicate the trigger conditions.
 
-When adding a new domain skill, extend the bullet list above with the
-medium-to-skill mapping. Optional chain-tail extensions (like
-`poster-render`) follow their parent skill in the same bullet.
+**Output paths**: all paths are relative to
+`./output/YYYY-MM-DD_project-name/` per
+`skills/brief-generation/references/output-file-rules.md`.
+
+**Unmapped media**: for any canonical medium not in the table
+(`brochure`, `infographic`, `frontend`, etc.), the corresponding
+domain skill is not yet available. Inform the user: "The
+<medium> domain skill is not yet available. The design brief has
+been saved and can be used when the skill is added." End the
+pipeline.
+
+**Adding a new domain skill**: append a new row to the registry
+table. The four columns are sufficient — chain-tail dispatch and
+unmapped-medium fallback work uniformly without bullet-prose
+duplication.
 
 ---
 
 ## Completion
 
-Output: "✓ Design pipeline complete." with the saved file paths (brief,
-domain output, and — when the chain ran — the rendered zone images under
-the project directory). Offer to revise the brief, regenerate the domain
-output, or start another project. If `poster-render` ran, also offer to
-re-render specific zones.
+Output: "✓ Design pipeline complete." with the saved file paths
+(brief, domain output, and — when a chain-tail render ran — the
+rendered zone images under the project directory). Offer to revise
+the brief, regenerate the domain output, or start another project.
+
+If a chain-tail render ran (`poster-render` or
+`social-graphics-render`), also offer to re-render specific zones
+(or, for social-graphics, specific (variant, zone) pairs).
