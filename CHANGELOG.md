@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.3](https://github.com/e16tae/omcc/compare/v1.2.2...v1.2.3) (2026-04-27)
+
+
+### Code Refactoring
+
+* **omcc-designer:** redesign per-zone gate action set ([d2bb4b0](https://github.com/e16tae/omcc/commit/d2bb4b0ba5ba25423a6206e689bce51a71573699))
+* **omcc-designer:** redesign per-zone gate action set ([c0a11f2](https://github.com/e16tae/omcc/commit/c0a11f2f7e30ed91237d23960516ecf2c738f637))
+
 ## [1.2.2](https://github.com/e16tae/omcc/compare/v1.2.1...v1.2.2) (2026-04-27)
 
 
