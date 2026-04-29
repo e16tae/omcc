@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.1.0](https://github.com/e16tae/omcc/compare/v2.0.0...v2.1.0) (2026-04-29)
+
+
+### Features
+
+* **omcc-designer:** add social-graphics skill pair ([#76](https://github.com/e16tae/omcc/issues/76)) ([36e6cf4](https://github.com/e16tae/omcc/commit/36e6cf43de90b005fe3edb7a332b30c2c3548ffa))
+* **omcc-designer:** add social-graphics skill pair and discovery surface ([7381ad4](https://github.com/e16tae/omcc/commit/7381ad4c4fd8c6319f3cf3a6ffe5637f659735db)), closes [#76](https://github.com/e16tae/omcc/issues/76)
+
+
+### Bug Fixes
+
+* **omcc-designer:** address social-graphics codex re-review P2 findings ([0537730](https://github.com/e16tae/omcc/commit/053773081c02c4c0fd5bd4a3b4e16dd82995a3c7))
+
 ## [2.0.0](https://github.com/e16tae/omcc/compare/v1.2.3...v2.0.0) (2026-04-28)
 
 
