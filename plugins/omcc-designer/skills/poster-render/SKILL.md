@@ -61,6 +61,25 @@ Note: the pre-flight does not detect codex authentication state —
 authentication failures surface only at runtime (see Per-zone gate
 Step 6 below).
 
+### Wrapper timeout binary (probe — fallback supported)
+
+In addition to the three gate checks above, capture an optional wrapper
+timeout binary once before the per-zone loop, per
+`skills/poster-render/references/codex-call-template.md` "Locating a
+wrapper timeout binary":
+
+```bash
+TIMEOUT_BIN=$(command -v timeout 2>/dev/null || command -v gtimeout 2>/dev/null || true)
+```
+
+`$TIMEOUT_BIN` is `timeout` (Linux / GNU coreutils on PATH), `gtimeout`
+(macOS with Homebrew `coreutils`), or empty (default macOS). The empty
+case is supported as a graceful fallback — do NOT gate the chain-tail
+on it. Step 5 below dispatches on `$TIMEOUT_BIN` via an explicit
+`if`/`else` — required because zsh (the default macOS shell) does not
+word-split unquoted `${var:+$var 300}` the way sh/bash do. See the
+canonical reference for the rationale.
+
 ## Tool dispatch decision (one prompt per render session — always)
 
 Before entering the render loop, **always** prompt the user once,
@@ -163,18 +182,31 @@ Based on the brief's Imagery approach:
 
 ### Step 5 — invoke codex-companion
 
-Via Bash:
+Via Bash, dispatching on `$TIMEOUT_BIN` from the pre-flight probe above:
 
 ```
-timeout 300 node <codex-companion-path> task --write --cwd <output-dir> "<prompt>"
+if [ -n "$TIMEOUT_BIN" ]; then
+  "$TIMEOUT_BIN" 300 node <codex-companion-path> task --write --cwd <output-dir> "<prompt>"
+else
+  node <codex-companion-path> task --write --cwd <output-dir> "<prompt>"
+fi
 ```
 
 - `--write` is mandatory (sandbox would block writes otherwise).
 - `--cwd <output-dir>` is informational (codex resolves to repo root
   anyway); the prompt's absolute path is the load-bearing target.
-- `timeout 300` (5 minutes) bounds hangs. Exit code 124 → treat as
-  render failure for this zone (offer edit / skip / defer in the gate
-  below — see "Recovery after a render failure" under Step 7).
+- The if-branch wraps the call with the detected `<bin> 300` (5-minute
+  bound). Exit code 124 → treat as render failure for this zone (offer
+  edit / skip / defer in the gate below — see "Recovery after a render
+  failure" under Step 7). The else-branch (no `$TIMEOUT_BIN` detected)
+  invokes `node` directly with no wrapper; codex CLI's own non-zero
+  exits and the Step 6 SAVED_PATH parse failure remain the render-
+  failure signals.
+- The explicit `if`/`else` is required, not a stylistic choice — zsh
+  (the default macOS interactive shell) does not word-split unquoted
+  `${var:+$var 300}` parameter expansion the way sh/bash do, so the
+  one-liner that "works on Linux" silently breaks on default macOS,
+  exactly the platform the fallback is meant to support.
 
 ### Step 6 — parse and validate
 
@@ -319,8 +351,11 @@ Rules:
 
 See `skills/poster-render/references/codex-call-template.md` for:
 
-- The exact companion command form
-  (`timeout 300 node <companion> task --write --cwd <out> '<prompt>'`).
+- The exact companion command form (an `if`/`else` that dispatches on
+  `$TIMEOUT_BIN` to either `"$TIMEOUT_BIN" 300 node <companion> ...` or
+  the unwrapped `node <companion> ...`) and the pre-flight
+  `$TIMEOUT_BIN` detection (`timeout`, `gtimeout`, or empty fallback),
+  including the zsh word-splitting rationale for the conditional form.
 - The absolute-path requirement in the prompt and the cwd-vs-repo-root
   resolution behavior (verified 2026-04-26).
 - The required `SAVED_PATH=` literal and last-match parsing rules.
