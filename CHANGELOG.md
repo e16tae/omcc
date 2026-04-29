@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.2.0](https://github.com/e16tae/omcc/compare/v2.1.1...v2.2.0) (2026-04-29)
+
+
+### Features
+
+* **omcc-research:** add minimal v1 plugin (issue [#77](https://github.com/e16tae/omcc/issues/77)) ([c8abd7d](https://github.com/e16tae/omcc/commit/c8abd7de09d7e5cdc3a4374ebba686c536580247))
+* **omcc-research:** add minimal v1 plugin (issue [#77](https://github.com/e16tae/omcc/issues/77)) ([b12b692](https://github.com/e16tae/omcc/commit/b12b6921ff195fa51569aa8afb9b55a2869a291b))
+
 ## [2.1.1](https://github.com/e16tae/omcc/compare/v2.1.0...v2.1.1) (2026-04-29)
 
 
