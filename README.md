@@ -26,6 +26,7 @@ Curated Claude Code plugin marketplace.
 | codex | Use Codex from Claude Code to review code or delegate tasks | [openai/codex-plugin-cc](https://github.com/openai/codex-plugin-cc) |
 | omcc-designer | Design consultation plugin with interview-based creative direction, design briefs, domain-specific specifications, existing design formalization, design planning, and quality auditing | built-in |
 | omcc-dev | Development workflow framework with systematic bug fixing, feature development, code auditing, and hierarchical workflow shards + intra-session checkpoints for long-running projects (schema 2) | built-in |
+| omcc-research | Topic-bound research plugin producing durable cited research briefs | built-in |
 
 ## How Plugins Are Selected
 

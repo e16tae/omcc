@@ -38,6 +38,16 @@
       "category": "development",
       "source": "./plugins/omcc-dev",
       "homepage": "https://github.com/e16tae/omcc"
+    },
+    {
+      "name": "omcc-research",
+      "description": "Topic-bound research plugin producing durable cited research briefs",
+      "author": {
+        "name": "e16tae"
+      },
+      "category": "research",
+      "source": "./plugins/omcc-research",
+      "homepage": "https://github.com/e16tae/omcc/tree/main/plugins/omcc-research"
     }
   ]
 }

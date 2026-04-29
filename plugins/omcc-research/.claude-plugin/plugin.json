@@ -1,0 +1,16 @@
+{
+  "name": "omcc-research",
+  "version": "2.1.1",
+  "description": "Topic-bound research plugin producing durable cited research briefs",
+  "license": "MIT",
+  "category": "research",
+  "keywords": [
+    "research",
+    "literature-review",
+    "citation"
+  ],
+  "author": {
+    "name": "e16tae"
+  },
+  "homepage": "https://github.com/e16tae/omcc/tree/main/plugins/omcc-research"
+}
