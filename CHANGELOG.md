@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.1.1](https://github.com/e16tae/omcc/compare/v2.1.0...v2.1.1) (2026-04-29)
+
+
+### Bug Fixes
+
+* **omcc-designer:** make render-skill wrapper timeout portable ([da074f7](https://github.com/e16tae/omcc/commit/da074f7af9e3b14ca1cebee033b64d37f4bdf9e5)), closes [#85](https://github.com/e16tae/omcc/issues/85)
+* **omcc-designer:** portable wrapper timeout for render skills ([aa61cdb](https://github.com/e16tae/omcc/commit/aa61cdb90179b314407edea06f81a71e58938260))
+
 ## [2.1.0](https://github.com/e16tae/omcc/compare/v2.0.0...v2.1.0) (2026-04-29)
 
 
