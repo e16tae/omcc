@@ -88,6 +88,25 @@ real consultation:
 2. Determine print vs digital requirements (CMYK/RGB, DPI, bleed)
 3. Confirm output format and delivery platform
 4. Set minimum text size based on medium and viewing distance
+5. **For multi-variant media** (Target medium = `social-graphics` or any
+   future multi-variant medium per `skills/brief-generation/references/design-brief-spec.md`
+   "Target medium aliases" table):
+   - Present the implied Variants list from Phase 1 analysis (e.g.,
+     `[instagram-post]` if user said "Instagram post"). If Phase 1
+     could not infer specific variants, present the canonical
+     whitelist (`instagram-post`, `instagram-story`,
+     `youtube-thumbnail`) and ask which apply to this campaign.
+   - Confirm the variant set as a designer recommendation: "I recommend
+     producing X for this campaign because Y. Want to add Z too?"
+   - For each confirmed variant, walk the platform's expected canvas
+     (1080×1080 / 1080×1920 / 1280×720) as the **default**; the user
+     may override per variant with explicit confirmation (Confirmed
+     Decision Principle — never auto-correct mid-step).
+   - The top-level Dimensions / Orientation / Resolution / Output
+     format / Platform fields stay as **shared defaults** — only
+     the per-variant override block carries variant-specific values.
+   - Variant id whitelist conformance + duplicate detection happen
+     here at confirmation time, not silently downstream.
 
 ### Completion
 

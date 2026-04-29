@@ -143,9 +143,42 @@ After the companion exits, parse its stdout:
 5. Verify it is a real PNG: `file "$path"` should report
    `PNG image data, <W> x <H>, 8-bit/color RGB(A), non-interlaced`.
 6. If any check fails, treat as a render failure for this zone — see
-   `skills/poster-render/SKILL.md` per-zone gate Step 7's "Recovery
-   after a render failure" subsection (offers `e/s/d`, no `a`; on N
-   consecutive failures, escape the loop).
+   the consumer chain-tail's SKILL.md per-zone gate "Recovery after
+   a render failure" subsection (offers `e/s/d`, no `a`; on N
+   consecutive failures, escape the loop). The canonical example is
+   `skills/poster-render/SKILL.md` Step 7.
+
+### Chain-specific validation hook
+
+Steps 1–6 are the **shared** validation contract — every chain-tail
+that consumes this template MUST implement them. A consumer chain
+MAY add **chain-specific** validation steps **after** Step 6's
+PNG-type check, before the gate fires. Such steps are advisory
+(they annotate the gate) — they MUST NOT auto-retry, MUST NOT
+re-invoke the companion, and MUST NOT block the user from accepting
+a partially-conforming output. The "no auto-regeneration" rule
+below is preserved unconditionally.
+
+Examples of legitimate chain-specific validation:
+
+- **Dimension validation** (used by `social-graphics-render`): after
+  the PNG-type check, run `sips -g pixelWidth -g pixelHeight "$path"`
+  (macOS) and compare against the variant's expected canvas. On
+  mismatch, record a non-blocking annotation that the chain's gate
+  step prepends to its prompt (e.g., `dim mismatch: actual <WxH>
+  vs expected <WxH>`). The user's `e` action becomes the natural
+  retry path.
+- **Color-mode validation** (hypothetical future): same shape —
+  detect, annotate, defer to gate.
+
+Chain-specific validation steps MUST gracefully degrade when their
+detection tool is unavailable (e.g., `sips` is macOS-only). On the
+non-supported platform, the step records a "validation skipped:
+<reason>" annotation rather than failing the render.
+
+The shared template intentionally does not enumerate the exact
+chain-specific steps — each chain's SKILL.md is the source of
+truth for its own annotations.
 
 Auth-failure pattern: if companion stdout/stderr contains tokens like
 `auth`, `login`, `401`, or `unauthorized`, treat the failure as

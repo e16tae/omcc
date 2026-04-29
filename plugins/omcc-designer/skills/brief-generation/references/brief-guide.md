@@ -44,6 +44,26 @@ Verify that Technical Specifications match the target medium:
 - Resolution should match print (300 DPI) or digital (72-150 DPI)
 - If bleed is specified for digital, flag as unnecessary
 
+For multi-variant briefs (e.g., `Target medium: social-graphics`):
+- Each variant's effective Technical Specifications (per-variant
+  overrides ∪ top-level shared defaults) MUST contain Dimensions,
+  Orientation, Resolution, Output format, and Platform. Missing both
+  per-variant and shared is a brief assembly error.
+- Each variant id MUST be in the whitelist defined in
+  `skills/brief-generation/references/design-brief-spec.md`
+  "Target medium aliases" — currently `instagram-post`,
+  `instagram-story`, `youtube-thumbnail`.
+- Duplicate variant ids — including alias inputs that normalize to
+  the same canonical id (`Instagram Post`, `instagram_post`,
+  `instagram-post`) — are a brief assembly error. Surface the
+  conflict for user repair; do NOT silently deduplicate.
+- Per-variant dimensions SHOULD match the platform's expected canvas
+  (1080×1080 for `instagram-post`, 1080×1920 for `instagram-story`,
+  1280×720 for `youtube-thumbnail`). Mismatches are flagged as
+  warnings — do NOT auto-correct. The Confirmed Decision Principle
+  applies: only the user can override an off-canvas dimension after
+  explicit confirmation.
+
 ### Content map completeness
 
 Verify:
@@ -112,3 +132,8 @@ Before saving the brief, verify all items:
 - [ ] Decision Log source correctly references interview steps
 - [ ] File saved to correct output path
 - [ ] Brief is self-contained (readable without conversation context)
+- [ ] (multi-variant only) `Variants:` block present and non-empty
+- [ ] (multi-variant only) Every variant id is in the canonical whitelist
+- [ ] (multi-variant only) No duplicate variant ids after alias normalization
+- [ ] (multi-variant only) Each variant's effective Technical Specifications cover Dimensions / Orientation / Resolution / Output format / Platform
+- [ ] (multi-variant only) Per-variant dimensions match the platform's expected canvas (or user explicitly confirmed an override)

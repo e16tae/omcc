@@ -177,6 +177,9 @@ For each zone that needs AI-generated imagery:
 | Brochure | 8-12 per panel | 3-6 total | >3 panels needed |
 | Infographic | 10-15 data points | 5-10 | >20 data points |
 | Frontend | No strict limit | No strict limit | >5 scroll-lengths |
+| Social — Instagram post (1080×1080) | 1-2 (hook + minor caption) | 1 (hero) | >2 lines text overlay |
+| Social — Instagram story (1080×1920) | 1-2 (hook + CTA) | 1 (hero) | text invading top/bottom UI overlay |
+| Social — YouTube thumbnail (1280×720) | 1 (hook headline only) | 1 (hero) | text occupying logo/timestamp overlay |
 
 When content exceeds thresholds:
 1. Flag to user: "This is more content than a single poster can effectively
@@ -193,14 +196,20 @@ When content exceeds thresholds:
 
 ### Dimension recommendations by medium
 
-| Medium | Common Dimensions | Orientation |
-|--------|------------------|-------------|
-| Poster (A3) | 297 x 420 mm | Portrait |
-| Poster (A2) | 420 x 594 mm | Portrait |
-| Poster (24x36) | 610 x 914 mm | Portrait |
-| Social media (Instagram) | 1080 x 1080 px | Square |
-| Social media (Story) | 1080 x 1920 px | Portrait |
-| Web banner | 1920 x 600 px | Landscape |
+| Medium | Common Dimensions | Orientation | Variant id (canonical) |
+|--------|------------------|-------------|------------------------|
+| Poster (A3) | 297 x 420 mm | Portrait | (single canvas — no variant) |
+| Poster (A2) | 420 x 594 mm | Portrait | (single canvas — no variant) |
+| Poster (24x36) | 610 x 914 mm | Portrait | (single canvas — no variant) |
+| Social — Instagram post | 1080 x 1080 px | Square | `instagram-post` |
+| Social — Instagram story | 1080 x 1920 px | Portrait | `instagram-story` |
+| Social — YouTube thumbnail | 1280 x 720 px | Landscape | `youtube-thumbnail` |
+| Web banner | 1920 x 600 px | Landscape | (no canonical variant id — generic) |
+
+For multi-variant social-graphics campaigns, the brief encodes a
+`Variants:` block listing one or more of the variant ids above —
+see `skills/brief-generation/references/design-brief-spec.md`
+"Target medium aliases" for the alias normalization table.
 
 ### Print specifications
 - **Resolution**: 300 DPI minimum for print
