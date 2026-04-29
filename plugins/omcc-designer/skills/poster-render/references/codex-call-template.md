@@ -53,17 +53,67 @@ If `$COMPANION` is empty after this check, the codex plugin is not
 installed in any marketplace — apply the graceful-degrade path from
 `skills/poster-render/SKILL.md`.
 
-## Canonical call form
+## Locating a wrapper timeout binary (probe — fallback supported)
 
-For each zone:
+GNU coreutils' `timeout` is **not** part of POSIX (IEEE Std 1003.1) and
+is not bundled with Apple's BSD coreutils on macOS. Homebrew's
+`coreutils` package installs the binary as `gtimeout` to avoid clobbering
+BSD utilities. Detect whichever (if any) is available:
 
 ```bash
-timeout 300 node "$COMPANION" task --write --cwd "$OUTPUT_DIR" "$PROMPT"
+TIMEOUT_BIN=$(command -v timeout 2>/dev/null || command -v gtimeout 2>/dev/null || true)
+```
+
+After this, `$TIMEOUT_BIN` is one of:
+
+- `timeout` — Linux, BSDs with GNU coreutils on PATH, or macOS where the
+  user has aliased / symlinked GNU `timeout` to that name.
+- `gtimeout` — macOS with stock Homebrew `coreutils` installed.
+- empty — default macOS without Homebrew coreutils, or any system where
+  neither binary is on PATH.
+
+The empty case is **a supported fallback, not a failure**. The wrapper
+timeout is defense-in-depth, not a load-bearing safety: codex CLI's own
+internal model timeout, network error paths, and the SAVED_PATH parse
+failure in Step 6 already bound and surface the relevant hang modes
+(auth stall, model timeout, network failure). On the empty branch the
+companion runs without a wrapper bound; the caller's recovery path
+(SKILL.md Step 6 / Step 7) is unchanged.
+
+This probe MUST NOT gate the chain-tail. The codex pre-flight above
+(node + codex CLI + app-server) remains the only gate.
+
+## Canonical call form
+
+For each zone, dispatch on `$TIMEOUT_BIN` with an explicit conditional.
+The conditional form is required because zsh — the default macOS
+interactive shell — does not word-split the result of an unquoted
+`${var:+$var 300}` parameter expansion the way sh and bash do (bash and
+sh apply IFS to the result; zsh treats it as a single token unless
+`SH_WORD_SPLIT` is set or `${=var}` is used). An unquoted expansion
+appears to work on Linux/bash but breaks on default macOS — exactly the
+platform the wrapper-timeout fallback is designed to support.
+
+```bash
+if [ -n "$TIMEOUT_BIN" ]; then
+  "$TIMEOUT_BIN" 300 node "$COMPANION" task --write --cwd "$OUTPUT_DIR" "$PROMPT"
+else
+  node "$COMPANION" task --write --cwd "$OUTPUT_DIR" "$PROMPT"
+fi
 ```
 
 Where:
 
 - `$COMPANION` — absolute path resolved above.
+- `$TIMEOUT_BIN` — set in the probe above to `timeout`, `gtimeout`, or
+  empty. The if-branch wraps the call with `<bin> 300` (5-minute bound);
+  the else-branch invokes `node` directly with no wrapper. When the
+  wrapper is in play, exit code 124 indicates a hang (codex auth flow
+  stalled, model timeout, network failure); the caller treats this as a
+  render failure for the zone. When the wrapper is absent, hangs
+  surface only via codex CLI's own non-zero exits or the Step 6
+  SAVED_PATH parse failure — both of which the caller already handles
+  as render failures.
 - `--write` — **mandatory**. The companion's `task` subcommand defaults
   to a read-only sandbox; without `--write`, codex generates the image
   internally but the disk write is blocked, and the final PNG never
@@ -78,9 +128,6 @@ Where:
   flags (e.g., do not invent `--imagegen`); the companion's
   `lib/args.mjs` treats unknown long flags as positional tokens, so
   invented flags become part of the prompt and confuse the model.
-- `timeout 300` — bounds the call to 5 minutes. Exit code 124 indicates
-  a hang (codex auth flow stalled, model timeout, network failure); the
-  caller treats this as a render failure for the zone.
 
 ## cwd resolution caveat (verified 2026-04-26)
 
@@ -235,7 +282,12 @@ choose imagegen on its own).
 
 Each codex `task` call counts toward the user's codex usage limits.
 For larger images (512×512 or above), a single call commonly takes
-20–60 seconds. The `timeout 300` guard above bounds the worst case.
+20–60 seconds. When `$TIMEOUT_BIN` is set, the 300-second wrapper guard
+above bounds the worst case at 5 minutes. On systems without
+`timeout`/`gtimeout` (default macOS without Homebrew coreutils), codex
+CLI's own internal model timeouts and per-call error paths apply
+instead — the call is not externally bounded, but the documented hang
+modes still surface as render failures.
 
 ### Rule: no auto-regeneration
 
