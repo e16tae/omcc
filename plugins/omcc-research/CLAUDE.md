@@ -16,10 +16,29 @@ and `skills/<name>/references/` for progressive disclosure.
     research brief artifact, plus citation conventions and audit checklist
   - `skills/research/references/output-file-rules.md` — directory naming, slug
     sanitization, fixed filename, overwrite rules, language policy
+- `research-ensemble-protocol.md` (plugin root) — research-domain
+  Codex ensemble protocol (research-scan ensemble point). Activated
+  by the research skill's command-invoked mode; auto-activated mode
+  does not dispatch.
 
-The plugin follows the lighter layout established by omcc-designer (no
-`agents/`, no `hooks/`, no plugin-root framework docs). v1 is single-skill
-single-command.
+The plugin remains lighter than omcc-dev (no `agents/`, no `hooks/`).
+Versus the original v1 single-skill single-command layout, v2 adds
+one plugin-root framework doc (`research-ensemble-protocol.md`) to
+hold the Codex ensemble contract — owning the contract locally is
+required because cross-plugin backtick references in markdown are
+rejected by `tests/test_plugin_structure.py`, and per the repo's
+"Independence over uniformity" principle.
+
+---
+
+## Optional Codex integration
+
+The Codex research-scan ensemble shells out to the codex plugin's
+`codex-companion.mjs`. When the codex plugin is not installed, the
+preflight in `research-ensemble-protocol.md` "Failure Handling"
+degrades gracefully — Claude-only research is always sufficient.
+Users who want the dual-model ensemble can install codex from the
+same marketplace; the dependency is optional, not required.
 
 ---
 
@@ -27,17 +46,23 @@ single-command.
 
 omcc-dev's brainstorm skill (plugins/omcc-dev/skills/brainstorm/SKILL.md)
 already does external research as part of its decision-support flow
-(Step 2: Research). The boundary that prevents feature overlap with the
-marketplace addition rule (repo CLAUDE.md "Plugin Addition Procedure" #4):
+(Step 2: Research), and both skills now invoke a Codex ensemble in
+command-invoked mode. The boundary that prevents feature overlap with
+the marketplace addition rule (repo CLAUDE.md "Plugin Addition
+Procedure" #4):
 
 | Aspect | omcc-dev:brainstorm Step 2 | omcc-research |
 |---|---|---|
 | Activation | Inside a decision flow | Explicit `/omcc-research:research <topic>` |
 | Required output | Comparison + recommendation | Cited brief, no recommendation |
 | Persistence | Ephemeral — only the *decision* is saved to workflow state | Durable artifact (research_brief.md on disk) |
+| Ensemble point type | brainstorm (option-generation prompt template) | research-scan (cited-evidence prompt template) |
 
 When in doubt: if the user is **choosing between options**, brainstorm.
 If the user is **gathering evidence about a topic**, omcc-research.
+The shared ensemble surface does not blur this boundary — each
+skill's ensemble point uses a distinct prompt template and
+synthesizes into its own artifact contract.
 
 ---
 
