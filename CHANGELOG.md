@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.3.2](https://github.com/e16tae/omcc/compare/v2.3.1...v2.3.2) (2026-04-30)
+
+
+### Bug Fixes
+
+* **omcc-designer:** switch render dispatch to --prompt-file flag ([d22326d](https://github.com/e16tae/omcc/commit/d22326d39e180803455343794062fcd601d68437))
+* **omcc-designer:** switch render dispatch to --prompt-file flag ([d486945](https://github.com/e16tae/omcc/commit/d4869456d34e37d5d5fb3090f40c50c7b58a649e)), closes [#103](https://github.com/e16tae/omcc/issues/103)
+
 ## [2.3.1](https://github.com/e16tae/omcc/compare/v2.3.0...v2.3.1) (2026-04-30)
 
 
