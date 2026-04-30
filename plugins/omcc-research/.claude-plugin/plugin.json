@@ -1,6 +1,6 @@
 {
   "name": "omcc-research",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "description": "Topic-bound research plugin producing durable cited research briefs",
   "license": "MIT",
   "category": "research",
