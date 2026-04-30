@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.3.0](https://github.com/e16tae/omcc/compare/v2.2.1...v2.3.0) (2026-04-30)
+
+
+### Features
+
+* **omcc-research:** introduce Codex research-scan ensemble ([3c68610](https://github.com/e16tae/omcc/commit/3c6861046c9cd69563030a8e3097bff19d94013f))
+* **omcc-research:** introduce Codex research-scan ensemble for command-mode ([bd16ff1](https://github.com/e16tae/omcc/commit/bd16ff17699176c212847aa34c513ac786adac1a))
+
 ## [2.2.1](https://github.com/e16tae/omcc/compare/v2.2.0...v2.2.1) (2026-04-30)
 
 
