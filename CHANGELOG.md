@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.3.1](https://github.com/e16tae/omcc/compare/v2.3.0...v2.3.1) (2026-04-30)
+
+
+### Bug Fixes
+
+* **omcc-research:** switch codex dispatch to --prompt-file flag ([4870a27](https://github.com/e16tae/omcc/commit/4870a272e9ffaae440a517deb1d62644e8b1491c))
+* **omcc-research:** switch codex dispatch to --prompt-file flag ([047db72](https://github.com/e16tae/omcc/commit/047db72073bc7e1daa6770c893519a18e15628fd))
+
 ## [2.3.0](https://github.com/e16tae/omcc/compare/v2.2.1...v2.3.0) (2026-04-30)
 
 
