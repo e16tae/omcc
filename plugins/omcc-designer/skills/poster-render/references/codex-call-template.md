@@ -6,9 +6,11 @@ and the cwd-resolution / dispatch caveats discovered during integration
 verification.
 
 This document is the canonical source for the call mechanics referenced
-by `skills/poster-render/SKILL.md`. The per-zone lifecycle (gate, history
-versioning, accept/skip handling) lives in SKILL.md; this file does
-not duplicate it.
+by `skills/poster-render/SKILL.md` and
+`skills/social-graphics-render/SKILL.md` (per `CLAUDE.md`
+"Cross-skill shared references"). The per-zone or per-(variant, zone)
+lifecycle (gate, history versioning, accept/skip handling) lives in
+each consuming SKILL.md; this file does not duplicate it.
 
 ---
 
@@ -35,6 +37,16 @@ The pre-flight does NOT detect codex authentication state — the
 `codex --version` and `codex app-server --help` commands succeed for
 unauthenticated installs. Authentication failures appear only at
 runtime; SKILL.md per-zone gate Step 6 handles them as session-fatal.
+
+**Output directory writability** is verified separately by each
+consuming SKILL.md (the "Output directory writability" subsection in
+`skills/poster-render/SKILL.md` and
+`skills/social-graphics-render/SKILL.md`) — orthogonal to the codex
+availability checks above and applied before the canonical call form
+below. The mechanism (a `touch`/`rm` probe against `<output-dir>`) is
+trivial and does not warrant a shared implementation here; the
+per-skill subsections own the exit-message wording and the
+failure-attribution rationale.
 
 ## Locating the companion script
 

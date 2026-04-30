@@ -244,7 +244,7 @@ canonical Variants list (post + story + thumbnail) and ask the user
 in Step E whether to widen the set; the implied variant is the
 **default selection** for that Step E confirmation.
 
-### Phase 4 chain extensions
+## Phase 4 Chain Extensions
 
 Some domain skills support optional chain-tail extensions that produce
 additional artifacts. Chain triggers consult brief fields to shape the

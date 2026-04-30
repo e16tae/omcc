@@ -61,6 +61,28 @@ Note: the pre-flight does not detect codex authentication state —
 authentication failures surface only at runtime (see Per-zone gate
 Step 6 below).
 
+### Output directory writability
+
+After the codex detection checks pass and before the wrapper timeout
+probe, verify that `<output-dir>` is writable:
+
+```bash
+touch "<output-dir>/.write-test" 2>/dev/null && rm -f "<output-dir>/.write-test"
+```
+
+If the touch fails (read-only mount, sandbox config override, or
+`<output-dir>` was removed mid-session), exit clean with the notice
+`"Output directory not writable — poster rendering skipped. Check
+filesystem permissions or sandbox config. The poster_spec.md
+contains image generation prompts for manual use."`
+
+This is a hard prerequisite distinct from the per-zone Step 6
+imagegen-not-available escape: that 3-consecutive-failure rule cannot
+distinguish an output-directory write failure from a missing imagegen
+tool, and would surface the latter message in either case. Catching
+writability up-front preserves correct error attribution and avoids
+spending three codex calls on a structurally doomed render session.
+
 ### Wrapper timeout binary (probe — fallback supported)
 
 In addition to the three gate checks above, capture an optional wrapper
