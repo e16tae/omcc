@@ -13,18 +13,32 @@ Follow the research skill's command-invoked mode (`skills/research/SKILL.md`).
 The skill handles topic intake, research execution, synthesis, and output
 assembly per its referenced specs.
 
+The Codex research-scan ensemble runs automatically per
+`research-ensemble-protocol.md` when the codex plugin is available —
+never ask the user whether to invoke Codex, and never direct them to
+run `/codex:*` commands manually. When codex is not installed or
+otherwise unavailable, the ensemble degrades silently to Claude-only
+and the brief is produced normally.
+
 ---
 
 ## Completion
 
-Output depends on whether the brief was actually written:
+Output depends on whether the brief was actually written and whether
+the abort came at scoping (before research) or at save (after research):
 
 - **If saved** (overwrite or distinct-directory branch): "✓ Research brief
   saved." plus the saved file path under `./output/YYYY-MM-DD_<topic-slug>/`.
   Offer to: adjust scope and re-run, deepen specific findings, or export to a
   different location.
-- **If aborted** (existing-directory abort branch): "ℹ Brief presented inline
-  without saving (existing-directory abort)." No path. Offer to save under a
-  distinct directory on user confirmation.
+- **If aborted at save** (Step 4 existing-directory abort branch — research
+  ran, brief was synthesized, user declined to save): "ℹ Brief presented
+  inline without saving (existing-directory abort)." No path. Offer to save
+  under a distinct directory on user confirmation.
+- **If aborted at scoping** (Step 1 existing-directory abort branch,
+  command mode only — user declined before research ran): "ℹ Aborted
+  at scoping (existing-directory abort); no research conducted, no
+  brief produced." No path, no inline brief. Offer to retry with a
+  distinct topic or to clean the existing directory and re-run.
 
 Do NOT print the "✓ saved" message when no file was written.

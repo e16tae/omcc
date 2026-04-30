@@ -22,7 +22,7 @@ on top of evidence.
 
 ### Step 1: Topic intake and scoping
 
-1. **Privacy gate** — before any web search:
+1. **Privacy gate** — before any web search **or external ensemble dispatch**:
    - Use generic technology terms in queries, not internal identifiers.
    - Never include proprietary code, internal paths, customer names,
      unpublished product names, or pasted internal documents.
@@ -31,6 +31,10 @@ on top of evidence.
    - If the user declines or indicates `<X>` is sensitive, ask whether
      to proceed with `<X>` redacted (e.g., generic substitute) or to
      abort the research session.
+   - Redacted substitutions apply equally to web queries and to any
+     prompt sent to an external model (e.g., the Codex research-scan
+     ensemble described in `research-ensemble-protocol.md`) — never
+     transmit the pre-redaction value.
 
 2. **Empty / over-broad topic check**:
    - If the user's input is empty or has no clear research subject,
@@ -132,9 +136,101 @@ For each sub-question:
 
 ## When invoked by command (/research)
 
-Same procedure as above. The command file provides `$ARGUMENTS` as the
-topic (may be empty — apply Step 1.2 empty-topic handling) and emits
-the completion message after Step 4 returns.
+Same procedure as above plus a Codex research-scan ensemble that runs
+in parallel with web research per `research-ensemble-protocol.md`.
+The command file provides `$ARGUMENTS` as the topic (may be empty —
+apply Step 1.2 empty-topic handling) and emits the completion message
+after Step 4 returns.
+
+### Step 1 addendum (command mode only) — pre-dispatch gates
+
+After Step 1.4 (scope statement) and BEFORE Step 2 begins, run the
+existing-directory check defined in
+`skills/research/references/output-file-rules.md` for the resolved
+output path.
+
+User choices and their downstream effect:
+
+- **Abort**: terminate the session immediately. Do not run Step 2
+  web research, do not dispatch Codex, do not attempt to produce a
+  brief. Emit the **"aborted at scoping"** completion message
+  defined in `commands/research.md` — there is no inline brief to
+  present at this stage (research has not run), and an external
+  Codex run would be wasted work. This Step 1 abort path is
+  distinct from the Step 4 abort path: Step 4 abort happens AFTER
+  research has run (so an inline brief exists), Step 1 abort
+  happens BEFORE research (so it does not).
+- **Overwrite**: record the decision (`save_path = default`,
+  `existing_dir_resolved = true`). Proceed to dispatch.
+- **Distinct directory**: compute the sibling path per
+  `skills/research/references/output-file-rules.md`
+  (e.g., `2026-04-29_my-topic_1430/`), record the decision
+  (`save_path = sibling`, `existing_dir_resolved = true`). Proceed
+  to dispatch.
+
+The recorded `save_path` and `existing_dir_resolved = true` are
+**carried into Step 4 save** so that the existing-directory prompt
+is NOT repeated. Step 4's save uses `save_path` directly when
+`existing_dir_resolved` is true; the user is never asked
+overwrite/distinct/abort twice within the same session.
+
+### Step 1 dispatch (command mode only) — Codex research-scan launch
+
+After the existing-directory gate clears, dispatch the Codex
+research-scan ensemble per `research-ensemble-protocol.md` Step 1
+Launch. The dispatch is a single background-Bash invocation of
+`codex-companion task` (foreground subcommand, backgrounded at the
+Bash layer) carrying the research-scan prompt. Then proceed to Step 2
+without waiting — Codex runs in parallel with Claude's WebSearch /
+WebFetch.
+
+If the codex plugin is not installed or the preflight check fails,
+skip the dispatch silently and continue Claude-only. The graceful
+degradation path is canonical in `research-ensemble-protocol.md`.
+
+### Step 3 collect (command mode only) — Codex output reconciliation
+
+Before applying Step 3.1 (organize by sub-question), check whether
+the Codex ensemble was actually dispatched in Step 1. The dispatch
+is skipped (silently) when the codex plugin is unavailable, the
+preflight check fails, or any of the guards in
+`research-ensemble-protocol.md` Step 1 Launch returns `exit 0`
+without launching `codex-companion`.
+
+- If the dispatch was skipped: do NOT wait for any background
+  notification — there is no in-flight Codex job. Proceed directly
+  to Step 3.1 with Claude-only findings.
+- If the dispatch was launched: wait for the Codex background
+  notification, read the Codex output, and reconcile the Codex
+  findings with Claude's findings via the four-category synthesis
+  defined in `research-ensemble-protocol.md`:
+
+- AGREED: same conclusion. If sources differ, apply Source Union
+  (verified, URL-deduplicated). New Codex sources go through Citation
+  Remapping per the protocol — Codex's own labels never enter the
+  brief.
+- CLAUDE-ONLY: present normally with Claude's citations. No
+  source-of-discovery label appears in the brief.
+- CODEX-ONLY: take Path A (Claude verifies via WebFetch and adds a
+  numeric `[N]` citation) OR Path B (move into Open Questions / Gaps
+  without citing the unverified source). Path C (`[uncited
+  inference]`) is forbidden for factual external claims.
+- CONFLICT: present both interpretations with their citations per
+  Step 3.3 below — the existing rule is unchanged.
+
+If Codex was unavailable, timed out, returned empty, or produced
+unsalvageable malformed output, proceed with Claude-only findings and
+record the degradation in the user-facing completion summary AFTER
+the brief is saved. Never insert ensemble-status labels into the
+brief artifact itself.
+
+### Step 4 audit (command mode only) — CODEX-ONLY claim handling
+
+The audit checklist (canonical in
+`skills/research/references/research-brief-spec.md`) applies as
+written. The synthesis above already routed every CODEX-ONLY claim
+into either a verified `[N]` citation or an Open Questions entry —
+no claim should reach the audit lacking both.
 
 ---
 

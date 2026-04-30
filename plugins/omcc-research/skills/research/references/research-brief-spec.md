@@ -102,13 +102,37 @@ weight in confidence ratings than secondary sources.
 
 ---
 
+## Ensemble Label Policy
+
+When the research skill runs in command-invoked mode, the Codex
+research-scan ensemble (per `research-ensemble-protocol.md`) may
+contribute claims and sources. The brief artifact does NOT carry
+any source-of-discovery labels:
+
+- No `[Claude]`, `[Codex]`, or `[Both]` markers anywhere in the brief.
+- Numeric `[N]` citations remain the only labeling format in
+  Findings and Sources.
+- Codex-internal citation labels are NEVER copied verbatim into the
+  brief — they are remapped to the brief's capture-order numbering
+  by Citation Remapping (canonical rule in
+  `research-ensemble-protocol.md`).
+
+The presence or absence of ensemble execution must NOT be inferable
+from reading the brief. Ensemble-status (unavailable, partial,
+degraded) is communicated only in the user-facing completion summary
+that follows the save, never inside the brief artifact.
+
+---
+
 ## Audit Checklist
 
 Before saving the brief, verify:
 
 - [ ] **Every finding has a citation OR a permitted sentinel**:
   - `[N]` citation referring to a Sources entry, OR
-  - `[uncited inference]` with rationale (the model's interpretation/synthesis), OR
+  - `[uncited inference]` with rationale — reserved for the model's
+    own interpretation/synthesis, NOT for factual claims attributed
+    to an external source, OR
   - `[research interrupted — partial coverage]` (web tools became unavailable mid-session)
 - [ ] **Every cited number `[N]` exists** as an entry in Sources.
 - [ ] **Every source entry** has: title (or fallback), URL, access date, source type.
@@ -119,3 +143,10 @@ Before saving the brief, verify:
 - [ ] **Date field is ISO `YYYY-MM-DD`** (Topic Info date and every Sources access date).
 - [ ] **Confidence rating is exactly one of `HIGH | MEDIUM | LOW`** with caveats tied to source quality.
 - [ ] **Open Questions section is honest** — gaps surfaced, not hidden under HIGH confidence.
+- [ ] **No source-of-discovery labels** anywhere in the brief —
+      `[Claude]` / `[Codex]` / `[Both]` and equivalents must not appear.
+- [ ] **Every CODEX-ONLY claim resolved** — when command-invoked mode
+      ran the Codex ensemble, every claim originating only from Codex
+      was either Path A (Claude-verified, `[N]`-cited) or Path B
+      (moved into Open Questions / Gaps without citing the unverified
+      source). Bare CODEX-ONLY claims are forbidden.
