@@ -87,8 +87,10 @@ Dispatch:
    `${TMPDIR:-/tmp}/omcc-research-prompt-<session-id>-<dispatch-id>.txt`.
    Remove the file after dispatch (success or failure).
 
-5. Execute as a background Bash. The shell only reads the prompt file
-   via `cat`; no prompt content is ever parsed by the shell.
+5. Execute as a background Bash. The shell passes only the file path
+   to `codex-companion`; the prompt content is read directly by the
+   companion via `fs.readFileSync` and never crosses shell parsing,
+   the process argv, or `ps aux`.
 
    The `CODEX_HOME` resolution and the subsequent `node` invocation
    MUST be in separate, sequenced shell statements (joined with `&&`
@@ -107,8 +109,9 @@ Dispatch:
        CODEX_HOME=$(ls -1d ~/.claude/plugins/cache/*/codex/*/ 2>/dev/null | sort -V | tail -1); \
        [ -n "$CODEX_HOME" ] || exit 0; \
        [ -f "$CODEX_HOME/scripts/codex-companion.mjs" ] || exit 0; \
+       grep -q 'valueOptions.*"prompt-file"' "$CODEX_HOME/scripts/codex-companion.mjs" || exit 0; \
        command -v node >/dev/null 2>&1 || exit 0; \
-       CLAUDE_PLUGIN_ROOT="$CODEX_HOME" node "$CODEX_HOME/scripts/codex-companion.mjs" task -- "$(cat "$PROMPT_FILE")"`,
+       CLAUDE_PLUGIN_ROOT="$CODEX_HOME" node "$CODEX_HOME/scripts/codex-companion.mjs" task --prompt-file "$PROMPT_FILE"`,
      run_in_background: true
    })
    ```
@@ -121,23 +124,15 @@ Dispatch:
    the prompt file (containing the sanitized topic and sub-questions)
    on disk indefinitely.
 
-   `"$(cat "$PROMPT_FILE")"` is a quoted command substitution: the
-   prompt is delivered to `node` as a single `argv` argument, with no
-   shell parsing of its content. Whatever the prompt contains —
-   `$(...)`, backticks, double quotes, heredoc-looking sequences —
-   passes through verbatim to the Node process. The `trap ... EXIT`
-   removes the temp file even when `set -e` aborts the shell mid-run.
+   Passing only the path keeps the prompt out of `argv` entirely,
+   removing both `ps aux` exposure and the system `ARG_MAX` ceiling.
 
-   The `--` delimiter between `task` and the prompt argument is
-   load-bearing: `codex-companion`'s argv parser re-splits the single
-   argument string and matches `--`-prefixed tokens against the
-   subcommand's option flags (e.g., `--write`, `--background`,
-   `--model`). Without the `--` delimiter, a sanitized topic that
-   happens to contain a token like `--write` or `--prompt-file` would
-   be interpreted as a CLI flag — a behavior change beyond the
-   prompt's intent. The `--` token is recognized by
-   `codex-companion`'s argument parser as the end-of-options marker;
-   every token after it is forced into positional position.
+   The `grep` preflight guard is load-bearing. Older `codex-companion`
+   builds that predate `--prompt-file` would treat the unknown flag as
+   positional argv, making `"--prompt-file <path>"` the literal prompt.
+   The pattern matches the parser's `valueOptions` declaration that
+   exists only when the flag is recognized; a miss exits 0 — graceful
+   degradation instead of silent malfunction.
 
    The codex-companion `task` subcommand defaults to foreground
    (synchronous). The `run_in_background: true` flag is at the Bash
@@ -479,39 +474,6 @@ therefore **in-session only**:
   re-runs the topic.
 - This is an explicit design gap for v2. A v3 with workflow state may
   add recovery; v2 trades recovery for plugin simplicity.
-
----
-
-## Known Limitations
-
-These are constraints accepted in v2 and worth flagging because they
-affect user-visible behavior or future maintenance.
-
-### Prompt visibility in process listings
-
-The dispatch passes the prompt content to `codex-companion task` as
-a single `argv` argument (`task -- "$(cat "$PROMPT_FILE")"`). While
-the prompt is never parsed by the shell, it does become visible in
-process listings (`ps aux`) for the duration of the Codex turn.
-
-This is a constraint of the current `codex-companion` CLI surface,
-which neither accepts a `--prompt-file` flag nor reads the prompt
-from stdin. A future codex plugin release that adds either path
-would let this protocol pass only the file path on the command line;
-until then, the temp file lives in a private per-dispatch path,
-is written only by the current user, and is removed on dispatch
-completion (success, failure, or graceful degradation) via
-`trap ... EXIT`.
-
-### argv size ceiling
-
-The prompt argument is bounded by the system's `ARG_MAX` (typically
-256 KB on macOS / Linux). Research prompts with up to ~7
-sub-questions and a sanitized topic stay well below this ceiling in
-practice. If a future expansion of the prompt template approaches
-the limit, the call will fail before launching `codex-companion` and
-the dispatch falls back to the same graceful-degradation path as a
-Codex-unavailable case.
 
 ---
 

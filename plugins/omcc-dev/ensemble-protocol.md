@@ -138,6 +138,16 @@ The user's config.toml is the single source of truth for model, effort, and
 service tier. Passing `--model` or `--effort` flags would override the user's
 global configuration.
 
+### Prefer `--prompt-file` for materialized prompts
+
+When the prompt is materialized in a temp file, prefer
+`--prompt-file <path>` over positional argv to keep the prompt out of
+`ps aux` and avoid the `ARG_MAX` ceiling. Older `codex-companion`
+builds without the flag would treat it as positional argv; gate the
+dispatch with `grep -q 'valueOptions.*"prompt-file"' "$companion" || exit 0`
+so a miss degrades gracefully (matching the missing-codex preflight
+contract).
+
 ---
 
 ## Independence Rule
