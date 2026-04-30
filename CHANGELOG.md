@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.2.1](https://github.com/e16tae/omcc/compare/v2.2.0...v2.2.1) (2026-04-30)
+
+
+### Documentation
+
+* **omcc-designer:** resolve remaining [#64](https://github.com/e16tae/omcc/issues/64) DEFER items ([4d1f34d](https://github.com/e16tae/omcc/commit/4d1f34db992612742edefe55354599afaec0c760))
+* **omcc-designer:** resolve remaining [#64](https://github.com/e16tae/omcc/issues/64) DEFER items ([c4e6801](https://github.com/e16tae/omcc/commit/c4e6801a3e4ce39f59281d201852e1f200615cb5))
+* **omcc-dev:** add batch/interview worked examples to presentation-protocol ([#80](https://github.com/e16tae/omcc/issues/80)) ([76b99a5](https://github.com/e16tae/omcc/commit/76b99a535441a0fa702ccb28cb244d345fcbb4eb))
+* **omcc-dev:** add batch/interview worked examples to presentation-protocol ([#80](https://github.com/e16tae/omcc/issues/80)) ([d0e60f9](https://github.com/e16tae/omcc/commit/d0e60f96e14726f5584595ffa96661fa0f907622))
+
 ## [2.2.0](https://github.com/e16tae/omcc/compare/v2.1.1...v2.2.0) (2026-04-29)
 
 
