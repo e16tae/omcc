@@ -65,6 +65,30 @@ If `$COMPANION` is empty after this check, the codex plugin is not
 installed in any marketplace — apply the graceful-degrade path from
 `skills/poster-render/SKILL.md`.
 
+## Preflight: codex-companion `--prompt-file` support
+
+The chain-tail dispatch passes the codex prompt to the companion via
+the `--prompt-file <path>` flag (see "Materialize the prompt" and
+"Canonical call form" below). Codex-companion 1.0.3+ ships this flag;
+earlier builds do not. Before any dispatch, gate on the companion's
+recognition of the flag:
+
+```bash
+grep -q 'valueOptions.*"prompt-file"' "$COMPANION" || exit 0
+```
+
+The pattern matches the parser's `valueOptions` declaration that exists
+only when `--prompt-file` is registered. The guard is load-bearing:
+older codex-companion's `lib/args.mjs` treats unknown long flags as
+positional tokens, which would silently turn `--prompt-file <path>`
+into the literal prompt text. The `exit 0` makes the miss a graceful-
+degrade — matching the missing-codex preflight contract — instead of
+a silent malfunction.
+
+The check runs once per session before entering the per-zone (or
+per-(variant, zone)) loop; it does not need to repeat per dispatch
+since the resolved `$COMPANION` is stable for the session.
+
 ## Locating a wrapper timeout binary (probe — fallback supported)
 
 GNU coreutils' `timeout` is **not** part of POSIX (IEEE Std 1003.1) and
@@ -93,7 +117,51 @@ companion runs without a wrapper bound; the caller's recovery path
 (SKILL.md Step 6 / Step 7) is unchanged.
 
 This probe MUST NOT gate the chain-tail. The codex pre-flight above
-(node + codex CLI + app-server) remains the only gate.
+(node + codex CLI + app-server + `--prompt-file` support) remains the
+only gate.
+
+## Materialize the prompt to a temp file (with cleanup trap)
+
+The dispatch passes only the prompt's file path to the companion via
+the `--prompt-file` flag. This keeps the prompt out of `argv` entirely,
+removing both `ps aux` exposure and the system `ARG_MAX` ceiling
+(~256 KB on macOS/Linux) that would otherwise bound the prompt size.
+For design prompts — which combine the Designer's Vision narrative,
+the Image Generation Guide notes, optional dispatch hints, and the
+absolute-path save instruction — the ARG_MAX ceiling is closer than
+it is for short research prompts.
+
+Before invoking the companion, write the in-memory `$PROMPT` to a
+private per-dispatch temp path via Claude's `Write` tool. Do NOT use
+shell redirection (e.g., `printf "$PROMPT" > "$PROMPT_FILE"`) — the
+prompt content may contain shell metacharacters (`$`, backticks,
+`$()`), and a re-emit via `printf`/`echo` would re-parse them. The
+`Write` tool writes a literal string and never invokes a shell.
+
+Path convention (avoids collision in the per-zone or per-(variant,
+zone) loops):
+
+- Poster (per-zone loop):
+  `${TMPDIR:-/tmp}/omcc-designer-prompt-$$-<zone-id>.txt`
+- Social-graphics (per-(variant, zone) 2D loop):
+  `${TMPDIR:-/tmp}/omcc-designer-prompt-$$-<variant_id_snake>-<zone-id>.txt`
+
+`$$` is the shell PID — a stable per-session token; the zone-id (or
+`<variant_id_snake>-<zone-id>`) tags the per-call slot. The two
+together survive Ctrl+C between zones without leaving stale files
+that could be picked up by a subsequent dispatch.
+
+Register an EXIT trap immediately after the `$PROMPT_FILE` assignment
+and BEFORE the dispatch:
+
+```bash
+trap 'rm -f "$PROMPT_FILE"' EXIT
+```
+
+The trap fires on any exit path — successful dispatch, codex error,
+SIGINT mid-render, even the `set -e` abort if the caller uses it —
+so the temp file (containing the rendered Designer's Vision and Image
+Generation Guide for that zone) does not linger on disk.
 
 ## Canonical call form
 
@@ -108,9 +176,9 @@ platform the wrapper-timeout fallback is designed to support.
 
 ```bash
 if [ -n "$TIMEOUT_BIN" ]; then
-  "$TIMEOUT_BIN" 300 node "$COMPANION" task --write --cwd "$OUTPUT_DIR" "$PROMPT"
+  "$TIMEOUT_BIN" 300 node "$COMPANION" task --write --cwd "$OUTPUT_DIR" --prompt-file "$PROMPT_FILE"
 else
-  node "$COMPANION" task --write --cwd "$OUTPUT_DIR" "$PROMPT"
+  node "$COMPANION" task --write --cwd "$OUTPUT_DIR" --prompt-file "$PROMPT_FILE"
 fi
 ```
 
@@ -135,11 +203,16 @@ Where:
   the enclosing git repository root** (see "cwd resolution caveat"
   below); this argument is informational. The actual save location is
   controlled by the absolute path embedded in the prompt.
-- `"$PROMPT"` — a single positional argument. Quote it once so the
-  shell does not split on spaces. Do not pass image-related options as
-  flags (e.g., do not invent `--imagegen`); the companion's
-  `lib/args.mjs` treats unknown long flags as positional tokens, so
-  invented flags become part of the prompt and confuse the model.
+- `--prompt-file "$PROMPT_FILE"` — the per-dispatch temp file written
+  in "Materialize the prompt to a temp file" above. Codex-companion
+  reads the file directly via `fs.readFileSync`; the prompt content
+  never crosses shell parsing, the process argv, or `ps aux`. Pass
+  only the path; do not also pass a positional prompt argument — the
+  companion's `lib/args.mjs` would treat that as an unknown positional
+  token and either ignore it or fold it into the prompt depending on
+  the version. The `--prompt-file` precondition (the grep guard above)
+  ensures this flag is recognized by the resolved companion before
+  this dispatch runs.
 
 ## cwd resolution caveat (verified 2026-04-26)
 

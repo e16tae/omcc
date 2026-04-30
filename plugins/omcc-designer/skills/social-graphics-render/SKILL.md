@@ -62,7 +62,7 @@ If the codex plugin is not installed, or its runtime is incomplete:
   manual use with any image generation tool."`
 - Exit clean.
 
-Detection — three checks (all must pass), identical to
+Detection — four checks (all must pass), identical to
 `poster-render`'s pre-flight:
 
 1. The codex-companion script exists at any
@@ -72,6 +72,15 @@ Detection — three checks (all must pass), identical to
 2. Node.js is on PATH (`command -v node` succeeds).
 3. The codex CLI itself is invokable: `codex --version` exits 0
    AND `codex app-server --help` exits 0.
+4. The selected codex-companion script supports `--prompt-file`.
+   Probe via `grep -q 'valueOptions.*"prompt-file"' "$COMPANION" || exit 0`
+   (see `skills/poster-render/references/codex-call-template.md`
+   "Preflight: codex-companion --prompt-file support" for the full
+   rationale). Older codex-companion builds (1.0.2 or earlier) treat
+   unknown long flags as positional argv, which would silently turn
+   the dispatch flag into part of the literal prompt — the grep
+   guard makes the miss a graceful-degrade rather than a silent
+   malfunction.
 
 If any check fails, run the graceful-degrade path above.
 
@@ -276,13 +285,23 @@ Based on the brief's Imagery approach (same logic as
 
 ### Step 5 — invoke codex-companion
 
-Via Bash, dispatching on `$TIMEOUT_BIN` from the pre-flight probe above:
+Materialize the composed prompt to a per-(variant, zone) temp file,
+register its EXIT trap, then dispatch via `--prompt-file`. The full
+procedure (path convention, trap ordering, why `Write` rather than
+shell redirection) lives in
+`skills/poster-render/references/codex-call-template.md` "Materialize
+the prompt to a temp file (with cleanup trap)" — this Step 5 only
+sketches the call shape:
 
 ```
+PROMPT_FILE="${TMPDIR:-/tmp}/omcc-designer-prompt-$$-<variant_id_snake>-<zone-id>.txt"
+# write <prompt> to $PROMPT_FILE via Claude's Write tool
+trap 'rm -f "$PROMPT_FILE"' EXIT
+
 if [ -n "$TIMEOUT_BIN" ]; then
-  "$TIMEOUT_BIN" 300 node <codex-companion-path> task --write --cwd <output-dir> "<prompt>"
+  "$TIMEOUT_BIN" 300 node <codex-companion-path> task --write --cwd <output-dir> --prompt-file "$PROMPT_FILE"
 else
-  node <codex-companion-path> task --write --cwd <output-dir> "<prompt>"
+  node <codex-companion-path> task --write --cwd <output-dir> --prompt-file "$PROMPT_FILE"
 fi
 ```
 
@@ -290,6 +309,17 @@ fi
 - `--cwd <output-dir>` is informational (codex resolves to repo
   root anyway); the prompt's absolute path is the load-bearing
   target.
+- `--prompt-file "$PROMPT_FILE"` keeps the prompt out of `argv`,
+  removing both `ps aux` exposure and the `ARG_MAX` ceiling. The
+  pre-flight check #4 above gates on the companion's `--prompt-file`
+  support so older builds gracefully degrade rather than silent-
+  malfunction on the unknown flag.
+- The temp-file path tags both the variant (`<variant_id_snake>`)
+  and the zone (`<zone-id>`) so the per-(variant, zone) 2D loop does
+  not collide on filenames. `$$` is the shell PID — a stable per-
+  session token. The EXIT trap is registered immediately after the
+  `$PROMPT_FILE` assignment so cleanup fires on any exit path
+  (success, codex error, timeout, SIGINT mid-render).
 - The if-branch wraps the call with the detected `<bin> 300` (5-minute
   bound). Exit code 124 → render failure for this variant × zone. The
   else-branch (no `$TIMEOUT_BIN` detected) invokes `node` directly
@@ -495,11 +525,18 @@ Rules:
 
 See `skills/poster-render/references/codex-call-template.md` for:
 
+- The `--prompt-file` preflight (grep guard against the companion's
+  `valueOptions` declaration) and the graceful-degrade rationale for
+  older codex-companion builds.
+- The temp-file materialization step (`Write`-tool write to a
+  `$$`-and-(variant, zone)-tagged path under `${TMPDIR:-/tmp}`) and
+  the EXIT trap that cleans it up on every exit path.
 - The exact companion command form (an `if`/`else` that dispatches on
-  `$TIMEOUT_BIN` to either `"$TIMEOUT_BIN" 300 node <companion> ...` or
-  the unwrapped `node <companion> ...`) and the pre-flight
-  `$TIMEOUT_BIN` detection (`timeout`, `gtimeout`, or empty fallback),
-  including the zsh word-splitting rationale for the conditional form.
+  `$TIMEOUT_BIN` to either `"$TIMEOUT_BIN" 300 node <companion> ...
+  --prompt-file "$PROMPT_FILE"` or the unwrapped `node <companion> ...
+  --prompt-file "$PROMPT_FILE"`) and the pre-flight `$TIMEOUT_BIN`
+  detection (`timeout`, `gtimeout`, or empty fallback), including the
+  zsh word-splitting rationale for the conditional form.
 - The absolute-path requirement and the cwd-vs-repo-root behavior.
 - The `SAVED_PATH=` literal and last-match parsing rules.
 - The two-step image storage path
