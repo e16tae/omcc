@@ -28,13 +28,14 @@ After the social_graphics_spec.md is saved, unconditionally dispatch
 the `social-graphics-render` skill
 (`skills/social-graphics-render/SKILL.md`) as a chain-tail.
 social-graphics-render owns the full dispatch logic: pre-flight
-(codex plugin + runtime checks), one-time Tool dispatch decision
-(user consent prompt that discloses the variant × zone call count
-regardless of brief field value), the variant-outer / zone-inner
-2D loop, dimension validation, and graceful-skip path when codex
-is unavailable or the user declines. This command does not
-duplicate the trigger conditions — see social-graphics-render's
-SKILL.md for the canonical spec.
+(codex plugin + runtime checks + output-dir writability), one-time
+Tool dispatch decision (user consent prompt that discloses the
+planned codex call count — Σ zones across all variants — regardless
+of brief field value), the variant-outer / zone-inner 2D loop,
+dimension validation, and graceful-skip path when codex is
+unavailable or the user declines. This command does not duplicate
+the trigger conditions — see social-graphics-render's SKILL.md for
+the canonical spec.
 
 `/start` Phase 4 dispatches social-graphics-render the same way,
 so `/start` and `/social-graphics` produce identical chain

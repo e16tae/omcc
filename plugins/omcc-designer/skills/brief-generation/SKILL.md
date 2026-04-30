@@ -54,6 +54,13 @@ Run the quality checklist from
    and sanitization per `skills/brief-generation/references/output-file-rules.md`.
 2. Present a summary of the brief to the user.
 3. Ask: "Brief generated. Ready to proceed to [poster/brochure/etc.] design?"
+4. Surface a discoverability Tip:
+   `"Tip: list \`codex\` in your brief's Image generation tools field to enable
+   optional auto-render in Phase 4 (where supported — currently \`poster\` and
+   \`social-graphics\` media)."`
+   This applies to both `/start` (where the chain runs in the same session) and
+   `/formalize` (where the brief is reused later by `/poster` or
+   `/social-graphics`).
 
 **Output language**: Write the brief file in the same language the user
 used for the request (the plugin's internal documentation stays English, but
