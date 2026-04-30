@@ -93,6 +93,67 @@ Present items sequentially, one at a time, with a pause for user input between e
 | Audit issue | One issue with location, category, description, and action |
 | Exploration perspective | One perspective (Architecture / Flow / Conventions) |
 
+### Worked Examples
+
+The "One Item =" anchor above is correct but compressed. The two scenarios
+below show how that anchor renders in batch and interview modes.
+
+#### Example 1 — 1 item with 4 options
+
+Setup: a brainstorm produced 4 candidate approaches (Option A/B/C/D) to a
+single design decision. The "One Item =" anchor for option comparison is
+*one option with its five-perspective analysis*.
+
+**Batch mode** — single message containing:
+
+1. The 5-perspective comparison table (rows = perspectives, columns = A/B/C/D)
+2. Each option's full perspective analysis (4 blocks, in order)
+3. The recommendation block (chosen option + rationale + alternative-conditions)
+
+**Interview mode** — 4 sequential per-option segments + 1 aggregate, each
+its own assistant turn with a pause for user input between:
+
+1. `[1/4]` Option A — name, summary, 5-perspective analysis. Pause.
+2. `[2/4]` Option B — same shape. Pause.
+3. `[3/4]` Option C — same. Pause.
+4. `[4/4]` Option D — same. Pause.
+5. After all 4 reviewed: aggregate synthesis (comparison table + recommendation).
+   Mandatory in interview mode per the synthesis rule above.
+
+Total assistant segments: **5** (4 per-option + 1 aggregate).
+
+#### Example 2 — 5 items with varied option counts
+
+Setup: a plan has 5 tasks; each task internally has 2-4 viable
+implementation alternatives (e.g., 4 / 2 / 3 / 4 / 2 = 15 options total
+across the 5 tasks).
+
+**Batch mode** — single message containing:
+
+1. Item 1 with all 4 of its options inline (compact 5-perspective per
+   option, plus per-item recommendation)
+2. Items 2-5 in the same shape, in order
+3. Cross-item synthesis if applicable (otherwise omit)
+
+**Interview mode** — 5 per-item segments + 1 aggregate, **grouped per item,
+not per option**:
+
+1. `[1/5]` Item 1 with its 4 options compared inline. Pause.
+2. `[2/5]` Item 2 with its 2 options compared. Pause.
+3. `[3/5]` Item 3 with its 3 options compared. Pause.
+4. `[4/5]` Item 4 with its 4 options compared. Pause.
+5. `[5/5]` Item 5 with its 2 options compared. Pause.
+6. After all 5 reviewed: aggregate synthesis covering all items.
+
+Total assistant segments: **6** (5 per-item + 1 aggregate), **NOT 15**.
+
+**Why per-item, not per-option** — the anchor is the item; its options are
+shown together so the user evaluates one item's trade-off at a time without
+losing cross-option framing. Splitting into 15 per-option segments would
+shatter that framing and force the user to re-build cross-option context
+across many turns. This grouping rule applies whenever the "One Item =" unit
+is itself a comparison container.
+
 ---
 
 ## Protocol Interaction Rule
