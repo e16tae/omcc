@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.9.0](https://github.com/e16tae/omcc/compare/v2.8.0...v2.9.0) (2026-05-01)
+
+
+### Features
+
+* **omcc-designer:** add frontend domain skill + DESIGN.md emission ([#118](https://github.com/e16tae/omcc/issues/118)) ([d8ad6a2](https://github.com/e16tae/omcc/commit/d8ad6a20c2b3fa05c7c43c0136ed1db3ff2493bb))
+* **omcc-designer:** dynamic spec sync via npx in frontend skill ([#121](https://github.com/e16tae/omcc/issues/121)) ([0879ef5](https://github.com/e16tae/omcc/commit/0879ef56c5f4322e65b3850e0a597eb52bdbf7b6))
+
+
+### Bug Fixes
+
+* **omcc-designer:** drop spec commit pin from frontend-guide ([#120](https://github.com/e16tae/omcc/issues/120)) ([31e1e9b](https://github.com/e16tae/omcc/commit/31e1e9b60d76fc547e618bbefb8fbb0e0e85247a))
+
 ## [2.8.0](https://github.com/e16tae/omcc/compare/v2.7.0...v2.8.0) (2026-05-01)
 
 
