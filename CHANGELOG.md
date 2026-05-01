@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.4.0](https://github.com/e16tae/omcc/compare/v2.3.2...v2.4.0) (2026-05-01)
+
+
+### Features
+
+* **omcc-designer:** integrate Codex design-critique-scan ensemble ([3c0edc8](https://github.com/e16tae/omcc/commit/3c0edc871699a3e11759a39c493d16dde66d96ff))
+* **omcc-designer:** integrate Codex design-critique-scan ensemble ([2a20068](https://github.com/e16tae/omcc/commit/2a200687fc7e602812c5f2a38ec37aaf14a12f44)), closes [#96](https://github.com/e16tae/omcc/issues/96)
+
 ## [2.3.2](https://github.com/e16tae/omcc/compare/v2.3.1...v2.3.2) (2026-04-30)
 
 
