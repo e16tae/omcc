@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.5.0](https://github.com/e16tae/omcc/compare/v2.4.0...v2.5.0) (2026-05-01)
+
+
+### Features
+
+* **omcc-dev:** add /omcc-dev:codex-now user-initiated Codex consultation ([#110](https://github.com/e16tae/omcc/issues/110)) ([a196a99](https://github.com/e16tae/omcc/commit/a196a9972f672c8858c999bb55b7581a765b2e1f))
+
 ## [2.4.0](https://github.com/e16tae/omcc/compare/v2.3.2...v2.4.0) (2026-05-01)
 
 
