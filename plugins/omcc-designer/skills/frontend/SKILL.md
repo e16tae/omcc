@@ -59,6 +59,42 @@ before producing the DESIGN.md:
 If the user declines the interview, save no files and end; DESIGN.md
 generation cannot proceed without confirmed decisions.
 
+### Step 0: Optional spec sync (recommended when Node is available)
+
+Before token derivation, attempt to fetch the **current** upstream
+DESIGN.md spec into the working context — this lets the skill follow
+the latest schema even if this SKILL.md and `skills/frontend/references/frontend-guide.md` were
+written against an older spec revision. The spec is alpha and changes;
+this step closes the drift gap without redistributing the spec source
+locally.
+
+Run, via Bash:
+
+```
+npx --yes @google/design.md spec --format markdown
+```
+
+Outcomes:
+
+- **Node + npx + network OK**: the command emits the current spec text
+  (8 standard sections, current token schema, current consumer-behavior
+  table). Use this output as the authoritative spec reference for
+  Steps 1–3 below; if it differs from this SKILL.md / `skills/frontend/references/frontend-guide.md`,
+  trust the freshly-fetched spec and adjust the token schema or
+  section authoring accordingly. Note any divergence so contributors
+  can update the SKILL afterward.
+- **Node not installed, offline, or npm fetch fails**: silently skip
+  this step. Inform the user once with a single line:
+  "Spec sync skipped (npx @google/design.md unavailable). Using static
+  authoring rules; spec drift is possible." Then proceed with Steps
+  1–3 using the static rules in this SKILL.md and
+  `skills/frontend/references/frontend-guide.md`.
+
+This step is **optional, additive context** — never blocking. The
+static rules are always sufficient to produce a spec-conforming
+DESIGN.md at the time they were written; the dynamic fetch only
+helps when upstream has drifted.
+
 ### Step 1: Token derivation (YAML frontmatter)
 
 Using the brief's Brand Identity, Color Palette, Typography, and Visual

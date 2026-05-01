@@ -13,12 +13,17 @@ spec.
 - **Specification path**: docs/spec.md (upstream repository, not a
   local file)
 - **Status**: `version: alpha` — actively evolving. This skill follows
-  the current spec at the URL above; we intentionally do NOT pin a
-  commit because alpha drift is expected and a pin would just record
-  a moment in time without protecting consumers from spec changes.
-  When the upstream spec changes in a way that breaks our authoring
-  rules below, contributors revise the rules; the rules are the
-  durable artifact.
+  the current spec at the URL above. Two complementary mechanisms keep
+  drift in check:
+  1. **Dynamic spec sync (Step 0 of the skill)**: when Node + npx are
+     available, the skill calls `npx @google/design.md spec` at
+     invocation time to inject the current spec into the working
+     context. The skill prefers the freshly-fetched spec over the
+     static rules below when they disagree.
+  2. **Static authoring rules (this guide)**: the durable fallback
+     used when the dynamic fetch is unavailable. Contributors revise
+     these rules when upstream behavior breaks them — the rules are
+     the offline source of truth.
 
 ### NOTICE (Apache 2.0 attribution)
 
@@ -387,26 +392,50 @@ Add brief-specific items from the Constraints field.
 
 ---
 
-## Soft dependency — upstream lint
+## Soft dependencies — upstream tooling (opt-in)
 
-If the user wants spec validation:
+The CLI is published as `@google/design.md` (npm). Two of its
+subcommands integrate with this skill on an opt-in basis:
+
+### Spec sync (skill auto-invokes when available)
+
+The frontend SKILL.md "Step 0: Optional spec sync" attempts to fetch
+the current upstream spec into the working context before token
+derivation:
+
+```bash
+npx --yes @google/design.md spec --format markdown
+```
+
+This is the only place where the skill itself runs the CLI, and the
+invocation is **best-effort** — failures (Node missing, offline, npm
+fetch failure) silently fall back to the static authoring rules in
+this guide. The point of the dynamic fetch is to catch upstream
+drift between releases of this skill.
+
+### Lint (user runs separately)
+
+If the user wants spec validation of the saved DESIGN.md:
 
 ```bash
 npx @google/design.md lint ./output/YYYY-MM-DD_project-name/DESIGN.md
 ```
 
-The CLI is published as `@google/design.md` (npm). Available subcommands:
+This skill does NOT auto-invoke `lint`. Users who want validation
+run it manually after save.
 
-- `lint` — 8 rules at the time of pin (broken-ref, missing-primary,
+### CLI subcommand reference
+
+- `lint` — 8 rules at the time of writing (broken-ref, missing-primary,
   contrast-ratio, orphaned-tokens, token-summary, missing-sections,
   missing-typography, section-order). Exit code `1` on errors.
 - `diff <before> <after>` — token regression detection.
 - `export --format tailwind|dtcg` — token export to Tailwind theme
   config or W3C DTCG `tokens.json`.
-- `spec` — print the spec itself (useful for agent-prompt injection).
+- `spec` — print the current spec (auto-fetched in Step 0; users can
+  also run it directly to read the spec).
 
-This skill does not invoke any of these commands. The CLI is **not** an
-omcc-designer dependency; users who want validation install Node and run
+The CLI is **not** an omcc-designer dependency; users who want validation install Node and run
 the CLI themselves.
 
 ---
