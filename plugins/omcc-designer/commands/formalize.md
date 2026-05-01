@@ -59,6 +59,13 @@ the formalize pipeline at design_brief.md only; let the user opt into
 
 For all other media, perform the emission inline:
 
+0. **Optional spec sync** (recommended when Node is available). Run
+   `npx --yes @google/design.md spec --format markdown` to fetch the
+   current upstream spec into the working context. Use the freshly-
+   fetched spec as the authoritative reference for token schema and
+   section order if it differs from the mapping contract below.
+   Failures (no Node / offline / npm fetch fails) silently fall back
+   to the static rules in extraction-guide.md and this Phase 4 step.
 1. Apply the mapping contract from
    `skills/design-extraction/references/extraction-guide.md`
    "Mapping extraction to DESIGN.md sections" — five extraction areas
