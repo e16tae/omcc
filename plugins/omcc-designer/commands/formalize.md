@@ -51,8 +51,9 @@ the next step based on the brief's canonical `Target medium`:
 
 - `Target medium: poster` → `/omcc-designer:poster`
 - `Target medium: social-graphics` → `/omcc-designer:social-graphics`
-- Other media (`brochure`, `infographic`, `frontend`) — pipeline
-  ends here until their domain commands are implemented.
+- `Target medium: frontend` → `/omcc-designer:frontend`
+- Other media (`brochure`, `infographic`) — pipeline ends here
+  until their domain commands are implemented.
 
 If the brief's `Target medium` did not normalize to a canonical
 value, surface the alias table from

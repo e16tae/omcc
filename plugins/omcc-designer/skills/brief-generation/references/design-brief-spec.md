@@ -208,8 +208,9 @@ Status values: confirmed / partial / unconfirmed / skipped
 |-------------|----------------------|
 | Poster | All sections; Dimensions critical for layout |
 | Social graphics | All sections; Variants + per-variant Technical Specs critical for multi-canvas layout. Each variant produces its own Layer 1/2/3 sub-block within a single social_graphics_spec.md. |
+| Frontend | Brand Identity (personality), Color Palette (5 slots → DESIGN.md `colors` tokens), Typography (3 roles → DESIGN.md `typography` tokens), Visual Direction (mood + constraints → Overview + Do's and Don'ts), Content Map (only Constraints; Image zones are NOT used — DESIGN.md `components` are derived from brand personality, not content zones). Produces a `DESIGN.md` artifact conforming to the Google design.md spec (Apache 2.0). Rounded/Spacing/Components/Elevation/Shapes are not in the brief and are derived inside the skill via brand-personality interview, not stored in the brief itself. |
 
-Additional domains (brochure, infographic, frontend) will be mapped
+Additional domains (brochure, infographic) will be mapped
 when their skills are implemented.
 
 ## Target medium aliases

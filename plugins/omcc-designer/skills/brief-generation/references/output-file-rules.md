@@ -47,9 +47,27 @@ which pipeline ran.
     └── ...
 ```
 
+**Frontend pipeline** (`frontend` medium — produces a Google
+DESIGN.md spec as the domain artifact, no chain-tail render):
+
+```
+./output/YYYY-MM-DD_project-name/
+├── design_brief.md
+├── DESIGN.md                  # Google design.md spec (Apache 2.0)
+└── design_plan.md              # if /omcc-designer:plan ran
+```
+
+The `design-extraction` skill, when invoked on visual inputs (image /
+Figma / PDF / URL), additionally emits `DESIGN.md` alongside the
+design brief in the project directory — irrespective of which domain
+pipeline runs afterward. The DESIGN.md captures tokens
+reverse-engineered from the input; subsequent domain-skill output
+(e.g., poster_spec.md) coexists with both.
+
 A given project directory holds one pipeline's spec at a time
-(driven by the brief's canonical `Target medium`); the two trees
-above are not expected to coexist.
+(driven by the brief's canonical `Target medium`); the trees
+above are not expected to coexist beyond the optional shared
+documents (design_brief.md, DESIGN.md, design_plan.md).
 
 ## Directory naming
 
@@ -69,7 +87,7 @@ Before using a project name as a directory component, apply these rules:
 
 - **Document filenames** within the directory are fixed:
   design_brief.md, poster_spec.md, social_graphics_spec.md,
-  design_plan.md.
+  design_plan.md, DESIGN.md.
 - **Asset filenames** (e.g., rendered zone PNGs from chain-tail
   render skills like `poster-render` or `social-graphics-render`)
   follow the shared conventions in `Rendered zone images` below.
@@ -77,6 +95,17 @@ Before using a project name as a directory component, apply these rules:
 - **Naming convention**: multi-word filenames use `snake_case` (lowercase with
   underscore separator). Single-word filenames stay lowercase. Apply this rule
   when introducing new output file types.
+- **External standard exception**: filenames defined by an external standard
+  preserve their canonical casing. Currently:
+  - `DESIGN.md` — Google design.md spec (Apache 2.0; upstream at
+    https://github.com/google-labs-code/design.md). Used by the
+    `frontend` domain skill and produced as a secondary artifact by
+    `design-extraction` when invoked on visual inputs.
+  - `README.md` — industry convention (cwd-level, not produced by
+    omcc-designer; listed for completeness).
+  The exception applies only when adopting an externally-defined
+  filename. New output types defined within omcc-designer follow the
+  lowercase / `snake_case` rule.
 - Do not use `_2`, `_3` suffixes for documents. Separate projects by
   directory. Asset filenames follow their own per-skill versioning rules
   (see `Rendered zone images` below).
