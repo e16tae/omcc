@@ -107,11 +107,23 @@ Follow the brainstorm skill's command-invoked mode (`skills/brainstorm/SKILL.md`
 
 Do not proceed until the user approves a direction.
 
+After Synthesize for the Codex `brainstorm` ensemble, the command
+writes `ensemble_results` per `ensemble-protocol.md` §Result
+Bookkeeping in the same atomic mutation that clears the matching
+`pending_ensemble` row. `phase: brainstorm`,
+`ensemble_type: brainstorm`, `run_id` per `continuity-protocol.md`
+§Run-id format (workflow-durable token, NOT the Bash background id).
+
 ---
 
 ## Phase 2: Explore Codebase
 
 Follow the explore skill's command-invoked mode (`skills/explore/SKILL.md`).
+
+After Synthesize for the Codex `explore` ensemble, the command writes
+`ensemble_results` per `ensemble-protocol.md` §Result Bookkeeping.
+`phase: explore`, `ensemble_type: explore`, `run_id` per
+`continuity-protocol.md` §Run-id format.
 
 ---
 
@@ -120,6 +132,11 @@ Follow the explore skill's command-invoked mode (`skills/explore/SKILL.md`).
 Follow the plan skill's command-invoked mode (`skills/plan/SKILL.md`).
 
 Do not proceed until the user approves the plan.
+
+After Synthesize for the Codex `plan-verify` ensemble, the command
+writes `ensemble_results` per `ensemble-protocol.md` §Result
+Bookkeeping. `phase: plan`, `ensemble_type: plan-verify`, `run_id`
+per `continuity-protocol.md` §Run-id format.
 
 ### Workflow State Write
 
@@ -264,6 +281,14 @@ Before parallel-review, verify completion:
 
 Then follow the parallel-review skill's command-invoked mode (`skills/parallel-review/SKILL.md`).
 
+After Synthesize for the parallel-review skill's Codex result, the
+command (not the skill — see `skills/parallel-review/SKILL.md`
+ownership note) writes `ensemble_results` per `ensemble-protocol.md`
+§Result Bookkeeping in a single atomic mutation that also clears the
+matching `pending_ensemble` row. `phase: review`,
+`ensemble_type: review`, `run_id` per `continuity-protocol.md`
+§Run-id format.
+
 ### Phase 5b: Cross-deliverable Final Review (deliverable mode only)
 
 After all deliverables are committed, review the entire branch:
@@ -275,6 +300,11 @@ After all deliverables are committed, review the entire branch:
    - Patterns visible only at whole-branch scope
 3. Codex review with `--scope branch`
 4. If findings exist, resolve via Phase 6
+
+The Phase 5b Codex review is also recorded to `ensemble_results` per
+`ensemble-protocol.md` §Result Bookkeeping. `phase: review`,
+`ensemble_type: review`, with a fresh `run_id` so it does not collide
+with the Phase 5 entry.
 
 ---
 
@@ -297,6 +327,13 @@ After all findings are addressed:
 2. Codex: `review --scope working-tree` (independent full patch review)
 3. Run the full test suite
 4. Synthesize Claude + Codex results
+
+The Phase 6 re-review Codex result is recorded to `ensemble_results`
+per `ensemble-protocol.md` §Result Bookkeeping. `phase: resolve`,
+`ensemble_type: review`, with a fresh `run_id` per re-review pass.
+Multiple resolve loops produce multiple `(phase=resolve,
+ensemble_type=review)` entries that differ by `run_id` and
+`completed_at`.
 
 ### Step 3: Converge
 

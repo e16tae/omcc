@@ -285,11 +285,12 @@ def test_sanitize_field_applies_table_caps():
     """Each field name gets its table-defined cap."""
     rc, stdout, stderr = _call_util(
         """
-const long = 'x'.repeat(300);
+const long = 'x'.repeat(500);
 console.log('phase:' + sanitizeField('phase', long).length);
 console.log('next_action:' + sanitizeField('next_action', long).length);
 console.log('type:' + sanitizeField('type', long).length);
 console.log('checkpoint_summary:' + sanitizeField('checkpoint_summary', long).length);
+console.log('ensemble_summary:' + sanitizeField('ensemble_summary', long).length);
 """,
         imports=["sanitizeField"],
     )
@@ -300,6 +301,7 @@ console.log('checkpoint_summary:' + sanitizeField('checkpoint_summary', long).le
         "next_action:120",
         "type:16",
         "checkpoint_summary:200",
+        "ensemble_summary:400",
     ]
 
 
