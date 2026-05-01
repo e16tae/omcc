@@ -8,7 +8,7 @@ End-user behavior lives in canonical components: `commands/`, `skills/`,
 
 ## Plugin layout
 
-- `commands/` — thin orchestrators (`start`, `fix`, `audit`, `resume`, `checkpoint`)
+- `commands/` — thin orchestrators (`start`, `fix`, `audit`, `resume`, `checkpoint`, `codex-now`)
 - `skills/` — reusable skill bodies (`brainstorm`, `explore`, `investigate`, `parallel-review`, `plan`)
 - `agents/` — subagent definitions (`architecture-mapper`, `flow-tracer`,
   `hypothesis-tracer`, `reviewer`). Primary agents pin `model: opus` and
@@ -40,6 +40,19 @@ plugin's `codex-companion.mjs`. When the `codex` plugin is not installed,
 results are always sufficient. Users who want the dual-model ensemble can
 install `codex` from the same marketplace; the dependency is optional, not
 required.
+
+### When to reach for `/omcc-dev:codex-now` vs the automatic ensemble
+
+The automatic ensemble fires at command-defined phase boundaries based on
+`ensemble-affinity.md`'s scope/risk evaluation — it is opinionated about
+*when* Codex adds value. `/omcc-dev:codex-now <question>` is the
+discretionary user-initiated counterpart: an escape hatch when a workflow
+is mid-flight and the user wants Codex's perspective on a specific question
+that does not match a phase point ("does this plan handle X?", "is there
+a known pitfall in Y?"). The question is the prompt itself; Claude's
+in-progress findings are not transmitted. Reach for `/codex-now` when you
+have a concrete question the automatic dispatch will not answer; trust the
+automatic ensemble for everything inside the seven phase-bound types.
 
 ---
 

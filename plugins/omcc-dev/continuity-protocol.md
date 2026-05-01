@@ -256,8 +256,11 @@ task_profile:                          # built during orchestration.md Step 1
       dispatched_at: <ISO 8601 UTC, Z suffix>
   ```
   `ensemble_type` enum (from `ensemble-protocol.md` Ensemble Point Types):
-  `brainstorm | explore | plan-verify | review | investigate | fix-verify | audit-scan`.
-  Absent when no Codex job is in flight.
+  `brainstorm | explore | plan-verify | review | investigate | fix-verify | audit-scan | codex-now`.
+  Absent when no Codex job is in flight. The `codex-now` value is the
+  user-initiated ad-hoc consultation type emitted by
+  `commands/codex-now.md`; all other values are emitted by automatic
+  affinity-driven dispatches inside `/start`, `/fix`, or `/audit`.
 - `latest_checkpoint`: map OR absent. Written by `/omcc-dev:checkpoint`
   as a user-initiated in-session context milestone. Shape:
   ```yaml
@@ -523,6 +526,19 @@ frontmatter (atomic full-file replace, not append).
 | 5 | Enter remediation | `current_phase="remediation-discussion"` |
 | 5 | Per-finding decision | `findings[i].decision` |
 | Terminal | Summary table written | `current_phase="summary-complete"`, `next_action="archive"` |
+
+### `/codex-now` (no phase transitions)
+
+`/codex-now` runs alongside an active workflow without driving any
+`current_phase` change. It writes `pending_ensemble` only:
+
+| Step | Write trigger | Updates |
+|---|---|---|
+| Step 4 | After background Codex `task` launch returns a Bash job id | `pending_ensemble` append `{job_id, ensemble_type: "codex-now", dispatched_at}` per `ensemble-protocol.md` §State Bookkeeping |
+| Step 5 | After Codex output is collected (success, failure, or graceful degradation) | `pending_ensemble` remove by `job_id` (idempotent — no-op if already absent) |
+
+The target file is the active workflow's flat root, OR — if sharded —
+the active shard, mirroring `commands/checkpoint.md` Step 1.
 
 ---
 

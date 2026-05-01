@@ -4,16 +4,25 @@ Defines how Claude and Codex operate as a dual-model ensemble.
 Claude orchestrates the workflow, launches Codex for independent parallel analysis,
 and synthesizes both perspectives into a unified result for the user.
 
-The user never invokes Codex commands directly.
-All Codex interactions are managed by this protocol.
+Codex is dispatched automatically at command-defined phase boundaries
+when Ensemble Affinity warrants it. The user may also opt into an
+ad-hoc consultation mid-workflow via `/omcc-dev:codex-now` (see
+Codex-now below).
 
 ---
 
 ## When This Protocol Applies
 
-Activates when Ensemble Affinity (per `ensemble-affinity.md`) is evaluated during
-a command execution. Each command file specifies which phases invoke the ensemble
-and with which ensemble point type.
+Activates on either of two paths:
+
+- **Automatic**: Ensemble Affinity (per `ensemble-affinity.md`) is
+  evaluated during a command execution. Each command file specifies
+  which phases invoke the ensemble and with which ensemble point type.
+- **User-initiated**: the user invokes `/omcc-dev:codex-now <question>`
+  while a workflow is active. Affinity is not evaluated for this path
+  — the user's invocation is itself the dispatch trigger. The
+  `commands/codex-now.md` command owns the launch and routes through
+  the Codex-now Ensemble Point Type (defined below).
 
 Does NOT apply to:
 - Inline skills (`brainstorm`, `explore`, `plan`, `investigate`, `parallel-review`)
@@ -89,10 +98,10 @@ for the synthesized result.
 ### State Bookkeeping (mandatory)
 
 Whenever an ensemble point is launched from inside a workflow file
-(`/start`, `/fix`, `/audit`, `/resume`, or any skill executing inside
-one of those workflows), the orchestrator MUST record the in-flight
-job in the workflow file per `continuity-protocol.md` `pending_ensemble`
-schema. This makes the "Absent when no Codex job is in flight" invariant
+(`/start`, `/fix`, `/audit`, `/omcc-dev:codex-now`, `/resume`, or any
+skill executing inside one of those workflows), the orchestrator MUST
+record the in-flight job in the workflow file per
+`continuity-protocol.md` `pending_ensemble` schema. This makes the "Absent when no Codex job is in flight" invariant
 hold and lets `/omcc-dev:resume` recover correctly across compaction.
 
 - After Step 1 Launch returns the background Bash task id, append an
@@ -352,6 +361,54 @@ as explicit input, because the task is to find gaps in that specific plan.
   - Full: `"design flaws, architectural weaknesses, hidden assumptions, failure modes"`
 - **Synthesis**: Merge with Claude agent findings. Deduplicate by location.
   Unify severity ratings. Source-label all findings.
+
+### Codex-now
+
+- **Purpose**: User-initiated ad-hoc Codex consultation on a free-form
+  question while a workflow is active. Unlike the other six entries,
+  this point is not bound to a phase or affinity — the trigger is the
+  `/omcc-dev:codex-now <question>` invocation. See
+  `commands/codex-now.md` for the orchestrating command.
+- **Subcommand**: `task`
+- **Independence exception**: none — the user's question is the
+  prompt; Claude's in-progress findings are NOT included unless a
+  future opt-in flag is added.
+- **Prompt template**:
+
+  ```xml
+  <task>
+  Answer the user's question independently. Do not propose code edits;
+  return analysis or guidance only.
+
+  Question:
+  <![CDATA[
+  {sanitized user question, verbatim}
+  ]]>
+  </task>
+
+  <grounding_rules>
+  Ground every claim in specific code, files, or documentation.
+  Label inferences explicitly. Quote 2-3 lines from any cited source.
+  </grounding_rules>
+
+  <privacy_contract>
+  The question may reference proprietary identifiers; do not echo
+  back any identifier you do not need to answer.
+  </privacy_contract>
+  ```
+
+  The CDATA wrapper isolates the user-controlled question from the
+  XML structure for `<`, `>`, `&`, and stray closing tags. The
+  three-byte sequence `]]>` would close the CDATA section
+  prematurely; `commands/codex-now.md` Step 2 rejects any question
+  containing that token, so the wrapper plus the rejection together
+  form the injection defense.
+
+- **Synthesis**: The four-category taxonomy applies only when Claude
+  also has a reading on the question worth presenting alongside;
+  otherwise present Codex's answer as a single-item CODEX-ONLY
+  result with light Claude framing. Always presented in batch mode
+  (presentation mode is not asked).
 
 ---
 
