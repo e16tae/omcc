@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.6.0](https://github.com/e16tae/omcc/compare/v2.5.0...v2.6.0) (2026-05-01)
+
+
+### Features
+
+* **omcc-dev:** refine affinity criteria + capture ensemble_results ([#97](https://github.com/e16tae/omcc/issues/97)) ([#112](https://github.com/e16tae/omcc/issues/112)) ([8b30629](https://github.com/e16tae/omcc/commit/8b30629446056af0f5f49bd2235b204245eb5c74))
+
 ## [2.5.0](https://github.com/e16tae/omcc/compare/v2.4.0...v2.5.0) (2026-05-01)
 
 
