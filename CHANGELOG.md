@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.7.0](https://github.com/e16tae/omcc/compare/v2.6.0...v2.7.0) (2026-05-01)
+
+
+### Features
+
+* **omcc-dev:** ensemble_results retention + SessionStart latest summary ([#100](https://github.com/e16tae/omcc/issues/100)) ([#114](https://github.com/e16tae/omcc/issues/114)) ([2498590](https://github.com/e16tae/omcc/commit/2498590006b29436b3286a41abc238fbe2b74028))
+
 ## [2.6.0](https://github.com/e16tae/omcc/compare/v2.5.0...v2.6.0) (2026-05-01)
 
 
