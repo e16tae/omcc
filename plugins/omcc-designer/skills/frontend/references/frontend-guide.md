@@ -6,18 +6,19 @@ spec.
 
 ---
 
-## Upstream spec source (pinned)
+## Upstream spec source
 
 - **Project**: Google design.md (Apache License 2.0)
 - **Repository**: https://github.com/google-labs-code/design.md
-- **Pinned commit**: `8ecd4645b957e6a683a05fb9c79cd6c9028873d0`
-  (commit date 2026-04-22T18:22:35Z; checked 2026-05-01)
-- **Specification path**: docs/spec.md at the pinned commit (in the
-  upstream repository, not a local file)
-- **Status**: `version: alpha` — actively evolving. When the upstream
-  spec changes, contributors update this pin and re-validate the
-  authoring rules below against the new revision before merging
-  the bump.
+- **Specification path**: docs/spec.md (upstream repository, not a
+  local file)
+- **Status**: `version: alpha` — actively evolving. This skill follows
+  the current spec at the URL above; we intentionally do NOT pin a
+  commit because alpha drift is expected and a pin would just record
+  a moment in time without protecting consumers from spec changes.
+  When the upstream spec changes in a way that breaks our authoring
+  rules below, contributors revise the rules; the rules are the
+  durable artifact.
 
 ### NOTICE (Apache 2.0 attribution)
 
