@@ -52,6 +52,14 @@ Output: "✓ Frontend pipeline complete." with the saved file path
    `npx @google/design.md lint <path>` validates the file against the
    upstream spec. Not invoked automatically; users opt in.
 
+### Optional next step (cross-plugin handoff, suggestion only)
+
+If `/omcc-dev:start` is installed and you want to implement this design
+system, run `/omcc-dev:start <DESIGN.md path>`. The omcc-dev plugin's
+`/start` recognizes `DESIGN.md` as an artifact handoff and ingests the
+spec automatically as initial context for its workflow. This is
+informational; no automatic invocation occurs from this command.
+
 Offer to adjust tokens (colors / typography / rounded / spacing /
 components), expand the typography scale, or regenerate specific
 sections of the body.

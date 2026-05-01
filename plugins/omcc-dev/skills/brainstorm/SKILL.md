@@ -57,6 +57,15 @@ internal knowledge, clearly distinguishing verified facts from best-effort recal
 If no external source applies (purely project-internal choice), state explicitly:
 "No external standards apply — comparison based on project context."
 
+**Cross-plugin handoff (suggestion only)** — if `/omcc-research:research`
+is installed and a decision needs durable cited evidence beyond Step 2's
+web research, consider running it first to produce a saved brief, then
+resume the decision with that saved brief as additional context (passed
+either back to `/omcc-dev:start` for full re-entry or pasted into the
+current discussion). This is informational only; no automatic invocation
+occurs from this skill — research v2 has no recoverable workflow state
+for nested execution.
+
 ### Step 3: Compare — Five Perspectives
 
 Evaluate each option from five perspectives. Not all perspectives carry equal weight

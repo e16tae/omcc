@@ -95,6 +95,49 @@ The exceptions below are explicit, documented dependencies.
 
 ---
 
+## Sanctioned cross-plugin handoffs (informational suggestions only)
+
+This plugin emits passive handoff suggestions in selected completion
+messages. The pattern is informational — no automatic invocation
+crosses plugin boundaries — and follows three rules:
+
+1. **Forward-only**: the source plugin emits the suggestion; the
+   target plugin does not need to know it exists. The recipient's
+   own intake (e.g., omcc-dev's `/start` artifact intake at its
+   commands/start.md Phase 0 Step 3a — see omcc-dev's CLAUDE.md
+   "Artifact intake" section) is what actually consumes the handoff.
+2. **Conditional wording**: phrase as "If `/<target>:<command>` is
+   installed and …, run …" rather than detecting installation. There
+   is no reliable command-availability detection in this marketplace
+   (cache glob is probabilistic; same marketplace ≠ both installed
+   per the `/plugin install codex@omcc` shape in the repo README).
+3. **Prose-only cross-plugin references**: the
+   `tests/test_plugin_structure.py` reference-existence test
+   matches backticked `*.md` paths against the local plugin directory,
+   so cross-plugin file references must be unquoted prose or italic
+   — only the four external-standard filenames `DESIGN.md`,
+   `README.md`, `AGENTS.md`, `CLAUDE.md` are exempt and may appear
+   inside backticks.
+
+This pattern is **opt-in per plugin** — new plugins added to the
+marketplace are not required to emit handoff footers. Each plugin
+decides independently whether and where to suggest a sibling.
+
+Currently registered handoff edges from this plugin:
+
+- `commands/frontend.md` "## Completion" → `/omcc-dev:start <DESIGN.md path>`.
+  After `DESIGN.md` is saved, the completion footer suggests
+  `/omcc-dev:start` for implementation. omcc-dev's `/start` recognizes
+  the `DESIGN.md` basename + YAML frontmatter as an artifact handoff
+  and ingests it as initial workflow context.
+
+This is the design-side half of a marketplace-level convention; the
+omcc-research plugin emits an analogous footer for *research_brief.md*
+handoffs, and the omcc-dev plugin documents the receiving intake in
+its own CLAUDE.md.
+
+---
+
 ## Boundary with research-scan and dev brainstorm
 
 omcc-designer's text-level Codex ensemble (design-critique-scan,

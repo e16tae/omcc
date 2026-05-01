@@ -31,6 +31,14 @@ the abort came at scoping (before research) or at save (after research):
   saved." plus the saved file path under `./output/YYYY-MM-DD_<topic-slug>/`.
   Offer to: adjust scope and re-run, deepen specific findings, or export to a
   different location.
+
+  **Cross-plugin handoff (suggestion only)** — if `/omcc-dev:start`
+  is installed and the brief is implementation-ready, run
+  `/omcc-dev:start <path-to-the-saved-brief>`. The omcc-dev plugin's
+  `/start` recognizes the brief filename as an artifact handoff and
+  ingests the brief automatically as initial context for its
+  workflow. This is informational; no automatic invocation occurs
+  from this command.
 - **If aborted at save** (Step 4 existing-directory abort branch — research
   ran, brief was synthesized, user declined to save): "ℹ Brief presented
   inline without saving (existing-directory abort)." No path. Offer to save

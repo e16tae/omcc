@@ -56,6 +56,53 @@ automatic ensemble for everything inside the seven phase-bound types.
 
 ---
 
+## Artifact intake (producer-agnostic; canonical spec in `commands/start.md`)
+
+`/omcc-dev:start` accepts an artifact handoff when `$ARGUMENTS` is the
+path to any file matching a recognized whitelist entry. The detection
+is producer-agnostic — any tool that emits a file at the recognized
+path with the expected structural marker can hand off, not just
+sibling omcc plugins. omcc-designer's frontend skill (which produces
+`DESIGN.md`) and omcc-research (which produces *research_brief.md*) are
+the current example producers within this marketplace. Detection
+happens in
+`commands/start.md` Phase 0 Step 3a; on detection, Step 4 emits a
+`## Source Artifact` subsection in the workflow file's Markdown body
+(no frontmatter changes — `original_request` remains the single-line
+scrubbed `$ARGUMENTS`, preserving compatibility with the YAML scalar
+parser in `hooks/_utils.mjs`).
+
+Whitelist policy (contributor-facing):
+
+- The recognized basenames are listed canonically in
+  `commands/start.md` Step 3b. New artifact kinds MUST be added there
+  (not here in CLAUDE.md). The structural marker is **per artifact**,
+  chosen to keep detection i18n-safe for whatever language the
+  artifact body uses:
+    - `DESIGN.md` → first non-empty line is exactly `---` (YAML
+      frontmatter block, mandated by the Google design.md spec).
+    - *research_brief.md* → first non-empty line begins with `# `
+      (any markdown h1; the literal text `Research Brief` may appear
+      in any user language and is not relied on).
+- Cross-plugin reference rule applies: only the four external-standard
+  filenames (`DESIGN.md`, `README.md`, `AGENTS.md`, `CLAUDE.md`) may
+  be cited inside backticks per the `tests/test_plugin_structure.py`
+  reference-existence test. Other artifact basenames such as
+  *research_brief.md* must be rendered as italic prose to avoid the
+  test rejecting the cross-plugin file path.
+- Detection is read-only — no parsing of YAML body or h1 trailing
+  text, no validation beyond "expected first-line marker present".
+  Malformed artifacts (and unreadable / nonexistent paths under a
+  whitelisted basename) are warned about and treated as raw input
+  rather than rejected outright.
+
+This intake is the receiving half of the cross-plugin handoff
+suggestion convention emitted by omcc-designer and omcc-research
+completion footers; see those plugins' contributor notes for the
+emitting half.
+
+---
+
 ## Language convention
 
 All documentation in this plugin uses English: CLAUDE.md, commands, skills,
