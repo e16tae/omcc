@@ -1,6 +1,6 @@
 ---
 description: Systematic feature development — think, explore, plan, build, review
-argument-hint: Feature description or goal
+argument-hint: Feature description, goal, or path to a recognized artifact (DESIGN.md / research_brief.md)
 ---
 
 # Start
@@ -41,6 +41,118 @@ section.
    `<cwd>/.claude/omcc-dev/archive/` exist with mode `0700` per
    `continuity-protocol.md` §Directory Layout (explicit `chmod 0700`
    after `mkdir -p`; do not rely on umask).
+3a. **Artifact intake (if applicable)**: inspect `$ARGUMENTS` for an
+   artifact handoff from another omcc plugin. Independent of Step 5
+   below — Step 3a's "single token resolving to a file" gate and
+   Step 5's parent-workflow id regex match disjoint shapes; the
+   `$ARGUMENTS` contract is one OR the other, never both. Mirrors the
+   brief-vs-raw idiom used in the omcc-designer plugin's frontend
+   skill (see that plugin's SKILL.md for the original pattern);
+   structural markers chosen per artifact for i18n safety where
+   applicable.
+
+   The detection pipeline runs in two phases: a **silent gate** that
+   determines whether the user even attempted a handoff, followed by
+   a **committed phase** in which any failure produces a user-facing
+   warning (so a typo or moved file is surfaced rather than swallowed).
+
+   a. **Normalize `$ARGUMENTS`**: strip leading and trailing ASCII
+      whitespace. Then trim one optional balanced quote pair (`'…'`
+      or `"…"`). The result is the candidate path token. If the
+      remaining string contains any internal whitespace (so it is
+      multi-token), skip artifact intake silently — the user did not
+      pass a single path.
+   b. **Whitelist gate (silent)** — case-sensitive comparison on the
+      basename of the candidate token (no path resolution yet, so
+      case-insensitive filesystems cannot change the discriminator):
+      the basename must be exactly `DESIGN.md` or *research_brief.md*.
+      Other filenames — even other `.md` files — fall through to
+      raw-request mode silently. (Note: only the four external-
+      standard filenames `DESIGN.md`, `README.md`, `AGENTS.md`,
+      `CLAUDE.md` may appear inside backticks per
+      `tests/test_plugin_structure.py`; *research_brief.md* is
+      rendered as italic prose for that reason.)
+
+   From this point on, the user has explicitly attempted a handoff;
+   any failure is a **warning** that surfaces the issue to the user
+   (then continues with `$ARGUMENTS` treated verbatim as raw input)
+   rather than a silent skip.
+
+   c. **Resolve the path** (committed phase):
+      - If the token starts with `~/` or `~<user>/`, expand `~` to
+        the matching home directory.
+      - If the token is relative, resolve against the current working
+        directory.
+      - Apply `realpath` to follow symlinks.
+      - The resolved target MUST be an existing **regular file** that
+        is **readable** by the current process.
+      - **On any path-resolution failure** (path does not exist,
+        target is a directory / device / socket / FIFO, broken
+        symlink, unreadable due to permissions, realpath errors):
+        emit warning "recognized artifact name <basename> but no
+        readable file at <token> (resolution failed: <reason>) —
+        proceeding as raw request" and continue with raw input.
+   d. **Per-artifact structural marker check** (committed phase):
+      - If basename = `DESIGN.md`: the file's first non-empty line
+        must be exactly `---` (start of a YAML frontmatter block).
+        Per the Google design.md spec the frontmatter is mandatory.
+      - If basename = *research_brief.md*: the file's first non-empty
+        line must start with `# ` (a markdown h1 — language-agnostic).
+        The omcc-research brief spec opens with
+        `# Research Brief: <topic>`, but the topic and the literal
+        `Research Brief` substring may both be in the user's language;
+        the structural h1 marker is the i18n-safe gate.
+      - On marker mismatch: emit warning "recognized artifact name
+        <basename> but the file does not match the expected shape
+        (DESIGN.md needs YAML frontmatter, *research_brief.md*
+        needs an h1 first line) — proceeding as raw request" and
+        continue with raw input.
+   e. **Outside-cwd advisory** (committed phase, non-fatal): if the
+      realpath-resolved file is outside the current working directory,
+      set `outside_cwd = true` and emit a one-line informational
+      warning of the form "artifact <basename> resolves to a path
+      outside the current project (<resolved-path>) — workflow
+      provenance will reference this external location; copy the
+      artifact into the project if you prefer self-contained
+      provenance." Otherwise `outside_cwd = false`. Continue regardless
+      — this is informational and never blocks ingestion.
+   f. **Read budget guards** (apply during excerpt extraction):
+      - If the file is larger than 1 MiB, do NOT embed any excerpt;
+        emit informational note "artifact exceeds 1 MiB — embedding
+        path only, downstream phases must Read the file directly" and
+        set `artifact_excerpt = null`. (Ingestion still proceeds — the
+        path is recorded so downstream phases can fetch on demand.)
+      - Otherwise read the file. Per-line cap: truncate any single
+        line longer than 1000 bytes to 997 bytes followed by `...`.
+        Excerpt selection: full content if ≤ 60 lines; otherwise
+        first 50 lines, then a separator line `...<N omitted>...`
+        where N is the omitted count, then the last 10 lines.
+      - **Fence-length rule**: scan the prepared excerpt for the
+        longest contiguous run of backticks on any line; the outer
+        fence in Step 4's body template MUST be at least one backtick
+        longer than that run (and never shorter than 3). The default
+        wrapper fence is therefore typically 4 or 5 backticks; bump
+        further if the excerpt itself contains long fences.
+
+   Outcomes:
+
+   - **Detected**: record the captured fields for use by Step 4 —
+     `artifact_kind` (one of `DESIGN.md` or *research_brief.md*),
+     `artifact_path` (absolute, realpath-resolved),
+     `outside_cwd` (boolean from Step 3a-e),
+     `artifact_excerpt` (string or `null` per Step 3a-f), and
+     `excerpt_fence_length` (integer ≥ 3 per Step 3a-f fence rule).
+   - **Warning emitted** (path resolution or marker check failed
+     after the basename gate committed the user to a handoff
+     attempt): treat `$ARGUMENTS` verbatim as raw input. The warning
+     is what the user sees; no artifact context is captured.
+   - **Silent skip** (basename not in the whitelist, or `$ARGUMENTS`
+     is multi-token / not a path-shaped token): continue with
+     `$ARGUMENTS` as raw input. No warning.
+
+   The artifact-intake whitelist is `commands/start.md`-canonical —
+   `CLAUDE.md` cross-references it, but new artifact kinds MUST be
+   added here.
 4. Bootstrap write: create
    `<cwd>/.claude/omcc-dev/workflows/start-<timestamp>-<shortid>.md`
    with the always-required frontmatter from `continuity-protocol.md`
@@ -52,6 +164,51 @@ section.
    orchestration). Apply the secrets-hygiene regex scrub to
    `$ARGUMENTS` before writing `original_request`. Write the file with
    mode `0600`.
+
+   **If Step 3a detected an artifact**: in addition to the frontmatter
+   above (which is unchanged — `original_request` remains the
+   single-line scrubbed `$ARGUMENTS` so the YAML scalar parser in
+   `hooks/_utils.mjs` is not corrupted by embedded newlines), include
+   a `## Source Artifact` subsection in the workflow file's Markdown
+   body using the verbatim template below, placed immediately after
+   the workflow's `## Original Request` body subsection so subsequent
+   phases (Phase 1 brainstorm onward) pick up the artifact context as
+   part of normal workflow-body re-reading — no additional intake
+   step is required downstream.
+
+   Verbatim template (substitute the bracketed fields with the
+   captured values from Step 3a; omit the `outside-cwd warning` line
+   when `outside_cwd = false`; the excerpt fence in the body MUST be
+   `excerpt_fence_length` backticks long per Step 3a-f's
+   fence-length rule; when `artifact_excerpt = null`, replace the
+   entire fenced block with the single italic line shown below):
+
+   `````markdown
+   ## Source Artifact
+
+   - **Type**: [DESIGN.md | research_brief.md]
+   - **Path**: [absolute realpath-resolved path]
+   - **Outside-cwd warning**: [the warning string emitted in Step 3a-e]
+   - **Excerpt**:
+
+   <fence of `excerpt_fence_length` backticks>
+   [artifact_excerpt verbatim, with Step 3a-f truncation already applied]
+   <fence of `excerpt_fence_length` backticks>
+   `````
+
+   When `artifact_excerpt = null`, replace the four template lines
+   from the fence-open through the fence-close with this single
+   substitute line:
+   `_Excerpt skipped: artifact exceeds 1 MiB; downstream phases must Read the file directly._`
+
+   The outer template fence above uses 5 backticks so the
+   `excerpt_fence_length` placeholder line and any nested 3-or-4-
+   backtick fence in the spec render correctly inside this document
+   itself; the actual workflow body uses whatever
+   `excerpt_fence_length` Step 3a-f computed.
+
+   When no artifact was detected, omit the `## Source Artifact`
+   subsection entirely (do NOT emit an empty placeholder).
 5. If `$ARGUMENTS` indicates this `/start` is spawned from a parent
    workflow (cross-workflow handoff per `continuity-protocol.md`
    §Cross-workflow Handoff) — typically a `fix-now` decision or a
