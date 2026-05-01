@@ -13,6 +13,13 @@ Interview results are the sole decision basis for Phase 3 brief generation.
 
 ## When auto-activated (without /start or /formalize command)
 
+Auto-activated mode runs Claude-only. The Codex
+`design-critique-scan` ensemble is **never dispatched** outside of
+the `/omcc-designer:start` and `/omcc-designer:formalize` command
+paths — see "When invoked by command (/start, /formalize)" below
+for the dispatch contract. Even within those command paths the
+dispatch fires only on explicit user request.
+
 ### Core principles
 
 Follow `skills/design-interview/references/interview-protocol.md` — designer
@@ -71,6 +78,13 @@ real consultation:
 4. Confirm each element. If the user rejects, ask what feels wrong
    and propose alternatives
 
+In command-invoked mode the recommend-then-confirm loop also exposes a
+**second opinion** hook — the user may ask for an independent
+alternative direction at any palette / typography / visual-style
+question. See "Second opinion (Codex ensemble)" under "When invoked
+by command" below. The hook lives inside this loop; no extra step
+appears between Step C and Step D.
+
 ### Step D: Content & Layout
 
 1. Confirm content elements: headline, subheadline, body copy, CTA
@@ -125,6 +139,86 @@ Same procedure as auto-activated mode.
 Difference: Invoked within a command, so auto-proceeds to Phase 3
 (brief-generation skill) after completion.
 
+### Second opinion (Codex ensemble — `design-critique-scan`, step-c-direction variant)
+
+The user may, at any palette / typography / visual-style question
+inside the Step C recommend-then-confirm loop, ask for a "second
+opinion" on the direction. When triggered, dispatch the Codex
+`design-critique-scan` ensemble per `design-ensemble-protocol.md`
+with the `step-c-direction` prompt variant.
+
+Trigger contract:
+
+- **User-initiated only.** The skill never auto-fires the
+  ensemble during Step C. Phrasings that count as a trigger
+  include "second opinion", "what would another designer
+  suggest", "alternative direction", "다른 방향" — interpret
+  generously, but do not infer from generic disagreement
+  ("hmm not sure"); ask the user explicitly when in doubt.
+- **Question must be in flight AND Claude must have presented
+  its recommendation first.** The trigger is valid only while the
+  recommend-then-confirm loop for one specific question (palette,
+  typography, OR visual style — exactly one) is active AND
+  Claude's working recommendation for that question has already
+  been shown to the user. Requests in the gap between
+  confirmations (after one question's confirm but before the next
+  is presented) are nudged: "I'll have my recommendation for the
+  next question shortly — would you like the second opinion on
+  it then?" Requests before Claude's recommendation exists for
+  the in-flight question are nudged the same way.
+- **One question per dispatch.** The dispatch covers exactly the
+  in-flight question — not all of Step C.
+- **Single-dispatch rule** (one dispatch per question per
+  session). A repeat request on the same question re-presents
+  the existing Codex proposal; it does not re-dispatch. The user
+  must explicitly indicate "different angle" — and even then
+  the skill should prefer iteration over a fresh dispatch.
+
+Synthesis (per `design-ensemble-protocol.md` step-c-direction
+Synthesis Categories):
+
+- **ALIGNED** (Codex proposes the same direction Claude
+  recommended): present Claude's recommendation alone. The aligned
+  echo adds noise.
+- **COMPLEMENT** (Codex proposes a meaningfully different
+  direction that fits the confirmed Step A/B): present both as
+  alternatives. The user picks one, asks for iteration, or
+  rejects both. Confirmed Decision Principle applies — neither
+  proposal is recorded into the brief until the user explicitly
+  confirms.
+- **DIVERGENT** (Codex proposes a direction at odds with the
+  confirmed Step A/B): surface with a flag —
+  "Codex's proposal does not appear to fit the confirmed brand
+  identity — possible context misread." Present Claude's
+  recommendation as primary, the Codex proposal as a flagged
+  alternative. The user decides whether the divergence is worth
+  exploring or worth ignoring.
+
+Stale-dispatch rule:
+
+If the user revises a confirmed Step A or Step B value AFTER a
+Step C Codex dispatch has completed, the existing Codex proposal
+is **discarded**. Inform the user: "Step B was revised; the
+previous Codex proposal no longer applies. Request a new second
+opinion if needed."
+
+Privacy gate:
+
+The project context and brand identity transmitted in the prompt
+must pass the privacy gate per `design-ensemble-protocol.md`.
+For proprietary brand strategy, ask the user to confirm
+transmission or accept a redacted substitution before dispatch.
+If the user declines, abort the dispatch and continue Claude-only.
+
+Graceful degradation:
+
+If the codex plugin is not installed, the preflight fails, or the
+dispatch errors, the second-opinion request silently degrades
+into Claude offering a fresh alternative direction itself. The
+user is informed in the same turn ("Codex unavailable — here is
+another direction from me instead.") so the interview cadence
+does not stall.
+
 ### Confirmation mode (/formalize)
 
 When invoked by `/formalize`, the interview receives extraction data
@@ -141,6 +235,54 @@ When invoked by `/formalize`, the interview receives extraction data
 The design-extraction SKILL.md and
 `skills/design-interview/references/interview-protocol.md` govern the full
 confirmation-mode behavior.
+
+**Second opinion under `/formalize`**:
+
+The Codex `step-c-direction` ensemble remains available under
+`/formalize` only on **explicit user request**. The default
+behavior is Claude-only, because `/formalize` is documenting an
+existing design, not consulting on a new one. When the user does
+request a second opinion, the observation-first context for
+high-confidence extracted values is preserved.
+
+`/formalize`-specific trigger contract (relaxes the `/start`
+"Claude must have recommended first" precondition because the
+observation-first flow does NOT produce a Claude recommendation
+for high-confidence extractions):
+
+- **User-initiated only** — same as `/start`.
+- **Question-in-flight requirement** — same as `/start`: the
+  request is valid only while one Step C question is currently
+  being walked.
+- **Baseline precondition** — instead of Claude's recommendation,
+  the **extracted value** for the in-flight question must have
+  been presented to the user (the observation "I extracted these
+  colors: …" satisfies this). For low-confidence extractions
+  where Claude does present a recommendation (the standard
+  designer-recommends-first path), the `/start` precondition
+  applies normally.
+- **Single-dispatch** and **Stale-dispatch** rules apply
+  unchanged.
+
+Synthesis under `/formalize` differs from `/start`: there is no
+Claude proposal under `/formalize` (the extracted value is the
+baseline, not a Claude design recommendation). The DIVERGENT
+treatment described above ("Claude's proposal as primary, Codex
+as flagged alternative") does NOT directly apply. Instead:
+
+- **The extracted value remains primary** — it is the documented
+  reality of the existing design and is not displaced by Codex
+  output.
+- **The Codex proposal is presented as a flagged alternative
+  the user may consider as a separate variant**, regardless of
+  the synthesis category (ALIGNED / COMPLEMENT / DIVERGENT). The
+  framing is: "Here is an alternative direction to consider for a
+  redesign; the existing extraction stands."
+- **No change propagates to brief generation unless the user
+  explicitly chooses "yes, replace the extracted value with the
+  alternative."** The Confirmed Decision Principle applies to
+  this choice with the same strictness as Step C confirmations
+  under `/start`.
 
 ---
 
