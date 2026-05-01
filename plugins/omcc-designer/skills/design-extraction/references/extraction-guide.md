@@ -330,7 +330,7 @@ production rule below), the same five areas map to the Google design.md spec's
 | Visual direction (mood, style, constraints) | — | Overview, Do's and Don'ts | HIGH for mood keywords; constraints feed the Don'ts list |
 | Medium identification | — | Layout (canvas-/viewport-context only when applicable) | MEDIUM; for visual inputs that are not viewport-shaped, this may not apply |
 | Layout & content structure — corner radii | `rounded.sm/md/lg/full` (when extractable from input) | Shapes | NEW for the formalize path; observe rounded corners on cards/buttons in the input. If radii are inconsistent or not visible, omit and surface a gap for interview |
-| Layout & content structure — spatial scale | `spacing.xs/sm/md/lg/xl` (when extractable) | Layout & Spacing | NEW; observe consistent spacing increments. If unclear, omit and use brand-personality-derived defaults at the frontend skill stage |
+| Layout & content structure — spatial scale | `spacing.xs/sm/md/lg/xl` (when extractable) | Layout & Spacing | NEW; observe consistent spacing increments. If unclear, omit (the formalize emit path skips rather than fabricating). For brand-personality-driven defaults, the user invokes /omcc-designer:frontend on the saved brief afterward |
 | Layout & content structure — components | `components.button-primary` etc. (when extractable) | Components | NEW; observe distinct UI element treatments (buttons, inputs, cards). For non-frontend inputs (e.g., posters), omit |
 
 DESIGN.md body sections without a direct extraction source (and how to handle):
@@ -362,20 +362,23 @@ explicit estimation occurred (no Figma metadata path); a single
 
 ### DESIGN.md emission policy
 
-The design-extraction skill emits a DESIGN.md alongside design_brief.md
-in these cases:
+design-extraction owns the **mapping contract** (the table above) but
+does NOT write DESIGN.md directly from this skill — it produces
+structured extraction data in-session. The actual file emission is
+performed by the orchestrating command, per the canonical table in
+`skills/brief-generation/references/output-file-rules.md` "DESIGN.md
+emission rules".
 
-- `/omcc-designer:formalize` invocation: always emits DESIGN.md
-  (the formalize pipeline's purpose is to formalize an existing visual
-  design, and DESIGN.md is the most direct machine-consumable
-  formalization of brand tokens).
-- `/omcc-designer:start medium=frontend` with extraction-driven Phase 1:
-  the frontend skill handles DESIGN.md generation downstream from the
-  brief, so design-extraction does NOT emit a separate DESIGN.md in this
-  path — to avoid two competing DESIGN.md files.
-- Other `/start medium=...` invocations: DESIGN.md is NOT emitted by
-  default; the user can opt in by an explicit "also emit DESIGN.md"
-  ask if they want a token bundle alongside, e.g., a poster spec.
+Briefly:
+
+- /omcc-designer:formalize (Target medium != frontend) — commands/formalize.md Phase 4 writes DESIGN.md.
+- /omcc-designer:formalize (Target medium == frontend) — DESIGN.md is deferred to /omcc-designer:frontend.
+- /omcc-designer:start medium=frontend — skills/frontend/SKILL.md writes DESIGN.md from the brief.
+- /omcc-designer:start (other medium) — no DESIGN.md is produced; user opts in via /omcc-designer:frontend on the saved brief.
+- design-extraction auto-activated (no orchestrator) — no file is written.
+
+For paths that DO produce DESIGN.md, the emitter follows this guide's
+mapping table + the Hex precision warning above.
 
 ### Unextractable fields
 

@@ -149,6 +149,24 @@ section headings; the spec rejects files with duplicate sections.
 
 ### Step 3: Validate and save
 
+**Hex precision check (extraction-provenance briefs only)**: if the
+brief was produced via /omcc-designer:formalize or via /start with an
+extraction-driven Phase 1 (visual input — image / Figma / PDF / URL,
+without authoritative metadata), the brief's Color Palette hex values
+are visually estimated. Per
+`skills/design-extraction/references/extraction-guide.md` "Hex precision
+warning", before promoting them into a normative DESIGN.md `colors:`
+token block, surface to the user:
+
+> The colors carried in the brief were visually estimated from the
+> input image. If you have an authoritative brand guide or design
+> tokens, please verify the hex values before treating the saved
+> DESIGN.md as canonical.
+
+Offer a confirm-each-color (or confirm-all) gate before save. If the
+brief came from a text-only design-analysis path (no visual input),
+the warning does not apply.
+
 1. **Section order check**: confirm the 8 h2 headings appear in the
    canonical order (aliases counted as their canonical name). The spec
    raises a `section-order` warning on order violations.

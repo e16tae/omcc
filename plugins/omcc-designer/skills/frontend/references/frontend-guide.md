@@ -58,13 +58,13 @@ colors:                   # map<token-name, "#" + hex sRGB>
   <token>: "#RRGGBB"
 typography:               # map<token-name, Typography>
   <token>:
-    fontFamily: <string>
-    fontSize: <Dimension>     # optional from this skill's perspective
-    fontWeight: <number>
-    lineHeight: <Dimension | number>
-    letterSpacing: <Dimension>
-    fontFeature: <string>     # optional
-    fontVariation: <string>   # optional
+    fontFamily: <string>          # only required field per upstream spec
+    fontSize: <Dimension>         # optional
+    fontWeight: <number>          # optional
+    lineHeight: <Dimension | number>  # optional
+    letterSpacing: <Dimension>    # optional
+    fontFeature: <string>         # optional
+    fontVariation: <string>       # optional
 rounded:                  # map<scale-level, Dimension>
   <level>: <px|em|rem>
 spacing:                  # map<scale-level, Dimension | number>
@@ -194,7 +194,8 @@ user for confirmation** before writing — wording: "Based on a
 [personality keyword] brand, I propose the rounded scale below.
 Adjust or confirm?"
 
-Use `units` consistently (px or rem; do not mix).
+Pick a unit consistently within the rounded scale (px, em, or rem are
+all valid per the spec; mixing them is allowed but reduces readability).
 
 ### Spacing derivation
 
@@ -375,10 +376,13 @@ Add brief-specific items from the Constraints field.
    must resolve to a defined token.
 4. **No embedded h1 in body**: the body's section starts at h2. A
    top-level title (h1) is allowed but not parsed.
-5. **Color values**: every `colors.*` value is `"#" + 6 hex chars`
-   (no rgb()/hsl() at the token level — those may appear inside
-   component property values for alpha, but token primitives are sRGB
-   hex).
+5. **Color values**: every `colors.*` value is `"#"` + sRGB hex
+   (the spec example uses 6-digit `#RRGGBB`; that is the recommended
+   form). `rgb()` / `hsl()` and other CSS color functions do NOT
+   belong at the token primitive level. They MAY appear inside
+   `components` property values when alpha is needed (e.g.,
+   `rgba(255,255,255,0.1)` for a glass surface), since `components`
+   property values are free-form per the spec.
 
 ---
 
@@ -392,9 +396,9 @@ npx @google/design.md lint ./output/YYYY-MM-DD_project-name/DESIGN.md
 
 The CLI is published as `@google/design.md` (npm). Available subcommands:
 
-- `lint` — 7 rules (broken-ref, missing-primary, contrast-ratio,
-  orphaned-tokens, token-summary, missing-sections, missing-typography,
-  section-order). Exit code `1` on errors.
+- `lint` — 8 rules at the time of pin (broken-ref, missing-primary,
+  contrast-ratio, orphaned-tokens, token-summary, missing-sections,
+  missing-typography, section-order). Exit code `1` on errors.
 - `diff <before> <after>` — token regression detection.
 - `export --format tailwind|dtcg` — token export to Tailwind theme
   config or W3C DTCG `tokens.json`.

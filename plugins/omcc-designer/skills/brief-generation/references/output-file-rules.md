@@ -57,12 +57,20 @@ DESIGN.md spec as the domain artifact, no chain-tail render):
 └── design_plan.md              # if /omcc-designer:plan ran
 ```
 
-The `design-extraction` skill, when invoked on visual inputs (image /
-Figma / PDF / URL), additionally emits `DESIGN.md` alongside the
-design brief in the project directory — irrespective of which domain
-pipeline runs afterward. The DESIGN.md captures tokens
-reverse-engineered from the input; subsequent domain-skill output
-(e.g., poster_spec.md) coexists with both.
+DESIGN.md emission rules (canonical reference for which invocation
+paths produce DESIGN.md, and who writes it):
+
+| Invocation path | DESIGN.md produced? | Producer |
+|---|---|---|
+| /omcc-designer:formalize, Target medium != frontend | YES | commands/formalize.md Phase 4 |
+| /omcc-designer:formalize, Target medium == frontend | NO (deferred) | (user follows up with /omcc-designer:frontend) |
+| /omcc-designer:start medium=frontend | YES | skills/frontend/SKILL.md |
+| /omcc-designer:start (other medium) | NO | (user can opt in via /omcc-designer:frontend on the saved brief) |
+| design-extraction auto-activated (no orchestrator) | NO | (extraction emits 5-area data only — no file write) |
+
+design-extraction owns the mapping contract (5 extraction areas →
+DESIGN.md frontmatter + 8 sections) regardless of who writes the
+file. See `skills/design-extraction/references/extraction-guide.md`.
 
 A given project directory holds one pipeline's spec at a time
 (driven by the brief's canonical `Target medium`); the trees

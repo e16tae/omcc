@@ -73,11 +73,17 @@ For all other media, perform the emission inline:
 3. Author the body sections from the brief's confirmed values
    (Brand Identity, Color Palette, Typography, Visual Direction
    constraints). Sections without an extraction source — Elevation
-   & Depth, Shapes (when `rounded` is not extractable),
-   Components — may be omitted; they are NOT mandatory per the
-   spec, and authoring them from scratch without source data
-   contradicts the formalize pipeline's "observe, don't fabricate"
-   principle.
+   & Depth, Shapes (when `rounded` is not extractable from the
+   visual input), Components (no UI component data is extractable
+   from non-frontend visual inputs by design), `spacing` (only
+   qualitatively described in extraction-guide.md) — are **omitted**
+   rather than fabricated. They are NOT mandatory per the spec,
+   and authoring them from scratch without source data contradicts
+   the formalize pipeline's "observe, don't fabricate" principle.
+   If the user wants a fuller design system with these sections,
+   suggest they invoke /omcc-designer:frontend on the saved brief
+   afterward — that skill handles brand-personality-driven
+   derivation with confirmation gates.
 4. Save to ./output/YYYY-MM-DD_project-name/DESIGN.md (uppercase per
    the external-standard-exception clause in
    `skills/brief-generation/references/output-file-rules.md`).

@@ -11,7 +11,7 @@ and shared references.
 - `commands/` — thin orchestrators (start, formalize, plan, poster, social-graphics, frontend, audit)
 - `skills/` — per-phase or per-capability logic with progressive disclosure via `references/`
   - `design-analysis` (Phase 1 standard pipeline)
-  - `design-extraction` (Phase 1 formalize pipeline)
+  - `design-extraction` (Phase 1 formalize pipeline; also owns the DESIGN.md mapping contract used by /formalize Phase 4 and by /omcc-designer:frontend's brief consumption)
   - `design-interview` (Phase 2 — the interview skill, also owns cross-skill protocols)
   - `brief-generation` (Phase 3 — owns the brief spec and output file rules)
   - `design-planning` (plan command, produces roadmap)
