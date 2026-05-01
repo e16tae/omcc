@@ -82,7 +82,12 @@ Every ensemble point follows three steps: Launch, Collect, Synthesize.
 ### Step 3: Synthesize
 
 Classify every finding, recommendation, or conclusion from both sources
-into one of four categories:
+into one of four categories. The four categories form the **base
+synthesis taxonomy** — a stable vocabulary that every ensemble point
+inherits, and that domain-specific plugins may extend through the
+prose-only *Extension Contract* defined below.
+
+#### Base Synthesis Categories
 
 | Category     | Condition                                  | Presentation                                        |
 |--------------|--------------------------------------------|-----------------------------------------------------|
@@ -91,9 +96,109 @@ into one of four categories:
 | CODEX-ONLY   | Codex found it, Claude did not             | Present normally. Label: **[Codex]**                 |
 | CONFLICT     | Claude and Codex disagree                  | Present both with evidence. Ask user to decide       |
 
+The four names — `AGREED`, `CLAUDE-ONLY`, `CODEX-ONLY`, `CONFLICT` —
+are the canonical public vocabulary of this protocol. Their semantics
+are schema-stable: renaming or removing any of the four is a breaking
+change; adding a fifth category is a non-breaking, schema-minor step.
+This table is the single authoritative declaration of the base
+taxonomy across all omcc plugins; domain-specific extensions cite it
+via the *Cross-plugin reference rule* below (prose-only, no backtick
+import) rather than redeclaring or forking the table.
+
 Synthesis output replaces the standard single-model output.
 Follow the Presentation Mode Protocol (`presentation-protocol.md`)
 for the synthesized result.
+
+### Extension Contract
+
+The base taxonomy above is shared across omcc plugins. Domain-specific
+plugins MAY extend it through prose-only contracts in their own
+protocol documents, without modifying or redeclaring the base table
+here. Cross-plugin reference is **prose only** — no markdown backtick
+path may cross plugin boundaries (enforced by
+`tests/test_plugin_structure.py`); each domain protocol cites the base
+via plain text such as "the omcc-dev base synthesis taxonomy".
+
+Two extension *shapes* are recognized — both in production use as
+canonical precedents. Patterns outside these two shapes are out of
+scope within the schema-2 minor: plugin-wide (non-variant-scoped)
+category additions and additive parallel surfaces (e.g., omcc-designer's
+*Positive observations* table) are NOT base extensions and are not
+classified by this contract. A future schema-bump proposal may revisit.
+
+#### Shape 1 — Sub-rule extension
+
+A sub-rule refines the meaning of an existing base category for one
+domain. The base name is preserved; the refinement is a domain-local
+qualifier that activates under domain-specific conditions. Domain
+extensions MAY suppress or replace the base's `**[Both]** / **[Claude]** / **[Codex]**`
+presentation labels when domain UX policy requires it — these labels
+are orchestrator-facing hints, not a UX contract.
+
+- **Precedent**: omcc-research's `Source Union` — an AGREED sub-rule
+  that activates when both models reach the same conclusion via
+  different sources. Documented in the omcc-research ensemble
+  protocol's AGREED handling section.
+- **Registration form**: in the domain protocol, under the relevant
+  base-category subsection, add a paragraph beginning with "This
+  plugin registers a sub-rule extension under <BASE-NAME>: …",
+  followed by the activation condition and any presentation
+  consequences.
+- **Constraint**: a sub-rule MUST NOT introduce a new top-level
+  category name; it lives entirely inside the base name's subsection.
+
+#### Shape 2 — Variant override
+
+A variant override replaces (or partially extends) the base category
+set for a specific ensemble variant within the domain. The override
+applies only when the dispatch step routes to that variant; all other
+variants keep the base set. The same UX policy as Shape 1 applies —
+domain extensions MAY suppress base presentation labels in their
+finalized surface.
+
+- **Full precedent**: omcc-designer's `step-c-direction` variant
+  replaces the entire 4-name set with a domain-specific 3-name set
+  (`ALIGNED` / `COMPLEMENT` / `DIVERGENT`).
+- **Partial precedent**: omcc-designer's audit variant adds a fifth
+  base-adjacent name (`AGREED-with-severity-delta`) alongside the four
+  base names — one row added.
+- **Registration form**: in the domain protocol, immediately above the
+  variant's category table, add a paragraph beginning with "This
+  plugin registers a variant override for <VARIANT-NAME>: …", stating
+  whether the override is partial (additional rows on top of the base)
+  or full (replacement set), and the dispatch condition that activates
+  it.
+- **Constraint**: a variant override is scoped to that variant's
+  dispatch path; the orchestrator MUST NOT apply the override outside
+  it. Domain plugins are responsible for documenting the scoping
+  predicate.
+
+#### Constraints (across all extensions)
+
+- The four base names (`AGREED`, `CLAUDE-ONLY`, `CODEX-ONLY`,
+  `CONFLICT`) and their core conditions are schema-stable vocabulary;
+  extensions cannot rename, delete, or reinterpret them. The drift
+  guard `test_base_synthesis_categories_in_protocol` in
+  `tests/test_schema_drift.py` enforces this from the spec side.
+- The synthesis category and the persisted `verdict` axis
+  (`pass | concerns | conflict`, owned by `continuity-protocol.md`
+  `ensemble_results`) are documentation-level orthogonal: a
+  `verdict: pass` entry can carry any synthesis category, and
+  `verdict: conflict` is overloaded across synthesis CONFLICT and
+  Codex degradation/failure (see § Failure Handling). Extensions MUST
+  NOT couple category names to verdict values, nor add a new verdict,
+  within the schema-2 minor scope — a separate schema-bump proposal
+  would be required.
+- The persistence schema for `ensemble_results` in
+  `continuity-protocol.md` is not per-domain extensible within the
+  schema-2 minor scope; the synthesis category itself is NOT a
+  persisted field. Domain plugins MAY persist domain-local result
+  artifacts in their own protocol's state surface.
+- Codex prompts at Step 1 Launch carry per-ensemble-point task
+  instructions, not the synthesis category vocabulary. Classification
+  into the base names is a post-hoc Claude-side operation owned by
+  the orchestrator. Extensions MUST NOT push category names into
+  Codex prompts. (Convention; not lint-enforced.)
 
 ### State Bookkeeping (mandatory)
 
@@ -306,7 +411,7 @@ as explicit input, because the task is to find gaps in that specific plan.
   </grounding_rules>
   ```
 
-- **Synthesis**: Merge option sets. If Codex proposed an approach Claude didn't consider,
+- **Synthesis** (per *Base Synthesis Categories* above): Merge option sets. If Codex proposed an approach Claude didn't consider,
   add it. If both proposed the same approach, elevate confidence.
 
 ### Explore
@@ -341,7 +446,7 @@ as explicit input, because the task is to find gaps in that specific plan.
   </grounding_rules>
   ```
 
-- **Synthesis**: Merge structural findings. Claude agents (architecture-mapper, flow-tracer)
+- **Synthesis** (per *Base Synthesis Categories* above): Merge structural findings. Claude agents (architecture-mapper, flow-tracer)
   provide deep per-layer analysis; Codex provides a holistic cross-cutting view.
   Flag files/patterns found by only one side.
 
@@ -386,7 +491,7 @@ as explicit input, because the task is to find gaps in that specific plan.
   </grounding_rules>
   ```
 
-- **Synthesis**: Incorporate valid gaps into the plan. If Codex found real missing tasks,
+- **Synthesis** (per *Base Synthesis Categories* above): Incorporate valid gaps into the plan. If Codex found real missing tasks,
   add them. If Codex flagged ordering issues, adjust. Note any Codex concerns Claude
   disagrees with under CONFLICT.
 
@@ -396,7 +501,7 @@ as explicit input, because the task is to find gaps in that specific plan.
 - **Subcommand**: `review --wait`
 - **Arguments**: `--scope branch` or `--scope working-tree` depending on command context
 - **No custom prompt** — uses Codex's native review system
-- **Synthesis**: Merge findings by location. Same file + same issue → deduplicate,
+- **Synthesis** (per *Base Synthesis Categories* above): Merge findings by location. Same file + same issue → deduplicate,
   take higher severity. Unique findings → label source. Conflicting severity →
   present both assessments.
 
@@ -438,7 +543,7 @@ as explicit input, because the task is to find gaps in that specific plan.
   </grounding_rules>
   ```
 
-- **Synthesis**: Cross-validate. If both point to same root cause → high confidence,
+- **Synthesis** (per *Base Synthesis Categories* above): Cross-validate. If both point to same root cause → high confidence,
   proceed. If Codex found a different cause → treat as additional hypothesis, verify
   with targeted check. If conflicting → present both with evidence, ask user.
 
@@ -447,7 +552,7 @@ as explicit input, because the task is to find gaps in that specific plan.
 - **Purpose**: Independent review of applied patch
 - **Subcommand**: `review --wait --scope working-tree`
 - **No custom prompt** — uses Codex's native review system
-- **Synthesis**: Same as review type. Merge into fix verification output.
+- **Synthesis** (per *Base Synthesis Categories* above): Same as review type. Merge into fix verification output.
 
 ### Audit-scan
 
@@ -459,7 +564,7 @@ as explicit input, because the task is to find gaps in that specific plan.
   - Code quality: `"unnecessary complexity, dead code, inconsistent patterns, poor abstractions"`
   - Tech debt: `"TODO/FIXME accumulation, deprecated API usage, test coverage gaps, maintenance burden"`
   - Full: `"design flaws, architectural weaknesses, hidden assumptions, failure modes"`
-- **Synthesis**: Merge with Claude agent findings. Deduplicate by location.
+- **Synthesis** (per *Base Synthesis Categories* above): Merge with Claude agent findings. Deduplicate by location.
   Unify severity ratings. Source-label all findings.
 
 ### Codex-now
@@ -504,7 +609,7 @@ as explicit input, because the task is to find gaps in that specific plan.
   containing that token, so the wrapper plus the rejection together
   form the injection defense.
 
-- **Synthesis**: The four-category taxonomy applies only when Claude
+- **Synthesis** (per *Base Synthesis Categories* above): The four-category taxonomy applies only when Claude
   also has a reading on the question worth presenting alongside;
   otherwise present Codex's answer as a single-item CODEX-ONLY
   result with light Claude framing. Always presented in batch mode

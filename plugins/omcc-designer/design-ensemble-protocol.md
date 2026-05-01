@@ -442,6 +442,17 @@ written into the brief without explicit user confirmation
 
 ## Synthesis Categories (audit variant)
 
+This plugin registers a **partial variant override** under the omcc-dev
+base synthesis taxonomy per the omcc-dev *Extension Contract* (Shape 2
+— variant override). The override is scoped to the `audit-artifact`
+prompt variant of the design-critique-scan ensemble; it adds one
+base-adjacent row (`AGREED-with-severity-delta`) on top of the four
+base names (`AGREED`, `CLAUDE-ONLY`, `CODEX-ONLY`, `CONFLICT`) and
+inherits the rest of the base semantics. The override applies only
+when the dispatch routes to the `audit-artifact` variant — outside it
+(e.g., the `step-c-direction` variant below), this 5-name set is NOT
+in effect.
+
 Every audit finding from either model classifies into one of five
 categories during reconciliation:
 
@@ -535,6 +546,18 @@ internal `source` is bookkeeping only.
 ---
 
 ## Synthesis Categories (step-c-direction variant)
+
+This plugin registers a **full variant override** under the omcc-dev
+base synthesis taxonomy per the omcc-dev *Extension Contract* (Shape 2
+— variant override). The override is scoped to the `step-c-direction`
+prompt variant of the design-critique-scan ensemble; it replaces the
+four base names (`AGREED`, `CLAUDE-ONLY`, `CODEX-ONLY`, `CONFLICT`)
+with a domain-specific three-name set (`ALIGNED` / `COMPLEMENT` /
+`DIVERGENT`) reflecting the design-direction problem shape rather
+than a defect-finding shape. The override applies only when the
+dispatch routes to the `step-c-direction` variant; for the
+`audit-artifact` variant above, the partial-override 5-name set
+applies instead.
 
 Reconciliation between Claude's recommendation and Codex's
 proposal. The trigger contract (Step 1 Launch precondition for
