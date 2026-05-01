@@ -20,6 +20,15 @@ and shared references.
   - `poster-render` (Phase 4 chain-tail / poster command, renders raw zone images via codex)
   - `social-graphics` (Phase 4 / social-graphics command, produces multi-variant social graphics spec)
   - `social-graphics-render` (Phase 4 chain-tail / social-graphics command, renders per-variant raw zone images via codex)
+- `design-ensemble-protocol.md` (plugin root) — design-domain
+  Codex ensemble protocol (design-critique-scan ensemble point
+  with audit-artifact + step-c-direction prompt variants).
+  Activated by `design-evaluation` and `design-interview`
+  command-invoked modes; auto-activated mode runs Claude-only.
+  Owning the contract locally is required because cross-plugin
+  backtick references in markdown are rejected by
+  `tests/test_plugin_structure.py`, and per the repo's
+  "Independence over uniformity" principle.
 
 ## Cross-skill shared references
 
@@ -58,6 +67,58 @@ The exceptions below are explicit, documented dependencies.
   for the detection contract — currently
   `skills/poster-render/SKILL.md` and
   `skills/social-graphics-render/SKILL.md`.
+
+- **Text-level critique skills → `codex` plugin** (same canonical
+  source and detection mechanism as the render skills). The
+  `design-evaluation` and `design-interview` skills shell out to
+  the codex plugin's `codex-companion.mjs` for an independent
+  second opinion — severity-rated audit critique and Step C
+  alternative direction proposals respectively. The dependency
+  is optional at runtime — preflight failure degrades silently
+  to Claude-only output (audit findings or palette / typography /
+  visual-style recommendations remain presentable on the
+  Claude-only path). Detection uses the same marketplace-agnostic
+  glob. The text critique invocation contract lives at
+  `design-ensemble-protocol.md` (plugin root) — **distinct from**
+  the image-render contract at
+  `skills/poster-render/references/codex-call-template.md`. The
+  two contracts share preflight discovery, `--prompt-file`
+  dispatch, and EXIT trap discipline, but the render template's
+  `--write` / `--cwd` / `SAVED_PATH` mechanics do not apply to
+  text task. See each consuming skill's section for activation
+  rules — `skills/design-evaluation/SKILL.md`
+  "Codex ensemble" subsection (always-on for `/audit`) and
+  `skills/design-interview/SKILL.md`
+  "Second opinion (Codex ensemble)" subsection
+  (user-initiated for `/start` and `/formalize` Step C).
+
+---
+
+## Boundary with research-scan and dev brainstorm
+
+omcc-designer's text-level Codex ensemble (design-critique-scan,
+defined at `design-ensemble-protocol.md`) is one of three
+text ensemble surfaces in this marketplace. The boundaries
+prevent feature overlap with the marketplace addition rule
+(repo CLAUDE.md "Plugin Addition Procedure" #4).
+
+| Aspect | design-critique-scan | research-scan (omcc-research) | brainstorm (omcc-dev) |
+|--------|----------------------|-------------------------------|------------------------|
+| Activation | `/omcc-designer:audit` always; `/omcc-designer:start` and `/omcc-designer:formalize` Step C user-initiated | `/omcc-research:research` always | `/omcc-dev:start` and `/omcc-dev:audit` brainstorm phase |
+| Output | Severity-rated findings + alternative direction proposals | Cited evidence brief | Option comparison + recommendation |
+| Persistence | In-session only | Durable artifact (research_brief.md) | In-workflow-state decision record |
+| Synthesis axis | severity (Critical / High / Medium / Low) + Step C alignment | citation source-tier (official-docs / standards / academic / secondary) | option viability + tradeoffs |
+
+When in doubt: critiquing a design or asking for an alternative
+design direction → design-critique-scan. Gathering cited evidence
+about a topic → research-scan. Choosing between viable options →
+brainstorm.
+
+The shared codex-companion surface does not blur this boundary —
+each plugin owns its own protocol contract, prompt template, and
+synthesis rules. References across protocols are prose only
+because cross-plugin backtick references are rejected by
+`tests/test_plugin_structure.py`.
 
 ---
 
