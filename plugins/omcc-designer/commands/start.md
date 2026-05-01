@@ -48,6 +48,7 @@ medium aliases") and dispatch via the registry below.
 |------------------|--------------|----------------------|---------------------|
 | `poster` | `skills/poster/SKILL.md` | poster_spec.md | `skills/poster-render/SKILL.md` |
 | `social-graphics` | `skills/social-graphics/SKILL.md` | social_graphics_spec.md (H2 variant sub-blocks) | `skills/social-graphics-render/SKILL.md` |
+| `frontend` | `skills/frontend/SKILL.md` | DESIGN.md (uppercase per the Google design.md spec; see `skills/frontend/references/frontend-guide.md`) | (none) |
 
 **Chain-tail dispatch rule**: when the row defines an optional
 chain-tail, dispatch it unconditionally after the domain skill
@@ -62,11 +63,10 @@ does NOT duplicate the trigger conditions.
 `skills/brief-generation/references/output-file-rules.md`.
 
 **Unmapped media**: for any canonical medium not in the table
-(`brochure`, `infographic`, `frontend`, etc.), the corresponding
-domain skill is not yet available. Inform the user: "The
-<medium> domain skill is not yet available. The design brief has
-been saved and can be used when the skill is added." End the
-pipeline.
+(`brochure`, `infographic`, etc.), the corresponding domain skill
+is not yet available. Inform the user: "The <medium> domain skill
+is not yet available. The design brief has been saved and can be
+used when the skill is added." End the pipeline.
 
 **Adding a new domain skill**: append a new row to the registry
 table. The four columns are sufficient — chain-tail dispatch and

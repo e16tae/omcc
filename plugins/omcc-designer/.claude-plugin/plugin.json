@@ -13,7 +13,12 @@
     "brief",
     "figma",
     "consultation",
-    "brand"
+    "brand",
+    "frontend",
+    "web",
+    "ui",
+    "design-system",
+    "design-tokens"
   ],
   "author": {
     "name": "e16tae"

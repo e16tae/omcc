@@ -316,6 +316,70 @@ The extraction produces data in five areas for seamless interview handoff:
 | Medium identification | Technical Specifications | MEDIUM (metadata-dependent) |
 | Layout & content structure | Content Map (zones, priority) | HIGH (observed) |
 
+### Mapping extraction to DESIGN.md sections
+
+When the extraction emits a DESIGN.md (per the formalize-pipeline DESIGN.md
+production rule below), the same five areas map to the Google design.md spec's
+8 standard sections + frontmatter design tokens:
+
+| Extraction area | DESIGN.md frontmatter | DESIGN.md body section(s) | Confidence + Notes |
+|---|---|---|---|
+| Project context | `name`, `description` | Overview (Brand & Style) | LOW for description text; Project name often comes from interview, not extraction |
+| Brand context — colors | `colors.primary/secondary/accent/neutral-light/neutral-dark` | Colors | HIGH observed but **hex values are visually estimated** — see "Hex precision warning" below |
+| Brand context — typography | `typography.heading/body/accent` (fontFamily + fontWeight; no fontSize/lineHeight unless explicitly visible) | Typography | HIGH for fontFamily; MEDIUM for fontWeight; do NOT fabricate fontSize/lineHeight values |
+| Visual direction (mood, style, constraints) | — | Overview, Do's and Don'ts | HIGH for mood keywords; constraints feed the Don'ts list |
+| Medium identification | — | Layout (canvas-/viewport-context only when applicable) | MEDIUM; for visual inputs that are not viewport-shaped, this may not apply |
+| Layout & content structure — corner radii | `rounded.sm/md/lg/full` (when extractable from input) | Shapes | NEW for the formalize path; observe rounded corners on cards/buttons in the input. If radii are inconsistent or not visible, omit and surface a gap for interview |
+| Layout & content structure — spatial scale | `spacing.xs/sm/md/lg/xl` (when extractable) | Layout & Spacing | NEW; observe consistent spacing increments. If unclear, omit (the formalize emit path skips rather than fabricating). For brand-personality-driven defaults, the user invokes /omcc-designer:frontend on the saved brief afterward |
+| Layout & content structure — components | `components.button-primary` etc. (when extractable) | Components | NEW; observe distinct UI element treatments (buttons, inputs, cards). For non-frontend inputs (e.g., posters), omit |
+
+DESIGN.md body sections without a direct extraction source (and how to handle):
+
+- **Elevation & Depth** — observe shadow/blur/transparency cues in the input
+  if visible (e.g., glassmorphism backdrop-filter, drop-shadow elevation
+  layers). If not clearly visible, omit and let the frontend skill derive
+  from brand personality during interview.
+- **Shapes** — covered by `rounded` extraction above when corner radii are
+  visible; otherwise an interview-driven section.
+
+### Hex precision warning (DESIGN.md emit)
+
+Per the "Color extraction" rule earlier in this guide, the hex values
+captured from visual input are **visually estimated** unless the input is a
+Figma file with metadata. When promoting these estimated values into a
+DESIGN.md `colors:` token block — which is a normative, machine-consumed
+artifact — the skill MUST surface this warning to the user before save:
+
+> "The colors extracted from this visual input are visually estimated.
+> If you have an authoritative brand guide or design tokens, please
+> verify the hex values before treating the saved DESIGN.md as
+> canonical. Run `npx @google/design.md lint <path>` for additional
+> spec-compliance checks."
+
+The skill MUST also offer the user a confirm-each-color gate when
+explicit estimation occurred (no Figma metadata path); a single
+"confirm all" affordance is acceptable if the user opts in.
+
+### DESIGN.md emission policy
+
+design-extraction owns the **mapping contract** (the table above) but
+does NOT write DESIGN.md directly from this skill — it produces
+structured extraction data in-session. The actual file emission is
+performed by the orchestrating command, per the canonical table in
+`skills/brief-generation/references/output-file-rules.md` "DESIGN.md
+emission rules".
+
+Briefly:
+
+- /omcc-designer:formalize (Target medium != frontend) — commands/formalize.md Phase 4 writes DESIGN.md.
+- /omcc-designer:formalize (Target medium == frontend) — DESIGN.md is deferred to /omcc-designer:frontend.
+- /omcc-designer:start medium=frontend — skills/frontend/SKILL.md writes DESIGN.md from the brief.
+- /omcc-designer:start (other medium) — no DESIGN.md is produced; user opts in via /omcc-designer:frontend on the saved brief.
+- design-extraction auto-activated (no orchestrator) — no file is written.
+
+For paths that DO produce DESIGN.md, the emitter follows this guide's
+mapping table + the Hex precision warning above.
+
 ### Unextractable fields
 
 These fields cannot be determined from visual inspection alone and must
@@ -329,3 +393,14 @@ always be collected during the interview:
 - Font pairing rationale (design intent, not observation)
 - Palette rationale (design intent, not observation)
 - Image generation tool preferences
+
+For DESIGN.md emission specifically, the following are also
+unextractable and require interview or are skipped:
+
+- DESIGN.md `description` (one-line design system intent — interview)
+- DESIGN.md prose for Overview / Colors / Typography rationales
+  (interview, since rationale is design intent not observation)
+- DESIGN.md `components` properties beyond what is visible
+  (interaction states like hover/active require interview)
+- DESIGN.md Do's and Don'ts text beyond brief.Visual Direction.Constraints
+  (additional guardrails come from interview)

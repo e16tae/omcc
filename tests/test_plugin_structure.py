@@ -215,12 +215,28 @@ def test_plugin_structure_allows_hooks_directory(tmp_path):
 # Cross-reference validation
 # ---------------------------------------------------------------------------
 
+# Filenames defined by external standards are exempt from the
+# plugin-local existence check below. They are referenced via backticks
+# in plugin documentation as a citation to an upstream artifact, not as
+# a local file lookup. Add a name here only when it is an externally
+# defined filename whose canonical form is widely recognized.
+EXTERNAL_STANDARD_FILENAMES = frozenset({
+    "DESIGN.md",   # Google design.md spec (Apache 2.0; github.com/google-labs-code/design.md)
+    "README.md",   # industry convention
+    "AGENTS.md",   # AI coding agent context standard (Sourcegraph/OpenAI/Google/Cursor/Factory; agents.md)
+    "CLAUDE.md",   # Claude Code project context (cwd-level + per-plugin contributor notes)
+})
+
 
 @pytest.mark.parametrize(
     "entry,plugin_dir", LOCAL_PLUGIN_DIRS, ids=_plugin_dir_ids
 )
 def test_referenced_files_exist(entry, plugin_dir):
-    """Shared .md files referenced via backtick notation must exist in the plugin."""
+    """Shared .md files referenced via backtick notation must exist in the plugin.
+
+    External standard filenames (see EXTERNAL_STANDARD_FILENAMES above) are
+    exempt: they refer to upstream-defined documents, not plugin-local files.
+    """
     ref_pattern = re.compile(r'`([a-zA-Z0-9_/.-]+\.md)`')
     all_md = list(plugin_dir.rglob("*.md"))
 
@@ -228,6 +244,8 @@ def test_referenced_files_exist(entry, plugin_dir):
         content = md_file.read_text(encoding="utf-8")
         for match in ref_pattern.finditer(content):
             ref_name = match.group(1)
+            if ref_name in EXTERNAL_STANDARD_FILENAMES:
+                continue
             ref_path = plugin_dir / ref_name
             if not ref_path.exists():
                 rel = md_file.relative_to(plugin_dir)

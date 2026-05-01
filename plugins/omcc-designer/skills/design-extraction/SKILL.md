@@ -126,3 +126,25 @@ adjusts its behavior:
 In the brief's Decision Log, record the source as
 "Phase 1 Extraction + Phase 2 Confirmation" for sections derived from
 visual extraction.
+
+### DESIGN.md emission (formalize-only)
+
+The formalize pipeline produces a `DESIGN.md` artifact alongside the
+design brief. The emission is orchestrated by `commands/formalize.md`
+after the `brief-generation` skill returns; design-extraction owns the
+**mapping contract** from its 5 extraction areas to the DESIGN.md
+frontmatter + 8 standard markdown sections (per the Google design.md
+spec, Apache 2.0). See
+`skills/design-extraction/references/extraction-guide.md`
+"Mapping extraction to DESIGN.md sections" for the canonical table
+and "Hex precision warning" for the user-confirm-before-promote rule.
+
+This SKILL.md does NOT write the DESIGN.md file directly. It produces
+the structured extraction data that `commands/formalize.md` consumes
+together with the confirmed brief to assemble the final DESIGN.md.
+
+When invoked from `/start medium=frontend` (the brief's canonical
+Target medium normalizes to `frontend`), DESIGN.md emission is
+deferred to the `frontend` Phase 4 skill instead — `commands/start.md`
+dispatches there. Two competing DESIGN.md files in one project are
+not produced.

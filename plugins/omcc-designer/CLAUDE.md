@@ -8,10 +8,10 @@ and shared references.
 
 ## Plugin layout
 
-- `commands/` — thin orchestrators (start, formalize, plan, poster, social-graphics, audit)
+- `commands/` — thin orchestrators (start, formalize, plan, poster, social-graphics, frontend, audit)
 - `skills/` — per-phase or per-capability logic with progressive disclosure via `references/`
   - `design-analysis` (Phase 1 standard pipeline)
-  - `design-extraction` (Phase 1 formalize pipeline)
+  - `design-extraction` (Phase 1 formalize pipeline; also owns the DESIGN.md mapping contract used by /formalize Phase 4 and by /omcc-designer:frontend's brief consumption)
   - `design-interview` (Phase 2 — the interview skill, also owns cross-skill protocols)
   - `brief-generation` (Phase 3 — owns the brief spec and output file rules)
   - `design-planning` (plan command, produces roadmap)
@@ -20,6 +20,7 @@ and shared references.
   - `poster-render` (Phase 4 chain-tail / poster command, renders raw zone images via codex)
   - `social-graphics` (Phase 4 / social-graphics command, produces multi-variant social graphics spec)
   - `social-graphics-render` (Phase 4 chain-tail / social-graphics command, renders per-variant raw zone images via codex)
+  - `frontend` (Phase 4 / frontend command, produces a Google design.md spec — `DESIGN.md` — for AI coding agents; no chain-tail)
 - `design-ensemble-protocol.md` (plugin root) — design-domain
   Codex ensemble protocol (design-critique-scan ensemble point
   with audit-artifact + step-c-direction prompt variants).
