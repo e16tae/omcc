@@ -13,6 +13,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 SPEC = ROOT / "plugins" / "omcc-dev" / "continuity-protocol.md"
 UTILS = ROOT / "plugins" / "omcc-dev" / "hooks" / "_utils.mjs"
+ENSEMBLE = ROOT / "plugins" / "omcc-dev" / "ensemble-protocol.md"
 
 
 def _read(path):
@@ -160,3 +161,53 @@ def test_supported_schema_version_is_2():
     m = re.search(r"export const SUPPORTED_SCHEMA_VERSION\s*=\s*(\d+)", utils)
     assert m
     assert int(m.group(1)) == 2
+
+
+def test_ensemble_type_enum_matches_protocol_headings():
+    """The continuity-protocol.md `pending_ensemble.ensemble_type` enum
+    prose must enumerate exactly the same set of values as the
+    `ensemble-protocol.md` "Ensemble Point Types" section's H3
+    headings. Drift between the two would let `pending_ensemble`
+    write a value that no Ensemble Point Type defines (or vice versa
+    omit a defined point from the recoverable enum).
+    """
+    spec = _read(SPEC)
+    proto = _read(ENSEMBLE)
+    m = re.search(
+        r"`ensemble_type`\s+enum[^\n]*\n\s*`([a-z][\sa-z\-|]+[a-z])`",
+        spec,
+    )
+    assert m, "could not find ensemble_type enum prose in continuity-protocol.md"
+    spec_types = {t.strip() for t in m.group(1).split("|") if t.strip()}
+    section = re.search(
+        r"\n## Ensemble Point Types\s*\n([\s\S]*?)(?=\n## )",
+        proto,
+    )
+    assert section, "could not find Ensemble Point Types section in ensemble-protocol.md"
+    body = section.group(1)
+    headings = re.findall(r"^### ([^\n]+?)\s*$", body, re.MULTILINE)
+    proto_types = {h.lower() for h in headings}
+    assert spec_types == proto_types, (
+        f"ensemble_type drift: continuity-protocol enum {spec_types} != "
+        f"ensemble-protocol headings {proto_types}"
+    )
+
+
+def test_sanitize_field_caps_includes_codex_question():
+    """The /omcc-dev:codex-now command relies on
+    SANITIZE_FIELD_CAPS.codex_question to bound the user's question
+    length. The cap must be present in code; the command rejects
+    overflow, so the cap acts as the hard maximum prompt-body length.
+    """
+    utils = _read(UTILS)
+    m = re.search(
+        r"SANITIZE_FIELD_CAPS\s*=\s*\{([^}]+)\}", utils, re.DOTALL
+    )
+    assert m, "could not find SANITIZE_FIELD_CAPS in _utils.mjs"
+    body = m.group(1)
+    cap = re.search(r"codex_question\s*:\s*(\d+)", body)
+    assert cap, "SANITIZE_FIELD_CAPS missing codex_question entry"
+    assert int(cap.group(1)) >= 1024, (
+        f"codex_question cap {cap.group(1)} is too small to hold a "
+        "realistic Codex question"
+    )

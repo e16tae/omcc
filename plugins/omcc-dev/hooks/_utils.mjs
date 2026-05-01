@@ -80,6 +80,10 @@ export const SANITIZE_FIELD_CAPS = {
   type: 16,
   // Pre-registered for schema 2 /omcc-dev:checkpoint injection (B5.3).
   checkpoint_summary: 200,
+  // Pre-registered for /omcc-dev:codex-now question validation. The
+  // command rejects (does not truncate) on overflow, so this cap also
+  // serves as the maximum prompt-body length the user may submit.
+  codex_question: 4000,
 };
 
 export function sanitizeField(name, value) {
