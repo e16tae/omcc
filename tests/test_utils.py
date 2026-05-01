@@ -887,3 +887,461 @@ def test_move_workflow_to_archive_handles_sharded(tmp_path):
     assert not shard_dir.exists()
     assert (archive / f"{root_id}.md").exists()
     assert (archive / root_id / "deliverable-A.md").exists()
+
+
+# --- pruneEnsembleResults (#100 retention cap) ------------------------------
+
+
+def test_prune_ensemble_results_empty():
+    rc, stdout, stderr = _call_util(
+        "console.log(JSON.stringify(pruneEnsembleResults([])));",
+        imports=["pruneEnsembleResults"],
+    )
+    assert rc == 0, stderr
+    assert json.loads(stdout) == []
+
+
+def test_prune_ensemble_results_below_cap_unchanged():
+    rc, stdout, stderr = _call_util(
+        """
+const entries = Array.from({length: 5}, (_, i) => ({
+  completed_at: `2026-04-${String(i + 1).padStart(2, '0')}T00:00:00Z`,
+  phase: "review",
+}));
+console.log(pruneEnsembleResults(entries).length);
+""",
+        imports=["pruneEnsembleResults"],
+    )
+    assert rc == 0, stderr
+    assert stdout.strip() == "5"
+
+
+def test_prune_ensemble_results_at_cap_unchanged():
+    rc, stdout, stderr = _call_util(
+        """
+const entries = Array.from({length: 20}, (_, i) => ({
+  completed_at: `2026-04-${String(i + 1).padStart(2, '0')}T00:00:00Z`,
+  phase: "review",
+}));
+console.log(pruneEnsembleResults(entries).length);
+""",
+        imports=["pruneEnsembleResults"],
+    )
+    assert rc == 0, stderr
+    assert stdout.strip() == "20"
+
+
+def test_prune_ensemble_results_just_over_cap_drops_oldest():
+    rc, stdout, stderr = _call_util(
+        """
+const entries = Array.from({length: 21}, (_, i) => ({
+  completed_at: `2026-04-${String(i + 1).padStart(2, '0')}T00:00:00Z`,
+  phase: "review",
+}));
+const result = pruneEnsembleResults(entries);
+console.log(JSON.stringify({
+  len: result.length,
+  first: result[0].completed_at,
+  last: result[result.length - 1].completed_at,
+}));
+""",
+        imports=["pruneEnsembleResults"],
+    )
+    assert rc == 0, stderr
+    out = json.loads(stdout)
+    assert out["len"] == 20
+    assert out["first"] == "2026-04-21T00:00:00Z"
+    assert out["last"] == "2026-04-02T00:00:00Z"
+
+
+def test_prune_ensemble_results_50_to_20_one_step():
+    """Pre-retention 50-row file becomes exactly 20 rows in one pass."""
+    rc, stdout, stderr = _call_util(
+        """
+const entries = Array.from({length: 50}, (_, i) => {
+  const day = String((i % 28) + 1).padStart(2, '0');
+  const month = String((Math.floor(i / 28) % 12) + 1).padStart(2, '0');
+  const year = 2024 + Math.floor(i / (28 * 12));
+  return {
+    completed_at: `${year}-${month}-${day}T00:00:00Z`,
+    run_id: `id-${i}`,
+  };
+});
+console.log(pruneEnsembleResults(entries).length);
+""",
+        imports=["pruneEnsembleResults"],
+    )
+    assert rc == 0, stderr
+    assert stdout.strip() == "20"
+
+
+def test_prune_ensemble_results_invalid_completed_at_sorts_oldest():
+    rc, stdout, stderr = _call_util(
+        """
+const entries = [
+  {completed_at: "not-iso", run_id: "INVALID"},
+  ...Array.from({length: 20}, (_, i) => ({
+    completed_at: `2026-04-${String(i + 1).padStart(2, '0')}T00:00:00Z`,
+    run_id: `valid-${i}`,
+  })),
+];
+const result = pruneEnsembleResults(entries);
+console.log(JSON.stringify({
+  len: result.length,
+  hasInvalid: result.some(e => e.run_id === "INVALID"),
+}));
+""",
+        imports=["pruneEnsembleResults"],
+    )
+    assert rc == 0, stderr
+    out = json.loads(stdout)
+    assert out["len"] == 20
+    assert out["hasInvalid"] is False
+
+
+def test_prune_ensemble_results_future_completed_at_sorts_oldest():
+    rc, stdout, stderr = _call_util(
+        """
+const entries = [
+  {completed_at: "2099-01-01T00:00:00Z", run_id: "FUTURE"},
+  ...Array.from({length: 20}, (_, i) => ({
+    completed_at: `2026-04-${String(i + 1).padStart(2, '0')}T00:00:00Z`,
+    run_id: `valid-${i}`,
+  })),
+];
+const result = pruneEnsembleResults(entries);
+console.log(JSON.stringify({
+  len: result.length,
+  hasFuture: result.some(e => e.run_id === "FUTURE"),
+}));
+""",
+        imports=["pruneEnsembleResults"],
+    )
+    assert rc == 0, stderr
+    out = json.loads(stdout)
+    assert out["len"] == 20
+    assert out["hasFuture"] is False
+
+
+def test_prune_ensemble_results_stable_tie_on_completed_at():
+    """Tie completed_at: source order preserved; tail trimmed."""
+    rc, stdout, stderr = _call_util(
+        """
+const entries = [];
+for (let i = 0; i < 21; i += 1) {
+  entries.push({
+    completed_at: "2026-04-15T00:00:00Z",
+    run_id: `tie-${i}`,
+  });
+}
+const result = pruneEnsembleResults(entries);
+console.log(JSON.stringify({
+  len: result.length,
+  hasTail: result.some(e => e.run_id === "tie-20"),
+}));
+""",
+        imports=["pruneEnsembleResults"],
+    )
+    assert rc == 0, stderr
+    out = json.loads(stdout)
+    assert out["len"] == 20
+    assert out["hasTail"] is False
+
+
+# --- sanitizeOpaqueId (#100 codex_session_id reject-on-overflow) ------------
+
+
+def test_sanitize_opaque_id_non_string_returns_null():
+    rc, stdout, stderr = _call_util(
+        "console.log(JSON.stringify(sanitizeOpaqueId(undefined)));",
+        imports=["sanitizeOpaqueId"],
+    )
+    assert rc == 0, stderr
+    assert json.loads(stdout) is None
+
+
+def test_sanitize_opaque_id_normal_returns_value():
+    rc, stdout, stderr = _call_util(
+        'console.log(sanitizeOpaqueId("019de2e3-6ba1-74d2-9652-58aac36eb1ba"));',
+        imports=["sanitizeOpaqueId"],
+    )
+    assert rc == 0, stderr
+    assert stdout.strip() == "019de2e3-6ba1-74d2-9652-58aac36eb1ba"
+
+
+def test_sanitize_opaque_id_backtick_rejected():
+    rc, stdout, stderr = _call_util(
+        'console.log(JSON.stringify(sanitizeOpaqueId("abc`def")));',
+        imports=["sanitizeOpaqueId"],
+    )
+    assert rc == 0, stderr
+    assert json.loads(stdout) is None
+
+
+def test_sanitize_opaque_id_overflow_rejected_not_truncated():
+    rc, stdout, stderr = _call_util(
+        """
+const long = "a".repeat(200);
+console.log(JSON.stringify(sanitizeOpaqueId(long)));
+""",
+        imports=["sanitizeOpaqueId"],
+    )
+    assert rc == 0, stderr
+    assert json.loads(stdout) is None
+
+
+def test_sanitize_opaque_id_at_cap_returns():
+    rc, stdout, stderr = _call_util(
+        """
+const exact = "a".repeat(128);
+console.log(sanitizeOpaqueId(exact).length);
+""",
+        imports=["sanitizeOpaqueId"],
+    )
+    assert rc == 0, stderr
+    assert stdout.strip() == "128"
+
+
+def test_sanitize_opaque_id_control_chars_rejected():
+    """resume.md Step 5c lists 'control characters' as a rejection
+    trigger for codex_session_id; the helper rejects (returns null)
+    rather than silently stripping (Issue #100 review F3)."""
+    rc, stdout, stderr = _call_util(
+        r"""
+console.log(JSON.stringify(sanitizeOpaqueId("abc\x01def")));
+""",
+        imports=["sanitizeOpaqueId"],
+    )
+    assert rc == 0, stderr
+    assert json.loads(stdout) is None
+
+
+# --- parseEnsembleResults (#100) --------------------------------------------
+
+
+def test_parse_ensemble_results_null_returns_empty():
+    rc, stdout, stderr = _call_util(
+        "console.log(JSON.stringify(parseEnsembleResults(null)));",
+        imports=["parseEnsembleResults"],
+    )
+    assert rc == 0, stderr
+    assert json.loads(stdout) == []
+
+
+def test_parse_ensemble_results_no_block_returns_empty():
+    rc, stdout, stderr = _call_util(
+        r"""
+const fmBody = "schema: 2\nworkflow_id: start-20260501T000000Z-aaaaaa\n";
+console.log(JSON.stringify(parseEnsembleResults(fmBody)));
+""",
+        imports=["parseEnsembleResults"],
+    )
+    assert rc == 0, stderr
+    assert json.loads(stdout) == []
+
+
+def test_parse_ensemble_results_single_entry():
+    rc, stdout, stderr = _call_util(
+        """
+const fmBody = `schema: 2
+ensemble_results:
+  - phase: explore
+    ensemble_type: explore
+    run_id: 20260501T000000Z-aaaaaa
+    verdict: pass
+    summary: "all good"
+    completed_at: 2026-05-01T00:00:00Z
+    codex_session_id: 019de2e3
+`;
+console.log(JSON.stringify(parseEnsembleResults(fmBody)));
+""",
+        imports=["parseEnsembleResults"],
+    )
+    assert rc == 0, stderr
+    out = json.loads(stdout)
+    assert len(out) == 1
+    assert out[0]["phase"] == "explore"
+    assert out[0]["ensemble_type"] == "explore"
+    assert out[0]["run_id"] == "20260501T000000Z-aaaaaa"
+    assert out[0]["verdict"] == "pass"
+    assert out[0]["summary"] == "all good"
+    assert out[0]["completed_at"] == "2026-05-01T00:00:00Z"
+    assert out[0]["codex_session_id"] == "019de2e3"
+
+
+def test_parse_ensemble_results_multiple_entries():
+    rc, stdout, stderr = _call_util(
+        """
+const fmBody = `schema: 2
+ensemble_results:
+  - phase: explore
+    ensemble_type: explore
+    run_id: 20260501T000000Z-aaaaaa
+    verdict: pass
+    summary: first
+    completed_at: 2026-05-01T00:00:00Z
+  - phase: plan
+    ensemble_type: plan-verify
+    run_id: 20260501T010000Z-bbbbbb
+    verdict: concerns
+    summary: second
+    completed_at: 2026-05-01T01:00:00Z
+`;
+console.log(parseEnsembleResults(fmBody).length);
+""",
+        imports=["parseEnsembleResults"],
+    )
+    assert rc == 0, stderr
+    assert stdout.strip() == "2"
+
+
+def test_parse_ensemble_results_optional_codex_session_id_absent():
+    rc, stdout, stderr = _call_util(
+        """
+const fmBody = `ensemble_results:
+  - phase: explore
+    ensemble_type: explore
+    run_id: 20260501T000000Z-aaaaaa
+    verdict: pass
+    summary: no-cid
+    completed_at: 2026-05-01T00:00:00Z
+`;
+const result = parseEnsembleResults(fmBody);
+console.log(JSON.stringify({
+  len: result.length,
+  hasCid: "codex_session_id" in result[0],
+}));
+""",
+        imports=["parseEnsembleResults"],
+    )
+    assert rc == 0, stderr
+    out = json.loads(stdout)
+    assert out["len"] == 1
+    assert out["hasCid"] is False
+
+
+# --- parseDeliverables (#100) -----------------------------------------------
+
+
+def test_parse_deliverables_null_returns_empty():
+    rc, stdout, stderr = _call_util(
+        "console.log(JSON.stringify(parseDeliverables(null)));",
+        imports=["parseDeliverables"],
+    )
+    assert rc == 0, stderr
+    assert json.loads(stdout) == []
+
+
+def test_parse_deliverables_no_plan_returns_empty():
+    rc, stdout, stderr = _call_util(
+        r"""
+const fmBody = "schema: 2\nworkflow_id: start-20260501T000000Z-aaaaaa\n";
+console.log(JSON.stringify(parseDeliverables(fmBody)));
+""",
+        imports=["parseDeliverables"],
+    )
+    assert rc == 0, stderr
+    assert json.loads(stdout) == []
+
+
+def test_parse_deliverables_single():
+    rc, stdout, stderr = _call_util(
+        """
+const fmBody = `plan:
+  deliverables:
+    - id: A
+      shard_path: deliverable-A.md
+      status: in_progress
+      phase: implement
+      next_action: stuff
+`;
+const result = parseDeliverables(fmBody);
+console.log(JSON.stringify(result));
+""",
+        imports=["parseDeliverables"],
+    )
+    assert rc == 0, stderr
+    out = json.loads(stdout)
+    assert len(out) == 1
+    assert out[0]["id"] == "A"
+    assert out[0]["status"] == "in_progress"
+    assert out[0]["shard_path"] == "deliverable-A.md"
+    assert out[0]["phase"] == "implement"
+
+
+def test_parse_deliverables_multiple():
+    rc, stdout, stderr = _call_util(
+        """
+const fmBody = `plan:
+  deliverables:
+    - id: A
+      status: completed
+    - id: B
+      status: in_progress
+    - id: C
+      status: pending
+`;
+const result = parseDeliverables(fmBody);
+console.log(JSON.stringify(result.map(d => `${d.id}:${d.status}`)));
+""",
+        imports=["parseDeliverables"],
+    )
+    assert rc == 0, stderr
+    out = json.loads(stdout)
+    assert out == ["A:completed", "B:in_progress", "C:pending"]
+
+
+def test_parse_deliverables_skips_nested_tasks_list():
+    """F6 (Issue #100 review round 2): nested `tasks:` lists under a
+    deliverable must NOT be treated as additional top-level deliverable
+    entries. A nested `- id: task-N` would otherwise be promoted by
+    pickActiveShard if it carried `status: in_progress`."""
+    rc, stdout, stderr = _call_util(
+        """
+const fmBody = `plan:
+  deliverables:
+    - id: A
+      status: in_progress
+      tasks:
+        - id: task-1
+          status: pending
+        - id: task-2
+          status: pending
+    - id: B
+      status: pending
+`;
+const result = parseDeliverables(fmBody);
+console.log(JSON.stringify(result.map(d => d.id + ":" + d.status)));
+""",
+        imports=["parseDeliverables"],
+    )
+    assert rc == 0, stderr
+    out = json.loads(stdout)
+    assert out == ["A:in_progress", "B:pending"], (
+        f"expected only A and B as top-level deliverables, got {out}"
+    )
+
+
+def test_parse_deliverables_missing_optional_cached_fields():
+    rc, stdout, stderr = _call_util(
+        """
+const fmBody = `plan:
+  deliverables:
+    - id: A
+      shard_path: deliverable-A.md
+      status: pending
+`;
+const result = parseDeliverables(fmBody);
+console.log(JSON.stringify({
+  len: result.length,
+  hasPhase: "phase" in result[0],
+  hasNext: "next_action" in result[0],
+}));
+""",
+        imports=["parseDeliverables"],
+    )
+    assert rc == 0, stderr
+    out = json.loads(stdout)
+    assert out["len"] == 1
+    assert out["hasPhase"] is False
+    assert out["hasNext"] is False

@@ -133,7 +133,8 @@ def test_sanitize_field_caps_spec_matches_code():
     spec_caps = dict(
         (name, int(value))
         for name, value in re.findall(
-            r"(phase|next_action|type|checkpoint_summary|ensemble_summary)=(\d+)", spec
+            r"(phase|next_action|type|checkpoint_summary|ensemble_summary|codex_session_id)=(\d+)",
+            spec,
         )
     )
     m = re.search(
@@ -143,7 +144,7 @@ def test_sanitize_field_caps_spec_matches_code():
     code_caps = dict(
         (name, int(value))
         for name, value in re.findall(
-            r"(phase|next_action|type|checkpoint_summary|ensemble_summary)\s*:\s*(\d+)",
+            r"(phase|next_action|type|checkpoint_summary|ensemble_summary|codex_session_id)\s*:\s*(\d+)",
             m.group(1),
         )
     )
@@ -153,6 +154,7 @@ def test_sanitize_field_caps_spec_matches_code():
         "type",
         "checkpoint_summary",
         "ensemble_summary",
+        "codex_session_id",
     ):
         assert name in spec_caps, f"spec missing cap for {name}"
         assert name in code_caps, f"code missing cap for {name}"
@@ -320,4 +322,87 @@ def test_sanitize_field_caps_includes_codex_question():
     assert int(cap.group(1)) >= 1024, (
         f"codex_question cap {cap.group(1)} is too small to hold a "
         "realistic Codex question"
+    )
+
+
+def test_session_start_stdout_includes_ensemble_suffix_shape():
+    """SessionStart spec must declare the ensemble= inline-suffix
+    template (Issue #100 criterion #5), the suffix-only-drop carve-out
+    distinct from the whole-row backtick rule, and the 4-state matrix
+    of (checkpoint?, ensemble?) suffix combinations.
+    """
+    spec = _read(SPEC)
+    section = re.search(
+        r"### SessionStart \(matcher: `compact`\)([\s\S]*?)(?=\n### )",
+        spec,
+    )
+    assert section, "could not find SessionStart section"
+    body = section.group(1)
+    assert "ensemble=" in body, (
+        "SessionStart spec must include the literal ensemble= template token"
+    )
+    assert re.search(
+        r"suffix[\-\s]*only|drop only the ensemble suffix|"
+        r"ensemble suffix is omitted",
+        body,
+        re.IGNORECASE,
+    ), "SessionStart spec must describe ensemble= suffix-only drop"
+    assert re.search(
+        r"4[\-\s]?state|four[\-\s]?state|"
+        r"\(checkpoint\?,?\s*ensemble\?\)",
+        body,
+        re.IGNORECASE,
+    ), "SessionStart spec must mention the 4-state (checkpoint?, ensemble?) matrix"
+
+
+def test_session_start_sharded_reader_rule_in_spec():
+    """SessionStart spec must declare the sharded /start reader rule:
+    root + active-shard merge with deterministic tie-break, and
+    fallback to root-only when no shard is active.
+    """
+    spec = _read(SPEC)
+    section = re.search(
+        r"### SessionStart \(matcher: `compact`\)([\s\S]*?)(?=\n### )",
+        spec,
+    )
+    assert section, "could not find SessionStart section"
+    body = section.group(1)
+    assert re.search(
+        r"sharded|active shard|plan\.deliverables",
+        body,
+        re.IGNORECASE,
+    ), "SessionStart spec must describe sharded reader rule"
+    assert re.search(
+        r"root[\-\s]first|tie[\-\s]?break.*root|root.*tie[\-\s]?break",
+        body,
+        re.IGNORECASE,
+    ), "SessionStart spec must declare root-first tie-break"
+
+
+def test_max_ensemble_results_per_workflow_matches_spec():
+    """The retention cap value declared in continuity-protocol.md
+    § ensemble_results semantics must match
+    MAX_ENSEMBLE_RESULTS_PER_WORKFLOW in _utils.mjs. The cap bounds
+    list growth at synthesize-time per the same single-mutation
+    contract that pops pending_ensemble and appends the new result;
+    drift between spec and code would let workflows accumulate beyond
+    the spec'd ceiling.
+    """
+    spec = _read(SPEC)
+    utils = _read(UTILS)
+    m = re.search(
+        r"MAX_ENSEMBLE_RESULTS_PER_WORKFLOW\s*=\s*(\d+)", spec
+    )
+    assert m, (
+        "could not find MAX_ENSEMBLE_RESULTS_PER_WORKFLOW "
+        "in continuity-protocol.md"
+    )
+    spec_cap = int(m.group(1))
+    m = re.search(
+        r"export const MAX_ENSEMBLE_RESULTS_PER_WORKFLOW\s*=\s*(\d+)", utils
+    )
+    assert m, "could not find MAX_ENSEMBLE_RESULTS_PER_WORKFLOW in _utils.mjs"
+    code_cap = int(m.group(1))
+    assert spec_cap == code_cap, (
+        f"retention cap drift: spec={spec_cap} code={code_cap}"
     )

@@ -586,3 +586,559 @@ class TestPreCompactCap:
         assert count == 50, f"expected 50 snapshots after trim, got {count}"
         # Oldest seeded snapshot (baseline000) should be gone
         assert "head: baseline000" not in body
+
+
+# ---------------------------------------------------------------------------
+# C.6 — SessionStart ensemble= suffix injection (Issue #100, criterion #5)
+# ---------------------------------------------------------------------------
+
+
+def _ensemble_results_block(entries):
+    """Render a YAML 'ensemble_results: ...' frontmatter block."""
+    if not entries:
+        return "ensemble_results: []\n"
+    lines = ["ensemble_results:"]
+    for e in entries:
+        lines.append(f"  - phase: {e['phase']}")
+        for k in ("ensemble_type", "run_id", "verdict", "summary",
+                 "completed_at", "codex_session_id"):
+            if k in e:
+                lines.append(f"    {k}: {e[k]}")
+    return "\n".join(lines) + "\n"
+
+
+def _write_workflow_with_extra_frontmatter(
+    cwd, workflow_id, phase, next_action,
+    workflow_type=None, extra_frontmatter="", schema=2,
+):
+    """Like _write_workflow but allows extra frontmatter (e.g.,
+    ensemble_results, plan.deliverables) appended just before the
+    closing --- terminator."""
+    wtype = workflow_type or workflow_id.split("-")[0]
+    bh = _current_head(cwd)
+    path = cwd / ".claude" / "omcc-dev" / "workflows" / f"{workflow_id}.md"
+    frontmatter = (
+        "---\n"
+        f"schema: {schema}\n"
+        f"workflow_id: {workflow_id}\n"
+        f"workflow_type: {wtype}\n"
+        "original_request: test\n"
+        "started_at: 2026-04-22T00:00:00Z\n"
+        "updated_at: 2026-04-22T00:00:00Z\n"
+        f"repo_root: {cwd}\n"
+        "git_baseline:\n"
+        "  branch: main\n"
+        f"  head: {bh}\n"
+        "  status_digest: aabbcc\n"
+        f"current_phase: {phase}\n"
+        f"next_action: {next_action}\n"
+        "tasks: []\n"
+        "task_profile:\n"
+        "  scope: x\n"
+        "  complexity: low\n"
+        "  ensemble_affinity: LOW\n"
+        f"{extra_frontmatter}"
+        "---\n"
+    )
+    content = frontmatter + f"\n# {workflow_id}\n"
+    path.write_text(content)
+    return path
+
+
+def _write_shard_file(cwd, root_id, shard_id, ensemble_entries):
+    """Write a shard file under workflows/<root_id>/<shard_id>.md."""
+    shard_dir = cwd / ".claude" / "omcc-dev" / "workflows" / root_id
+    shard_dir.mkdir(parents=True, exist_ok=True)
+    path = shard_dir / f"{shard_id}.md"
+    er = _ensemble_results_block(ensemble_entries)
+    deliverable_letter = shard_id.split("-")[1]
+    fm = (
+        "---\n"
+        "schema: 2\n"
+        "shard_type: deliverable\n"
+        f"root_workflow: {root_id}\n"
+        f"deliverable_id: {deliverable_letter}\n"
+        "started_at: 2026-04-22T00:00:00Z\n"
+        "updated_at: 2026-04-22T00:00:00Z\n"
+        "current_phase: review\n"
+        "next_action: review\n"
+        "tasks: []\n"
+        f"{er}"
+        "---\n"
+    )
+    path.write_text(fm + f"\n# shard {shard_id}\n")
+    return path
+
+
+def _valid_ensemble_entry(phase, ensemble_type, run_id_suffix, summary,
+                          completed_at, verdict="pass"):
+    return {
+        "phase": phase,
+        "ensemble_type": ensemble_type,
+        "run_id": f"20260501T000000Z-{run_id_suffix}",
+        "verdict": verdict,
+        "summary": summary,
+        "completed_at": completed_at,
+    }
+
+
+class TestSessionStartEnsembleSuffix:
+    """Issue #100 criterion #5: SessionStart emits an ensemble= 1-line
+    suffix per active workflow when a valid ensemble_results entry exists.
+    Eight fixtures cover empty / single / malformed / backtick / multiple /
+    sharded-with-shard / sharded-no-active-shard / tie-completed_at."""
+
+    def test_empty_ensemble_results_no_suffix(self, tmp_path):
+        cwd = _init_cwd(tmp_path)
+        wf_id = "fix-20260422T120000Z-aaaaaa"
+        _write_workflow_with_extra_frontmatter(
+            cwd, wf_id, "investigate", "do thing", "fix",
+            extra_frontmatter=_ensemble_results_block([]),
+        )
+        _write_active(cwd, [{"id": wf_id, "type": "fix", "phase": "investigate",
+                             "parent": None, "children": []}])
+        rc, out, _ = _run_hook(
+            "session-start.mjs", {"cwd": str(cwd), "source": "compact"}, cwd
+        )
+        assert rc == 0
+        assert wf_id in out
+        assert "ensemble=" not in out
+
+    def test_single_valid_entry_emits_suffix(self, tmp_path):
+        cwd = _init_cwd(tmp_path)
+        wf_id = "fix-20260422T120000Z-bbbbbb"
+        entries = [_valid_ensemble_entry(
+            "fix-and-verify", "fix-verify", "111111",
+            "verified clean", "2026-04-30T00:00:00Z",
+        )]
+        _write_workflow_with_extra_frontmatter(
+            cwd, wf_id, "fix-and-verify", "commit", "fix",
+            extra_frontmatter=_ensemble_results_block(entries),
+        )
+        _write_active(cwd, [{"id": wf_id, "type": "fix",
+                             "phase": "fix-and-verify",
+                             "parent": None, "children": []}])
+        rc, out, _ = _run_hook(
+            "session-start.mjs", {"cwd": str(cwd), "source": "compact"}, cwd
+        )
+        assert rc == 0
+        assert 'ensemble="verified clean"' in out
+
+    def test_malformed_entry_drops_suffix_keeps_base_row(self, tmp_path):
+        cwd = _init_cwd(tmp_path)
+        wf_id = "fix-20260422T120000Z-cccccc"
+        # run_id fails the format regex → fails the gauntlet
+        entries = [{
+            "phase": "fix-and-verify",
+            "ensemble_type": "fix-verify",
+            "run_id": "INVALID-RUN-ID",
+            "verdict": "pass",
+            "summary": "should-not-appear",
+            "completed_at": "2026-04-30T00:00:00Z",
+        }]
+        _write_workflow_with_extra_frontmatter(
+            cwd, wf_id, "fix-and-verify", "commit", "fix",
+            extra_frontmatter=_ensemble_results_block(entries),
+        )
+        _write_active(cwd, [{"id": wf_id, "type": "fix",
+                             "phase": "fix-and-verify",
+                             "parent": None, "children": []}])
+        rc, out, err = _run_hook(
+            "session-start.mjs", {"cwd": str(cwd), "source": "compact"}, cwd
+        )
+        assert rc == 0
+        assert wf_id in out
+        assert "phase=fix-and-verify" in out
+        assert "ensemble=" not in out
+        assert "should-not-appear" not in out
+        assert "should-not-appear" not in err
+
+    def test_backtick_summary_drops_suffix_silent(self, tmp_path):
+        cwd = _init_cwd(tmp_path)
+        wf_id = "fix-20260422T120000Z-dddddd"
+        # Summary contains a backtick → sanitizeField returns null
+        entries = [{
+            "phase": "fix-and-verify",
+            "ensemble_type": "fix-verify",
+            "run_id": "20260501T000000Z-aaaaaa",
+            "verdict": "pass",
+            "summary": "bad whoami output",  # placeholder; we override below
+            "completed_at": "2026-04-30T00:00:00Z",
+        }]
+        # Replace placeholder with backtick-laden summary at write time —
+        # the YAML emitter would otherwise need quoting; inject it as a
+        # raw frontmatter block instead.
+        raw_block = (
+            "ensemble_results:\n"
+            "  - phase: fix-and-verify\n"
+            "    ensemble_type: fix-verify\n"
+            "    run_id: 20260501T000000Z-aaaaaa\n"
+            "    verdict: pass\n"
+            "    summary: bad `whoami` output\n"
+            "    completed_at: 2026-04-30T00:00:00Z\n"
+        )
+        _write_workflow_with_extra_frontmatter(
+            cwd, wf_id, "fix-and-verify", "commit", "fix",
+            extra_frontmatter=raw_block,
+        )
+        _write_active(cwd, [{"id": wf_id, "type": "fix",
+                             "phase": "fix-and-verify",
+                             "parent": None, "children": []}])
+        rc, out, err = _run_hook(
+            "session-start.mjs", {"cwd": str(cwd), "source": "compact"}, cwd
+        )
+        assert rc == 0
+        assert wf_id in out
+        assert "ensemble=" not in out
+        assert "`" not in out
+
+    def test_multiple_entries_latest_by_completed_at(self, tmp_path):
+        cwd = _init_cwd(tmp_path)
+        wf_id = "fix-20260422T120000Z-eeeeee"
+        entries = [
+            _valid_ensemble_entry(
+                "investigate", "investigate", "aaaaaa",
+                "older entry", "2026-04-01T00:00:00Z",
+            ),
+            _valid_ensemble_entry(
+                "fix-and-verify", "fix-verify", "bbbbbb",
+                "newest entry", "2026-04-30T00:00:00Z",
+            ),
+            _valid_ensemble_entry(
+                "investigate", "investigate", "cccccc",
+                "middle entry", "2026-04-15T00:00:00Z",
+            ),
+        ]
+        _write_workflow_with_extra_frontmatter(
+            cwd, wf_id, "fix-and-verify", "commit", "fix",
+            extra_frontmatter=_ensemble_results_block(entries),
+        )
+        _write_active(cwd, [{"id": wf_id, "type": "fix",
+                             "phase": "fix-and-verify",
+                             "parent": None, "children": []}])
+        rc, out, _ = _run_hook(
+            "session-start.mjs", {"cwd": str(cwd), "source": "compact"}, cwd
+        )
+        assert rc == 0
+        assert 'ensemble="newest entry"' in out
+        assert "older entry" not in out
+        assert "middle entry" not in out
+
+    def test_sharded_with_ensemble_in_active_shard_only(self, tmp_path):
+        cwd = _init_cwd(tmp_path)
+        root_id = "start-20260422T120000Z-ffffff"
+        shard_id = "deliverable-A"
+        deliverables_block = (
+            "plan:\n"
+            "  deliverables:\n"
+            f"    - id: A\n"
+            f"      shard_path: {shard_id}.md\n"
+            "      status: in_progress\n"
+        )
+        _write_workflow_with_extra_frontmatter(
+            cwd, root_id, "implement", "build deliverable A", "start",
+            extra_frontmatter=deliverables_block,
+        )
+        shard_entries = [_valid_ensemble_entry(
+            "review", "review", "111111",
+            "shard review pass", "2026-04-30T00:00:00Z",
+        )]
+        _write_shard_file(cwd, root_id, shard_id, shard_entries)
+        _write_active(cwd, [{"id": root_id, "type": "start",
+                             "phase": "implement",
+                             "parent": None, "children": []}])
+        rc, out, _ = _run_hook(
+            "session-start.mjs", {"cwd": str(cwd), "source": "compact"}, cwd
+        )
+        assert rc == 0
+        assert 'ensemble="shard review pass"' in out
+
+    def test_sharded_no_active_shard_root_only(self, tmp_path):
+        cwd = _init_cwd(tmp_path)
+        root_id = "start-20260422T120000Z-aaaaaa"
+        deliverables_block = (
+            "plan:\n"
+            "  deliverables:\n"
+            "    - id: A\n"
+            "      shard_path: deliverable-A.md\n"
+            "      status: completed\n"
+            "    - id: B\n"
+            "      shard_path: deliverable-B.md\n"
+            "      status: completed\n"
+        )
+        root_entries = [_valid_ensemble_entry(
+            "review", "review", "222222",
+            "branch-wide review", "2026-05-01T00:00:00Z",
+        )]
+        extra = deliverables_block + _ensemble_results_block(root_entries)
+        _write_workflow_with_extra_frontmatter(
+            cwd, root_id, "review", "5b cross-deliverable", "start",
+            extra_frontmatter=extra,
+        )
+        _write_active(cwd, [{"id": root_id, "type": "start",
+                             "phase": "review",
+                             "parent": None, "children": []}])
+        rc, out, _ = _run_hook(
+            "session-start.mjs", {"cwd": str(cwd), "source": "compact"}, cwd
+        )
+        assert rc == 0
+        assert 'ensemble="branch-wide review"' in out
+
+    def test_sharded_tie_completed_at_root_first(self, tmp_path):
+        cwd = _init_cwd(tmp_path)
+        root_id = "start-20260422T120000Z-bbbbbb"
+        shard_id = "deliverable-A"
+        same_ts = "2026-04-30T00:00:00Z"
+        deliverables_block = (
+            "plan:\n"
+            "  deliverables:\n"
+            f"    - id: A\n"
+            f"      shard_path: {shard_id}.md\n"
+            "      status: in_progress\n"
+        )
+        root_entries = [_valid_ensemble_entry(
+            "plan", "plan-verify", "111111",
+            "root entry wins", same_ts,
+        )]
+        shard_entries = [_valid_ensemble_entry(
+            "review", "review", "222222",
+            "shard entry loses", same_ts,
+        )]
+        extra = deliverables_block + _ensemble_results_block(root_entries)
+        _write_workflow_with_extra_frontmatter(
+            cwd, root_id, "implement", "build A", "start",
+            extra_frontmatter=extra,
+        )
+        _write_shard_file(cwd, root_id, shard_id, shard_entries)
+        _write_active(cwd, [{"id": root_id, "type": "start",
+                             "phase": "implement",
+                             "parent": None, "children": []}])
+        rc, out, _ = _run_hook(
+            "session-start.mjs", {"cwd": str(cwd), "source": "compact"}, cwd
+        )
+        assert rc == 0
+        assert 'ensemble="root entry wins"' in out
+        assert "shard entry loses" not in out
+
+    # ------------------------------------------------------------------
+    # Phase 6 review-resolved findings (Issue #100 review)
+    # ------------------------------------------------------------------
+
+    def test_missing_summary_field_drops_suffix(self, tmp_path):
+        """F1: an entry whose summary field is absent must reject from
+        the latest-overall selector — not pass through as empty string."""
+        cwd = _init_cwd(tmp_path)
+        wf_id = "fix-20260422T120000Z-aaaa01"
+        raw_block = (
+            "ensemble_results:\n"
+            "  - phase: fix-and-verify\n"
+            "    ensemble_type: fix-verify\n"
+            "    run_id: 20260501T000000Z-aaaaaa\n"
+            "    verdict: pass\n"
+            "    completed_at: 2026-04-30T00:00:00Z\n"
+        )
+        _write_workflow_with_extra_frontmatter(
+            cwd, wf_id, "fix-and-verify", "commit", "fix",
+            extra_frontmatter=raw_block,
+        )
+        _write_active(cwd, [{"id": wf_id, "type": "fix",
+                             "phase": "fix-and-verify",
+                             "parent": None, "children": []}])
+        rc, out, _ = _run_hook(
+            "session-start.mjs", {"cwd": str(cwd), "source": "compact"}, cwd
+        )
+        assert rc == 0
+        assert wf_id in out
+        assert "ensemble=" not in out
+
+    def test_missing_summary_does_not_shadow_older_valid(self, tmp_path):
+        """F1: when a newer entry has no summary, the latest-overall
+        selector must skip it and surface the older valid entry."""
+        cwd = _init_cwd(tmp_path)
+        wf_id = "fix-20260422T120000Z-aaaa02"
+        raw_block = (
+            "ensemble_results:\n"
+            "  - phase: investigate\n"
+            "    ensemble_type: investigate\n"
+            "    run_id: 20260501T000000Z-bbbbbb\n"
+            "    verdict: pass\n"
+            "    summary: older valid\n"
+            "    completed_at: 2026-04-01T00:00:00Z\n"
+            "  - phase: fix-and-verify\n"
+            "    ensemble_type: fix-verify\n"
+            "    run_id: 20260501T000000Z-cccccc\n"
+            "    verdict: pass\n"
+            "    completed_at: 2026-04-30T00:00:00Z\n"
+        )
+        _write_workflow_with_extra_frontmatter(
+            cwd, wf_id, "fix-and-verify", "commit", "fix",
+            extra_frontmatter=raw_block,
+        )
+        _write_active(cwd, [{"id": wf_id, "type": "fix",
+                             "phase": "fix-and-verify",
+                             "parent": None, "children": []}])
+        rc, out, _ = _run_hook(
+            "session-start.mjs", {"cwd": str(cwd), "source": "compact"}, cwd
+        )
+        assert rc == 0
+        assert 'ensemble="older valid"' in out
+
+    def test_double_quote_in_summary_drops_suffix(self, tmp_path):
+        """F5: a summary containing `\"` would break the line builder's
+        quoted output; reject the entry to prevent format-injection."""
+        cwd = _init_cwd(tmp_path)
+        wf_id = "fix-20260422T120000Z-aaaa03"
+        raw_block = (
+            "ensemble_results:\n"
+            "  - phase: fix-and-verify\n"
+            "    ensemble_type: fix-verify\n"
+            "    run_id: 20260501T000000Z-dddddd\n"
+            "    verdict: pass\n"
+            '    summary: bad "quoted" value\n'
+            "    completed_at: 2026-04-30T00:00:00Z\n"
+        )
+        _write_workflow_with_extra_frontmatter(
+            cwd, wf_id, "fix-and-verify", "commit", "fix",
+            extra_frontmatter=raw_block,
+        )
+        _write_active(cwd, [{"id": wf_id, "type": "fix",
+                             "phase": "fix-and-verify",
+                             "parent": None, "children": []}])
+        rc, out, _ = _run_hook(
+            "session-start.mjs", {"cwd": str(cwd), "source": "compact"}, cwd
+        )
+        assert rc == 0
+        assert wf_id in out
+        assert "ensemble=" not in out
+        assert 'bad "quoted" value' not in out
+
+    def test_shard_legacy_schema_falls_back_to_root(self, tmp_path):
+        """F2: a shard whose schema is unsupported (legacy=1, future>2)
+        must not contribute entries; the selector falls back to root."""
+        cwd = _init_cwd(tmp_path)
+        root_id = "start-20260422T120000Z-aaaa04"
+        shard_id = "deliverable-A"
+        deliverables_block = (
+            "plan:\n"
+            "  deliverables:\n"
+            f"    - id: A\n"
+            f"      shard_path: {shard_id}.md\n"
+            "      status: in_progress\n"
+        )
+        root_entries = [_valid_ensemble_entry(
+            "review", "review", "111111",
+            "root entry", "2026-04-15T00:00:00Z",
+        )]
+        extra = deliverables_block + _ensemble_results_block(root_entries)
+        _write_workflow_with_extra_frontmatter(
+            cwd, root_id, "implement", "build A", "start",
+            extra_frontmatter=extra,
+        )
+        shard_dir = cwd / ".claude" / "omcc-dev" / "workflows" / root_id
+        shard_dir.mkdir(parents=True, exist_ok=True)
+        shard_path = shard_dir / f"{shard_id}.md"
+        shard_entries = [_valid_ensemble_entry(
+            "review", "review", "999999",
+            "shard would have won", "2026-04-30T00:00:00Z",
+        )]
+        er = _ensemble_results_block(shard_entries)
+        fm = (
+            "---\n"
+            "schema: 1\n"  # legacy → reject
+            "shard_type: deliverable\n"
+            f"root_workflow: {root_id}\n"
+            "deliverable_id: A\n"
+            "started_at: 2026-04-22T00:00:00Z\n"
+            "updated_at: 2026-04-22T00:00:00Z\n"
+            "current_phase: review\n"
+            "next_action: review\n"
+            "tasks: []\n"
+            f"{er}"
+            "---\n"
+        )
+        shard_path.write_text(fm + "\n# shard\n")
+        _write_active(cwd, [{"id": root_id, "type": "start",
+                             "phase": "implement",
+                             "parent": None, "children": []}])
+        rc, out, _ = _run_hook(
+            "session-start.mjs", {"cwd": str(cwd), "source": "compact"}, cwd
+        )
+        assert rc == 0
+        assert 'ensemble="root entry"' in out
+        assert "shard would have won" not in out
+
+    def test_corrupt_frontmatter_suppresses_workflow_row(self, tmp_path):
+        """F7 (Issue #100 review round 2): a workflow file whose
+        frontmatter cannot be parsed must NOT produce a SessionStart
+        row. The prior `fields = {}` fallback bypassed the
+        schema/version gate and surfaced stale phase/next from the
+        active registry."""
+        cwd = _init_cwd(tmp_path)
+        wf_id = "fix-20260422T120000Z-aaaa06"
+        (cwd / ".claude" / "omcc-dev" / "workflows" / f"{wf_id}.md").write_text(
+            "no frontmatter at all — not even ---\n"
+        )
+        _write_active(cwd, [{"id": wf_id, "type": "fix",
+                             "phase": "investigate",
+                             "parent": None, "children": []}])
+        rc, out, _ = _run_hook(
+            "session-start.mjs", {"cwd": str(cwd), "source": "compact"}, cwd
+        )
+        assert rc == 0
+        assert wf_id not in out
+
+    def test_shard_root_workflow_mismatch_falls_back_to_root(self, tmp_path):
+        """F2: a shard whose root_workflow does not match the owning
+        workflow id is orphaned/corrupt; do not merge its entries."""
+        cwd = _init_cwd(tmp_path)
+        root_id = "start-20260422T120000Z-aaaa05"
+        other_id = "start-20260422T120000Z-bbbb05"
+        shard_id = "deliverable-A"
+        deliverables_block = (
+            "plan:\n"
+            "  deliverables:\n"
+            f"    - id: A\n"
+            f"      shard_path: {shard_id}.md\n"
+            "      status: in_progress\n"
+        )
+        root_entries = [_valid_ensemble_entry(
+            "review", "review", "111111",
+            "root entry", "2026-04-15T00:00:00Z",
+        )]
+        extra = deliverables_block + _ensemble_results_block(root_entries)
+        _write_workflow_with_extra_frontmatter(
+            cwd, root_id, "implement", "build A", "start",
+            extra_frontmatter=extra,
+        )
+        shard_dir = cwd / ".claude" / "omcc-dev" / "workflows" / root_id
+        shard_dir.mkdir(parents=True, exist_ok=True)
+        shard_path = shard_dir / f"{shard_id}.md"
+        shard_entries = [_valid_ensemble_entry(
+            "review", "review", "999999",
+            "orphan shard entry", "2026-04-30T00:00:00Z",
+        )]
+        er = _ensemble_results_block(shard_entries)
+        fm = (
+            "---\n"
+            "schema: 2\n"
+            "shard_type: deliverable\n"
+            f"root_workflow: {other_id}\n"  # mismatch
+            "deliverable_id: A\n"
+            "started_at: 2026-04-22T00:00:00Z\n"
+            "updated_at: 2026-04-22T00:00:00Z\n"
+            "current_phase: review\n"
+            "next_action: review\n"
+            "tasks: []\n"
+            f"{er}"
+            "---\n"
+        )
+        shard_path.write_text(fm + "\n# shard\n")
+        _write_active(cwd, [{"id": root_id, "type": "start",
+                             "phase": "implement",
+                             "parent": None, "children": []}])
+        rc, out, _ = _run_hook(
+            "session-start.mjs", {"cwd": str(cwd), "source": "compact"}, cwd
+        )
+        assert rc == 0
+        assert 'ensemble="root entry"' in out
+        assert "orphan shard entry" not in out

@@ -274,11 +274,22 @@ ensemble_results: phase=<phase> type=<ensemble_type> run_id=<run_id> verdict=<ve
   summary: <sanitized summary, first 80 chars, ellipsis if longer>
 ```
 
-When multiple entries share the same `(phase, ensemble_type)` (e.g.,
-multiple resolve-loop re-reviews), show them in `completed_at` order
-so the user can read the iteration history. Order is computed only
-across surviving entries; entries with invalid timestamps were
-already skipped above.
+Show all retained valid entries in `completed_at` order so the user
+can read the iteration history (across `(phase, ensemble_type)` pairs
+AND within a pair when re-runs produced multiple entries). Order is
+computed only across surviving entries; entries with invalid
+timestamps were already skipped above. Retention may have evicted
+older entries inside the writer-side mutation per
+`continuity-protocol.md` § ensemble_results semantics § Retention
+cap; the surfaced list is the post-retention state.
+
+Note: the SessionStart hook (`hooks/session-start.mjs`) emits a
+separate `ensemble=` 1-line summary using **latest-overall by
+`completed_at`** — a single row across all `(phase, ensemble_type)`
+pairs. The history view here and SessionStart's latest-summary view
+are intentional siblings, not redundant: the history view supports
+audit/inspection, while SessionStart's suffix is a session-level
+glance.
 
 Empty or absent `ensemble_results:` produces no output. This step is
 informational only — no state mutation. Skipping a malformed entry

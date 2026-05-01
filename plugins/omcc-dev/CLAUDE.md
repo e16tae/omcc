@@ -85,5 +85,7 @@ legacy schema-1 file. Key schema-2 features:
 
 Schema drift is guarded by `tests/test_schema_drift.py` — any
 spec-vs-code divergence (SUPPORTED_SCHEMA_VERSION, TERMINAL_PHASES,
-WORKFLOW_ID_REGEX, SHARD_ID_REGEX, SANITIZE_FIELD_CAPS, Backtick rule
-wording) fails CI.
+WORKFLOW_ID_REGEX, SHARD_ID_REGEX, SANITIZE_FIELD_CAPS (including
+`codex_session_id`), MAX_ENSEMBLE_RESULTS_PER_WORKFLOW, Backtick rule
+wording, SessionStart `ensemble=` suffix shape, sharded SessionStart
+reader rule) fails CI.

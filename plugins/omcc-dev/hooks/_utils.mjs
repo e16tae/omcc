@@ -26,6 +26,16 @@ export const KNOWN_WORKFLOW_TYPES = ["start", "fix", "audit"];
 // offers the user an Import / Archive / Abort choice to migrate them.
 export const SUPPORTED_SCHEMA_VERSION = 2;
 
+// Maximum ensemble_results entries per workflow file (root or shard,
+// scoped independently). On overflow, oldest entries by completed_at
+// are trimmed at synthesize-time inside the same atomicModifyFile
+// mutation that pops pending_ensemble and appends the new result —
+// see continuity-protocol.md § ensemble_results semantics § Retention
+// cap and ensemble-protocol.md § Result Bookkeeping. Pre-retention
+// files exceeding this cap are tolerated by readers and trimmed
+// lazily on the next writer mutation (no migration step).
+export const MAX_ENSEMBLE_RESULTS_PER_WORKFLOW = 20;
+
 // Returns true if the file's schema version is not actively supported
 // (either legacy `schema < SUPPORTED` or future `schema > SUPPORTED`).
 // Writes a one-line stderr diagnostic identifying the workflow and the
@@ -88,6 +98,11 @@ export const SANITIZE_FIELD_CAPS = {
   // not truncate) the entire entry when sanitize() returns null, so
   // the cap acts as the hard maximum sanitized summary length.
   ensemble_summary: 400,
+  // ensemble_results[].codex_session_id cap (opaque correlation id).
+  // Used by sanitizeOpaqueId() with reject-on-overflow rather than
+  // silent truncation — opaque ids must round-trip exactly to be
+  // useful as handles into Codex's own job log.
+  codex_session_id: 128,
 };
 
 export function sanitizeField(name, value) {
@@ -95,6 +110,67 @@ export function sanitizeField(name, value) {
     ? SANITIZE_FIELD_CAPS[name]
     : SANITIZE_CAP;
   return sanitize(value, cap);
+}
+
+// Sanitize an opaque correlation id (e.g., codex_session_id). Differs
+// from sanitize() in two key ways:
+//   - non-string input -> null (not "")
+//   - length-overflow  -> null (not silently truncated)
+// Backtick and control-char handling match sanitize() — backtick
+// returns null; control characters are stripped.
+//
+// Use for fields whose referential identity is destroyed by silent
+// truncation; opaque ids must round-trip exactly. See
+// continuity-protocol.md § ensemble_results semantics for the
+// canonical caller (resume Step 5c reader, SessionStart selector).
+export function sanitizeOpaqueId(value, cap = SANITIZE_FIELD_CAPS.codex_session_id) {
+  if (typeof value !== "string") return null;
+  if (value.includes("`")) return null;
+  // Reject (do not strip) on control characters, matching
+  // commands/resume.md Step 5c which lists "control characters" as a
+  // rejection trigger for codex_session_id (non-string-strip semantics
+  // would silently mutate the opaque id, contradicting "round-trip
+  // exactly").
+  if (/[\x00-\x08\x0b-\x1f\x7f]/.test(value)) return null;
+  if (value.length > cap) return null;
+  return value;
+}
+
+// Enforce MAX_ENSEMBLE_RESULTS_PER_WORKFLOW retention cap by trimming
+// oldest entries by completed_at desc until the list size is at most the
+// cap. Sort key: parsed completed_at as Unix epoch ms; entries with
+// invalid ISO-8601 or future completed_at sort as oldest (-Infinity),
+// matching the writer-side timestamp policy in continuity-protocol.md
+// § ensemble_results semantics. Tie-break: stable on entry source order
+// (Array.prototype.sort is stable in V8 since Node 12).
+//
+// Pure function; no side effects. Used at synthesize-time inside the
+// atomicModifyFile mutation that pops pending_ensemble and appends the
+// new result — see ensemble-protocol.md § Result Bookkeeping for the
+// three-step mutation contract.
+export function pruneEnsembleResults(entries) {
+  if (!Array.isArray(entries)) return [];
+  if (entries.length <= MAX_ENSEMBLE_RESULTS_PER_WORKFLOW) {
+    return entries.slice();
+  }
+  const now = Date.now();
+  const keyed = entries.map((entry, idx) => {
+    let key = -Infinity;
+    if (entry && typeof entry.completed_at === "string") {
+      const parsed = Date.parse(entry.completed_at);
+      if (Number.isFinite(parsed) && parsed <= now) {
+        key = parsed;
+      }
+    }
+    return { entry, idx, key };
+  });
+  keyed.sort((a, b) => {
+    if (b.key !== a.key) return b.key - a.key;
+    return a.idx - b.idx;
+  });
+  return keyed
+    .slice(0, MAX_ENSEMBLE_RESULTS_PER_WORKFLOW)
+    .map((o) => o.entry);
 }
 
 export function isValidWorkflowId(id) {
@@ -288,6 +364,112 @@ export function parseNestedList(fmBody, topKey, innerListKeys = []) {
     }
     if (val === "null" || val === "") val = null;
     current[key] = val;
+  }
+  if (current) entries.push(current);
+  return entries;
+}
+
+// Parse the ensemble_results: list-of-maps from a workflow file's
+// frontmatter body. Each entry begins with `  - phase: <value>` and
+// continues with `    <key>: <value>` lines until the next entry or
+// the next non-indented line. Returns
+// Array<{phase, ensemble_type, run_id, verdict, summary,
+//        completed_at, codex_session_id?}>.
+//
+// Null-safe: accepts non-string fmBody and returns []. Does NOT
+// validate field values — only parses scalar key:value pairs.
+// Validation (enum subsets, ISO-8601 parse, run-id regex, sanitize +
+// LF/CR + backtick rules, sanitizeOpaqueId for codex_session_id) is
+// the call site's responsibility per ensemble-protocol.md § Result
+// Bookkeeping reader-side rules. Skips lines that do not match the
+// `- phase:` entry-marker or scalar `key: value` shapes.
+//
+// Used by SessionStart's latest-ensemble selector and by /resume Step
+// 5c's history view.
+export function parseEnsembleResults(fmBody) {
+  if (typeof fmBody !== "string") return [];
+  const m = fmBody.match(/(?:^|\n)ensemble_results:\s*(?:\n([\s\S]*))?$/);
+  if (!m || !m[1]) return [];
+  const entries = [];
+  let current = null;
+  for (const line of m[1].split("\n")) {
+    if (/^\S/.test(line) || line.trim() === "---") break;
+    const phaseLine = line.match(/^\s*-\s*phase:\s*(\S+)/);
+    if (phaseLine) {
+      if (current) entries.push(current);
+      current = { phase: phaseLine[1] };
+      continue;
+    }
+    if (!current) continue;
+    const kv = line.match(/^\s+([a-zA-Z_][a-zA-Z0-9_]*):\s*(.*)$/);
+    if (!kv) continue;
+    let val = kv[2].trim();
+    val = val.replace(/^"(.*)"$/, "$1").replace(/^'(.*)'$/, "$1");
+    current[kv[1]] = val;
+  }
+  if (current) entries.push(current);
+  return entries;
+}
+
+// Parse the plan.deliverables[] list-of-maps from a root workflow's
+// frontmatter body. Entries are nested under `plan:` -> `deliverables:`
+// and each begins with `    - id: <value>`. Continuation lines have
+// 6+ space indent. Returns Array<{id, shard_path?, status?, phase?,
+// next_action?}>.
+//
+// Null-safe: accepts non-string fmBody and returns [].
+//
+// Used by SessionStart to discover the active shard for sharded /start
+// workflows per continuity-protocol.md § Hook Responsibilities §
+// SessionStart sharded reader rule. Skips malformed entries (those
+// without an `- id:` leading line).
+export function parseDeliverables(fmBody) {
+  if (typeof fmBody !== "string") return [];
+  const planMatch = fmBody.match(
+    /(?:^|\n)plan:\s*\n([\s\S]*?)(?=\n[A-Za-z_]|\n---|$)/
+  );
+  if (!planMatch) return [];
+  const planBody = planMatch[1];
+  const m = planBody.match(/^\s*deliverables:\s*\n([\s\S]*)$/m);
+  if (!m) return [];
+  const entries = [];
+  let current = null;
+  // Lock onto the indent of the FIRST top-level `- id:` entry — only
+  // dashed lines at that exact indent are treated as new deliverable
+  // entries. Nested dash-prefixed lists under a deliverable (e.g.,
+  // `tasks: \n        - id: task-1`) appear at deeper indent and
+  // must NOT be re-interpreted as deliverables, otherwise their
+  // status field would falsely promote them into pickActiveShard.
+  let baseDashIndent = null;
+  let scalarIndent = null;
+  for (const line of m[1].split("\n")) {
+    if (line.trim() === "---") break;
+    if (/^\s{0,3}\S/.test(line)) break;
+    const dashIdLine = line.match(/^(\s*)-\s*id:\s*(\S+)/);
+    if (dashIdLine) {
+      const indent = dashIdLine[1].length;
+      if (baseDashIndent === null) baseDashIndent = indent;
+      if (indent === baseDashIndent) {
+        if (current) entries.push(current);
+        current = { id: dashIdLine[2] };
+        scalarIndent = indent + 2;
+        continue;
+      }
+      // Deeper indent → nested list under the current deliverable;
+      // skip without altering `current`.
+      continue;
+    }
+    if (!current) continue;
+    const kv = line.match(/^(\s+)([a-zA-Z_][a-zA-Z0-9_]*):\s*(.*)$/);
+    if (!kv) continue;
+    // Only accept scalar continuation at the deliverable's indent
+    // level (one step deeper than the dash). Lines deeper than that
+    // are part of a nested map/list and must not overwrite
+    // `current`'s scalar fields.
+    if (kv[1].length !== scalarIndent) continue;
+    let val = kv[3].trim();
+    val = val.replace(/^"(.*)"$/, "$1").replace(/^'(.*)'$/, "$1");
+    current[kv[2]] = val;
   }
   if (current) entries.push(current);
   return entries;
