@@ -380,9 +380,34 @@ must produce a distinguishable identity.
   (see `ensemble-protocol.md` § Result Bookkeeping).
 - The composite identity `(phase, ensemble_type, run_id)` allows
   re-runs (Plan Adjustment, fix-and-verify retry, re-review) to
-  append a new entry rather than overwrite history. Readers display
-  the latest entry per `(phase, ensemble_type)` by `completed_at`
-  while preserving full history for audit.
+  append a new entry rather than overwrite history. Readers surface
+  the entries according to two distinct contexts: (a) the **history
+  view** (`commands/resume.md` Step 5c) shows all retained valid
+  entries in `completed_at` order so users can read the iteration
+  history per `(phase, ensemble_type)`; (b) the **latest summary**
+  view (SessionStart's `ensemble=` suffix per § Hook Responsibilities
+  § SessionStart) shows latest-overall by `completed_at` — a single
+  row across all `(phase, ensemble_type)` pairs. Retention applies
+  to both views (readers see only retained entries).
+- **Retention cap**: `ensemble_results` retains at most
+  `MAX_ENSEMBLE_RESULTS_PER_WORKFLOW = 20` entries per workflow
+  file (root or shard, scoped independently — a sharded `/start`
+  with three deliverables can hold up to 20 entries on the root and
+  20 on each shard, not 20 in aggregate). On overflow, oldest
+  entries by `completed_at` are trimmed inside the same atomic
+  mutation that appends the new entry — this is the third step in
+  the single `atomicModifyFile` invocation per
+  `ensemble-protocol.md` § Result Bookkeeping (after pop pending +
+  append result). Pre-retention files exceeding the cap are
+  tolerated by readers (read-only) and trimmed lazily on the next
+  writer mutation; there is no migration step.
+
+  Algorithm (writer-side, applied during the same atomic mutation):
+  sort entries by `completed_at` desc; entries with invalid ISO-8601
+  or future `completed_at` sort as oldest (treated as `-Infinity`);
+  slice to `MAX_ENSEMBLE_RESULTS_PER_WORKFLOW`. The trim is one-step
+  — a pre-retention 50-row file becomes exactly 20 rows on the next
+  writer mutation, not gradual eviction.
 - The pending-remove and result-write steps MUST happen in a single
   `atomicModifyFile` mutation per `ensemble-protocol.md` § Result
   Bookkeeping. This closes the crash window where `pending_ensemble`
@@ -397,6 +422,18 @@ must produce a distinguishable identity.
 - `completed_at` that fails ISO-8601 parsing or is in the future is
   treated as **absent** — the entry is dropped, matching the
   `latest_checkpoint` precedent.
+- **`codex_session_id` policy**: when present, the value is sanitized
+  via `sanitizeOpaqueId` (`hooks/_utils.mjs`) using the
+  `SANITIZE_FIELD_CAPS.codex_session_id = 128` cap. Unlike
+  `ensemble_summary`, both length-overflow AND control-char presence
+  REJECT (return null) rather than being silently
+  stripped/truncated — opaque correlation ids must round-trip exactly
+  to remain useful as handles into Codex's own job log. Backticks
+  reject as well, matching `sanitize()`. On rejection, the entire
+  entry is dropped (the field is optional per the schema, but a
+  rejected value indicates upstream corruption — preserving the
+  remainder of the entry could leak a partially-mangled correlation
+  surface into a reader that then mismatches against Codex's job log).
 - Schema delta: `ensemble_results` is a **schema-2 minor addition**
   (new optional field, backward compatible per § Schema evolution
   rules below). `SUPPORTED_SCHEMA_VERSION` (and the `schema:`
@@ -869,9 +906,25 @@ invoke other git subcommands such as `check-ignore` during Phase 0):
   ```
   Active omcc-dev workflow(s):
   - <id> (<type>) phase=<current_phase> next="<next_action>"
+  - <id> (<type>) phase=<current_phase> next="<next_action>" checkpoint="<summary>"
+  - <id> (<type>) phase=<current_phase> next="<next_action>" ensemble="<latest summary>"
+  - <id> (<type>) phase=<current_phase> next="<next_action>" checkpoint="<summary>" ensemble="<latest summary>"
   ... one line per active workflow ...
   If this hook did not fire, run /omcc-dev:resume for full rehydration.
   ```
+
+  Per-workflow lines follow a 4-state matrix `(checkpoint?, ensemble?)`:
+  the bare `phase= next=` line is emitted always; `checkpoint=` is
+  appended when `latest_checkpoint.summary` is present and survives
+  sanitization; `ensemble=` is appended when the workflow's latest
+  valid `ensemble_results` entry survives the `commands/resume.md`
+  Step 5c validation gauntlet AND
+  `sanitizeField("ensemble_summary", entry.summary)` returns a
+  non-null value. Suffix order is fixed:
+  `phase= next= checkpoint= ensemble=` (omitted suffixes leave no
+  placeholder). For sharded `/start` workflows the ensemble selector
+  reads root + active-shard `ensemble_results` per the sharded
+  reader rule below.
 
   When zero active workflows: **no output** (silent exit 0). SessionStart
   fires on every compaction, so the silent path is the common case.
@@ -879,17 +932,50 @@ invoke other git subcommands such as `check-ignore` during Phase 0):
 - **Frontmatter sanitization** (applied to every string value before
   injection): length cap (see `SANITIZE_FIELD_CAPS` in `hooks/_utils.mjs`
   — phase=64, next_action=120, type=16, checkpoint_summary=200,
-  ensemble_summary=400; default SANITIZE_CAP=512 for unregistered field
-  names), strip control characters (`\x00-\x08`, `\x0b-\x1f`, `\x7f`).
-- **Backtick rule**: if any sanitized value in an entry contains a
-  backtick (U+0060), that entire entry is rejected (skipped from the
-  output) and a one-line stderr diagnostic names the workflow id and
-  field. Rationale: backtick-quoted content in a summary that later
-  lands in Claude's context is a prompt-injection surface; the
-  conservative posture is to drop the row rather than emit a stripped
-  fragment. When every surviving entry is dropped this way, the hook
-  emits a one-line stderr summary "N entries skipped" and exits with
-  no stdout (matches the silent-no-workflows path).
+  ensemble_summary=400, codex_session_id=128 (reject-on-overflow);
+  default SANITIZE_CAP=512 for unregistered field names), strip
+  control characters (`\x00-\x08`, `\x0b-\x1f`, `\x7f`).
+- **Backtick rule**: if any of the four identity-bearing sanitized
+  values in an entry — `phase`, `next_action`, `type`,
+  `checkpoint_summary` — contains a backtick (U+0060), that entire
+  entry is rejected (skipped from the output) and a one-line stderr
+  diagnostic names the workflow id and field. Rationale:
+  backtick-quoted content in a summary that later lands in Claude's
+  context is a prompt-injection surface; the conservative posture
+  is to drop the row rather than emit a stripped fragment. When
+  every surviving entry is dropped this way, the hook emits a
+  one-line stderr summary "N entries skipped" and exits with no
+  stdout (matches the silent-no-workflows path).
+
+  **Carve-out for `ensemble_summary`** (Issue #100, criterion #5):
+  the new optional `ensemble=` suffix follows a **suffix-only drop
+  rule**, NOT the whole-row drop above. If
+  `sanitizeField("ensemble_summary", ...)` returns null on the
+  latest valid `ensemble_results` entry's summary, OR if the entry
+  fails the resume Step 5c validation gauntlet, the `ensemble=`
+  suffix is omitted from that workflow's line — but the base row
+  (with `phase=`, `next=`, and any valid `checkpoint=`) is still
+  emitted. No stderr diagnostic is emitted for the suffix-only
+  drop (silent degrade), since the ensemble row is informational
+  and a malformed entry should not surface as a user-visible error
+  every session. The carve-out diverges from the whole-row rule
+  because the ensemble suffix does not carry the workflow's
+  identity-bearing fields (the four above do).
+- **Sharded `/start` reader rule**: When an active workflow's root
+  frontmatter contains a `plan.deliverables[]` block (deliverable
+  mode), the SessionStart selector for the `ensemble=` suffix reads
+  ensemble entries from BOTH the root file AND the **active shard**
+  (the deliverable whose `status` is `in_progress`; if none is
+  `in_progress`, the first `pending`; if all are `completed` or
+  `archived`, no shard is active and the selector falls back to
+  root-only). Entries are merged chronologically by `completed_at`
+  desc; ties between root and shard are broken **root-first**
+  (deterministic source order). This mirrors `commands/resume.md`
+  Step 5c's root+shard merge precedent so SessionStart and `/resume`
+  show consistent latest-ensemble views. For non-sharded `/start`
+  (single-pass mode) and `/fix`, the selector reads only the flat
+  workflow file; this rule applies only when `plan.deliverables[]`
+  is present.
 - **Body content is NOT injected** via SessionStart.
 
 ### PreCompact (no matcher)

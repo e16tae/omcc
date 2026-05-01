@@ -284,10 +284,13 @@ Then follow the parallel-review skill's command-invoked mode (`skills/parallel-r
 After Synthesize for the parallel-review skill's Codex result, the
 command (not the skill — see `skills/parallel-review/SKILL.md`
 ownership note) writes `ensemble_results` per `ensemble-protocol.md`
-§Result Bookkeeping in a single atomic mutation that also clears the
-matching `pending_ensemble` row. `phase: review`,
-`ensemble_type: review`, `run_id` per `continuity-protocol.md`
-§Run-id format.
+§Result Bookkeeping in a single three-step atomic mutation:
+(1) clear the matching `pending_ensemble` row; (2) append the new
+`ensemble_results` entry; (3) invoke `pruneEnsembleResults(entries)`
+from `hooks/_utils.mjs` to enforce the retention cap per
+`continuity-protocol.md` §ensemble_results semantics §Retention cap.
+`phase: review`, `ensemble_type: review`, `run_id` per
+`continuity-protocol.md` §Run-id format.
 
 ### Phase 5b: Cross-deliverable Final Review (deliverable mode only)
 
@@ -302,9 +305,11 @@ After all deliverables are committed, review the entire branch:
 4. If findings exist, resolve via Phase 6
 
 The Phase 5b Codex review is also recorded to `ensemble_results` per
-`ensemble-protocol.md` §Result Bookkeeping. `phase: review`,
-`ensemble_type: review`, with a fresh `run_id` so it does not collide
-with the Phase 5 entry.
+`ensemble-protocol.md` §Result Bookkeeping (three-step atomic
+mutation: pop pending → append result → `pruneEnsembleResults`).
+`phase: review`, `ensemble_type: review`, with a fresh `run_id` so
+it does not collide with the Phase 5 entry. 5b writes to the **root**
+file (no shard is "active" at branch-wide review).
 
 ---
 
@@ -329,11 +334,14 @@ After all findings are addressed:
 4. Synthesize Claude + Codex results
 
 The Phase 6 re-review Codex result is recorded to `ensemble_results`
-per `ensemble-protocol.md` §Result Bookkeeping. `phase: resolve`,
-`ensemble_type: review`, with a fresh `run_id` per re-review pass.
-Multiple resolve loops produce multiple `(phase=resolve,
-ensemble_type=review)` entries that differ by `run_id` and
-`completed_at`.
+per `ensemble-protocol.md` §Result Bookkeeping (three-step atomic
+mutation: pop pending → append result → `pruneEnsembleResults`).
+`phase: resolve`, `ensemble_type: review`, with a fresh `run_id` per
+re-review pass. Multiple resolve loops produce multiple
+`(phase=resolve, ensemble_type=review)` entries that differ by
+`run_id` and `completed_at`. The retention cap may evict the oldest
+entries across `(phase, ensemble_type)` pairs as the list grows past
+`MAX_ENSEMBLE_RESULTS_PER_WORKFLOW`.
 
 ### Step 3: Converge
 

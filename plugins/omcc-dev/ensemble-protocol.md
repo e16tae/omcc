@@ -155,19 +155,37 @@ verdict comes from Step 3.)
   records the synthesis verdict (`pass | concerns | conflict`), a
   sanitized summary (`SANITIZE_FIELD_CAPS.ensemble_summary` cap),
   the completion timestamp, and an optional `codex_session_id`.
-- The remove-pending and write-result steps MUST be a single atomic
-  mutation (one `atomicModifyFile` invocation that updates
-  `pending_ensemble` and `ensemble_results` together). Splitting the
+- The remove-pending, append-result, and retention-prune steps
+  MUST be a single atomic mutation (one `atomicModifyFile`
+  invocation that updates `pending_ensemble` and `ensemble_results`
+  together). The mutation performs three logical edits in this
+  order: (1) remove the matching `pending_ensemble` entry by
+  `(job_id, ensemble_type, run_id)`; (2) append the new
+  `ensemble_results` entry; (3) call
+  `pruneEnsembleResults(entries)` to enforce the cap (see
+  `continuity-protocol.md` § ensemble_results semantics § Retention
+  cap for the algorithm; `_utils.mjs`
+  `MAX_ENSEMBLE_RESULTS_PER_WORKFLOW` is the single source of truth
+  for the constant value, the spec text reflects it). Splitting the
   mutation risks a crash window in which `pending_ensemble` is
   cleared but no `ensemble_results` row exists — the originating
-  phase would then have no recoverable trace of the run on resume.
+  phase would then have no recoverable trace of the run on resume —
+  or, if prune ran outside the same `atomicModifyFile`, would leave
+  the list above the retention ceiling for an indeterminate window
+  (a writer crash between append and prune leaves the file in a
+  state no reader contract describes).
 - **Supersede policy**: if a phase is re-executed (Plan Adjustment
   case 2 in `commands/start.md`, fix-and-verify retry, etc.), the
   re-run produces a new entry with the same `(phase, ensemble_type)`
   but a NEW `run_id`. Entries are never overwritten in place; the
-  list grows and readers (e.g., `commands/resume.md`) display the
-  latest by `completed_at` per `(phase, ensemble_type)` while
-  preserving full history.
+  list grows (subject to `MAX_ENSEMBLE_RESULTS_PER_WORKFLOW`
+  retention) and readers surface them per their context: history
+  views (e.g., `commands/resume.md` Step 5c) show all retained valid
+  entries in `completed_at` order so users read the iteration history
+  per `(phase, ensemble_type)`; the SessionStart `ensemble=` suffix
+  shows latest-overall by `completed_at`. Retention enforces the
+  cap at write-time per `continuity-protocol.md` § ensemble_results
+  semantics § Retention cap; readers see only retained entries.
 - **Sanitize / scrub / normalize policy** (writer-side, applied
   in this order before persisting):
   1. `scrubSecrets(summary)` — apply the canonical secrets-hygiene
