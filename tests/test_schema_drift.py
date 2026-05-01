@@ -406,3 +406,36 @@ def test_max_ensemble_results_per_workflow_matches_spec():
     assert spec_cap == code_cap, (
         f"retention cap drift: spec={spec_cap} code={code_cap}"
     )
+
+
+def test_base_synthesis_categories_in_protocol():
+    """The omcc-dev base synthesis taxonomy at ensemble-protocol.md is
+    the single canonical declaration that omcc-research and
+    omcc-designer extension protocols cite as the base via the
+    plugin-local *Extension Contract*. The four base names —
+    AGREED, CLAUDE-ONLY, CODEX-ONLY, CONFLICT — are schema-stable:
+    a silent rename or removal would orphan every extension's prose
+    reference. This guard asserts all four names appear as table rows
+    under the ensemble-protocol.md '#### Base Synthesis Categories'
+    section.
+    """
+    proto = _read(ENSEMBLE)
+    section = re.search(
+        r"\n#### Base Synthesis Categories\s*\n([\s\S]*?)(?=\n##|\Z)",
+        proto,
+    )
+    assert section, (
+        "could not find '#### Base Synthesis Categories' section in "
+        "ensemble-protocol.md — base taxonomy authority site is missing"
+    )
+    body = section.group(1)
+    expected = {"AGREED", "CLAUDE-ONLY", "CODEX-ONLY", "CONFLICT"}
+    found = {
+        name
+        for name in expected
+        if re.search(rf"^\|\s*{re.escape(name)}\b", body, re.MULTILINE)
+    }
+    assert found == expected, (
+        f"base synthesis category drift: expected {expected} as table "
+        f"rows under '#### Base Synthesis Categories', found {found}"
+    )

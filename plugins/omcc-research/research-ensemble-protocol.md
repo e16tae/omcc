@@ -304,8 +304,25 @@ normalized claims into the brief's Findings and Sources sections.
 
 ## Synthesis Categories
 
-Every claim from either model classifies into one of four categories
-during reconciliation:
+This plugin registers **sub-rule extensions** under the omcc-dev base
+synthesis taxonomy per the omcc-dev *Extension Contract* (Shape 1 —
+sub-rule extension). The category table below mirrors the four base
+names — `AGREED`, `CLAUDE-ONLY`, `CODEX-ONLY`, `CONFLICT` — with
+identical core semantics. The handling subsections that follow
+register research-local qualifiers under those names:
+
+- *AGREED handling* registers the **Source Union** sub-rule
+  (different sources, same conclusion) and a confidence-tier
+  resolution rule for same-conclusion / different-confidence cases.
+- *CODEX-ONLY handling* registers the **Path A / Path B / forbidden
+  Path C** sub-rule — citation-discipline scoping that the research
+  brief audit imposes on Codex-discovered claims.
+- *CONFLICT handling* registers a delegate to the research SKILL's
+  Conflict Handling rule and the brief spec's canonical wording.
+
+Base category names and core conditions are not modified, renamed, or
+removed by these extensions. Every claim from either model classifies
+into one of four categories during reconciliation:
 
 | Category     | Condition                                        |
 |--------------|--------------------------------------------------|
