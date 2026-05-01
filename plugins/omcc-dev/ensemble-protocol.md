@@ -112,6 +112,12 @@ hold and lets `/omcc-dev:resume` recover correctly across compaction.
   preflight guard rejected codex-companion), no entry is written.
 - After Step 2 Collect completes (success, failure, or graceful
   degradation), remove the entry by `job_id`.
+- **Exception** for the in-scope automatic `/start` and `/fix`
+  ensembles covered by Result Bookkeeping below: the pending-remove
+  is deferred until after Step 3 Synthesize so the remove and the
+  matching `ensemble_results` append happen in a single atomic
+  mutation. Out-of-scope ensembles (`audit-scan`, `codex-now`)
+  follow the unconditional rule above and remove pending at Step 2.
 
 Consumer commands (`commands/audit.md`, `commands/fix.md`, etc.) and
 skill files MUST NOT redefine these rules; they cross-reference this
@@ -121,6 +127,82 @@ Stale entries left over by an interrupted session are cleared by
 `commands/resume.md` Step 5b before phase rehydration — Bash background
 task ids do not survive across sessions, so the recorded handle becomes
 uncollectable and the originating phase re-executes the launch on resume.
+
+### Result Bookkeeping (mandatory)
+
+Applies to **automatic phase ensembles in `/start` and `/fix` only**.
+Excluded by design:
+
+- `/omcc-dev:codex-now` — user-initiated ad-hoc consultation; result
+  stays in-conversation only.
+- `/audit` audit-scan — audit results land in `findings` (the
+  audit-specific result store at `continuity-protocol.md`
+  Workflow-type-specific frontmatter for `/audit`), not in
+  `ensemble_results`. This excludes both the Phase 2 MEDIUM/HIGH
+  parallel scan and the Phase 4 LOW-affinity deferred scan.
+
+After Step 3 Synthesize produces the `verdict` and `summary` for an
+in-scope ensemble point, the orchestrator MUST persist a summary
+entry to the workflow file's `ensemble_results` field per
+`continuity-protocol.md` `ensemble_results` schema. This makes the
+ensemble's contribution durable across session compaction and
+`/omcc-dev:resume` rehydration. (Step 2 Collect alone does not
+produce a verdict — only the raw Codex output; the synthesized
+verdict comes from Step 3.)
+
+- `ensemble_results` entries follow the list-of-maps shape with the
+  composite identity `(phase, ensemble_type, run_id)`. Each entry
+  records the synthesis verdict (`pass | concerns | conflict`), a
+  sanitized summary (`SANITIZE_FIELD_CAPS.ensemble_summary` cap),
+  the completion timestamp, and an optional `codex_session_id`.
+- The remove-pending and write-result steps MUST be a single atomic
+  mutation (one `atomicModifyFile` invocation that updates
+  `pending_ensemble` and `ensemble_results` together). Splitting the
+  mutation risks a crash window in which `pending_ensemble` is
+  cleared but no `ensemble_results` row exists — the originating
+  phase would then have no recoverable trace of the run on resume.
+- **Supersede policy**: if a phase is re-executed (Plan Adjustment
+  case 2 in `commands/start.md`, fix-and-verify retry, etc.), the
+  re-run produces a new entry with the same `(phase, ensemble_type)`
+  but a NEW `run_id`. Entries are never overwritten in place; the
+  list grows and readers (e.g., `commands/resume.md`) display the
+  latest by `completed_at` per `(phase, ensemble_type)` while
+  preserving full history.
+- **Sanitize / scrub / normalize policy** (writer-side, applied
+  in this order before persisting):
+  1. `scrubSecrets(summary)` — apply the canonical secrets-hygiene
+     scrub patterns (`hooks/_utils.mjs` `scrubSecrets`) to redact
+     `Authorization: Bearer …`, `api_key=…`, and similar
+     credentials that Codex may have quoted from logs or code.
+  2. `sanitizeField("ensemble_summary", scrubbed)` — strip control
+     characters and apply the 400-char cap.
+  3. **Reject LF/CR**: if the sanitized result contains LF
+     (`\x0a`) or CR (`\x0d`), drop the entire entry. `sanitize()`
+     intentionally preserves newlines as legitimate text, but
+     `ensemble_results.summary` is a single-line field by contract
+     — `/resume` Step 5c rejects multiline summaries to prevent
+     prompt injection, so writers MUST NOT emit them.
+  4. **Reject backticks**: `sanitize()` returns `null` on backticks
+     per the canonical rule, matching the `commands/checkpoint.md`
+     precedent. The entire entry is dropped with a one-line
+     stderr warning.
+  Codex degradation / failure cases write `verdict: conflict` with
+  the failure reason in `summary` only if it survives the four
+  steps above; otherwise no entry is written.
+- **Timestamp policy**: a `completed_at` that fails ISO-8601 parsing
+  or is in the future is treated as **absent** rather than as an
+  error, per the `latest_checkpoint` precedent in
+  `continuity-protocol.md`. The entry is dropped in this case.
+- `codex-now` and `audit-scan` results are NOT persisted to
+  `ensemble_results` — only automatic `/start` and `/fix` phase
+  ensembles are. `codex-now` and `audit-scan` are still tracked in
+  `pending_ensemble` for in-flight job recovery, but their synthesized
+  results land in conversation (`codex-now`) or in `findings`
+  (`audit-scan`).
+
+Consumer commands and skill files MUST NOT redefine the Result
+Bookkeeping rules; they cross-reference this section as the single
+source of truth, in the same way they do for State Bookkeeping.
 
 ---
 

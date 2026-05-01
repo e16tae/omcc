@@ -88,6 +88,15 @@ updated_at: <ISO 8601 UTC, Z suffix>
 current_phase: <per workflow_type phase enum>   # inherits the owning root's type
 next_action: <short imperative sentence>
 tasks: []                                  # empty at shard bootstrap
+ensemble_results: []                       # optional; same schema as the root's
+                                           # ensemble_results list. Used when the
+                                           # owning root is workflow_type=start
+                                           # and a per-deliverable ensemble runs
+                                           # at Phase 5 (Review) or Phase 6
+                                           # (Resolve re-review). Out-of-scope:
+                                           # Phase 5b cross-deliverable review
+                                           # is rooted; it writes to the root,
+                                           # not a shard.
 ---
 ```
 
@@ -304,6 +313,14 @@ plan:                                  # after Phase 3 Plan approved
     - id: A
       status: pending | in_progress | completed
       tasks: [...]
+ensemble_results:                      # appended after each automatic ensemble Collect+Synthesize
+  - phase: brainstorm | explore | plan | review | resolve
+    ensemble_type: brainstorm | explore | plan-verify | review
+    run_id: <workflow-durable token, see Run-id format below>
+    verdict: pass | concerns | conflict
+    summary: <sanitized; SANITIZE_FIELD_CAPS.ensemble_summary cap>
+    completed_at: <ISO 8601 UTC, Z suffix>
+    codex_session_id: <opaque string, optional>
 ```
 
 **`/fix`** (populated progressively):
@@ -322,7 +339,76 @@ failing_test:                          # after Phase 2
 similar_pattern_grep:                  # after Phase 3 similar-pattern search
   pattern: <regex or literal>
   matches: [<file:line>, ...]
+ensemble_results:                      # appended after each automatic ensemble Collect+Synthesize
+  - phase: investigate | fix-and-verify
+    ensemble_type: investigate | fix-verify
+    run_id: <workflow-durable token, see Run-id format below>
+    verdict: pass | concerns | conflict
+    summary: <sanitized; SANITIZE_FIELD_CAPS.ensemble_summary cap>
+    completed_at: <ISO 8601 UTC, Z suffix>
+    codex_session_id: <opaque string, optional>
 ```
+
+**Run-id format**:
+`^[0-9]{8}T[0-9]{6}Z-[0-9a-f]{6}$` — ISO 8601 UTC compact timestamp
+plus 6 lowercase hex suffix, identical shape to the workflow-id
+timestamp+shortid component. Generated at Synthesize-time by the
+writer (`run_id = ${ISO_compact_now}-${random_hex_6}`). Bash
+background job ids are NOT used because they are session-local and
+collide across sessions; a re-run in a later Claude Code session
+must produce a distinguishable identity.
+
+**`ensemble_results` semantics** (apply to `/start` root, `/fix`, and `/start` shards):
+
+- **Write target** (deliverable-mode `/start`):
+  - Phase 1/2/3 ensembles → **root** (root-scoped phases).
+  - Per-deliverable Phase 5 review and Phase 6 resolve-re-review
+    (within an active shard, before 5b) → **active shard**
+    (`workflows/<root_id>/<shard_id>.md`).
+  - Phase 5b cross-deliverable final review → **root** (5b
+    evaluates the entire branch; no shard is "active" anymore).
+  - Phase 6 resolve-re-review **after** Phase 5b → **root**
+    (the re-review is branch-wide, all shards are completed; the
+    root is the only valid write target so the iteration history
+    is not lost or misfiled to a completed deliverable).
+
+  Single-pass `/start` (no shards) and `/fix` always write to the
+  flat workflow file.
+- The list captures every automatic-phase ensemble run on a workflow.
+  `codex-now` results are NOT recorded here — they are user-initiated
+  ad-hoc consultations whose synthesis stays in-conversation only
+  (see `ensemble-protocol.md` § Result Bookkeeping).
+- The composite identity `(phase, ensemble_type, run_id)` allows
+  re-runs (Plan Adjustment, fix-and-verify retry, re-review) to
+  append a new entry rather than overwrite history. Readers display
+  the latest entry per `(phase, ensemble_type)` by `completed_at`
+  while preserving full history for audit.
+- The pending-remove and result-write steps MUST happen in a single
+  `atomicModifyFile` mutation per `ensemble-protocol.md` § Result
+  Bookkeeping. This closes the crash window where `pending_ensemble`
+  is cleared but no `ensemble_results` row exists.
+- `summary` is processed writer-side in this exact order (see
+  `ensemble-protocol.md` § Result Bookkeeping for the canonical
+  recipe): (1) `scrubSecrets`; (2) `sanitizeField("ensemble_summary", ...)`;
+  (3) reject if LF/CR present; (4) reject if backtick-containing
+  (sanitize returns null). The entire entry is dropped on any
+  rejection with a one-line stderr warning, matching the
+  `commands/checkpoint.md` precedent.
+- `completed_at` that fails ISO-8601 parsing or is in the future is
+  treated as **absent** — the entry is dropped, matching the
+  `latest_checkpoint` precedent.
+- Schema delta: `ensemble_results` is a **schema-2 minor addition**
+  (new optional field, backward compatible per § Schema evolution
+  rules below). `SUPPORTED_SCHEMA_VERSION` (and the `schema:`
+  frontmatter integer) remain `2`. Pre-`ensemble_results` workflows
+  remain valid; readers MUST treat the field as optional.
+- Existing precedent: an archive workflow recorded a `fix-verify`
+  result inline before this schema landed (filename omitted to keep
+  cross-tree refs prose-only per the plugin-structure backtick test
+  guard). That single-key shape is retroactively valid as the
+  `(phase=fix-and-verify, ensemble_type=fix-verify, run_id=<inferred>)`
+  projection of the list shape; new writes use the canonical
+  list-of-maps form above.
 
 **`/audit`** (populated progressively):
 
@@ -497,7 +583,7 @@ frontmatter (atomic full-file replace, not append).
 | 6 | Convergence | body: findings resolution; `current_phase="resolve"` |
 | 7 | Commit complete | `current_phase="commit-complete"`, `next_action="archive"` |
 | 1/2/3/5/6 | Ensemble dispatch | `pending_ensemble` append per `ensemble-protocol.md` §State Bookkeeping (any of brainstorm / explore / plan-verify / review / re-review launch sites) |
-| 1/2/3/5/6 | Ensemble collected | `pending_ensemble` remove per `ensemble-protocol.md` §State Bookkeeping |
+| 1/2/3/5/6 | Ensemble collected | `pending_ensemble` remove AND `ensemble_results` append per `ensemble-protocol.md` §State Bookkeeping + §Result Bookkeeping (single atomic mutation; excludes `codex-now`) |
 
 ### `/fix` (4 phases)
 
@@ -506,10 +592,12 @@ frontmatter (atomic full-file replace, not append).
 | 0 | Before Phase 1 | bootstrap; `current_phase="investigate"` |
 | 1 | Hypotheses generated | `hypotheses` |
 | 1 | Root cause confirmed | `root_cause`, `fix_approach` |
+| 1 | Ensemble dispatch | `pending_ensemble` append (when MEDIUM/HIGH affinity, OR LOW full-strike fallback per `skills/investigate/SKILL.md`) |
+| 1 | Ensemble collected | `pending_ensemble` remove AND `ensemble_results` append (`ensemble_type=investigate`) per `ensemble-protocol.md` §Result Bookkeeping (single atomic mutation) |
 | 2 | Failing test status | `failing_test`; `current_phase="failing-test"` |
 | 3 | Similar-pattern search | `similar_pattern_grep` |
 | 3 | Ensemble dispatch | `pending_ensemble` append |
-| 3 | Ensemble collected | `pending_ensemble` remove; `current_phase="fix-and-verify"` |
+| 3 | Ensemble collected | `pending_ensemble` remove AND `ensemble_results` append (`ensemble_type=fix-verify`) per `ensemble-protocol.md` §Result Bookkeeping (single atomic mutation); `current_phase="fix-and-verify"` |
 | 4 | Commit complete | `current_phase="commit-complete"`, `next_action="archive"` |
 
 ### `/audit` (5 phases)
@@ -518,8 +606,11 @@ frontmatter (atomic full-file replace, not append).
 |---|---|---|
 | 0 | Before Phase 1 | bootstrap; `current_phase="scope"` |
 | 1 | Scope locked | `audit_type`, `target_scope`, `task_profile` (no phase transition — stays `scope`) |
-| 2 | Scan dispatch | `pending_ensemble` append; `current_phase="scan"` |
-| 2 | Scan results collected | `findings` (initial); `pending_ensemble` remove |
+| 2 | Scan dispatch (MEDIUM/HIGH) | `pending_ensemble` append; `current_phase="scan"` |
+| 2 | Scan results collected (MEDIUM/HIGH) | `findings` (initial); `pending_ensemble` remove |
+| 4 | Scan dispatch (LOW deferred) | `pending_ensemble` append per `commands/audit.md` LOW Phase 4 path |
+| 4 | Scan results collected (LOW deferred) | `findings` (synthesized); `pending_ensemble` remove |
+| — | Note | `/audit` does NOT use `ensemble_results` — `findings` is the audit-specific result store. `audit-scan` is excluded from Result Bookkeeping per `ensemble-protocol.md` §Result Bookkeeping. |
 | 3 | Integrate built-in results | body: integrated findings; `current_phase="integrate"` |
 | 4 | Synthesis complete | `findings` (synthesized); `current_phase="present"`; `presentation_mode` (if first presentation) |
 | 4 (observation-only) | All findings are observations | `current_phase="summary-complete"`, `next_action="archive"` (short-circuits Phase 5) |
@@ -787,9 +878,9 @@ invoke other git subcommands such as `check-ignore` during Phase 0):
 
 - **Frontmatter sanitization** (applied to every string value before
   injection): length cap (see `SANITIZE_FIELD_CAPS` in `hooks/_utils.mjs`
-  — phase=64, next_action=120, type=16, checkpoint_summary=200; default
-  SANITIZE_CAP=512 for unregistered field names), strip control
-  characters (`\x00-\x08`, `\x0b-\x1f`, `\x7f`).
+  — phase=64, next_action=120, type=16, checkpoint_summary=200,
+  ensemble_summary=400; default SANITIZE_CAP=512 for unregistered field
+  names), strip control characters (`\x00-\x08`, `\x0b-\x1f`, `\x7f`).
 - **Backtick rule**: if any sanitized value in an entry contains a
   backtick (U+0060), that entire entry is rejected (skipped from the
   output) and a one-line stderr diagnostic names the workflow id and

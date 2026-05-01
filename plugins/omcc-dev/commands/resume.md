@@ -207,6 +207,84 @@ When the list is empty after cleanup, omit the field entirely (per
 originating phase will re-execute the ensemble launch when Step 6
 hands control back to it — no work is lost, only the stale handle.
 
+## Step 5c: Ensemble Results Surface (read-only)
+
+Read `ensemble_results:` frontmatter from the appropriate sources.
+**Read scope** depends on workflow shape:
+
+- Single-pass `/start` and `/fix` (flat workflow, no shards):
+  read the flat workflow file's `ensemble_results` only.
+- Deliverable-mode `/start` resuming a shard: read **both** the
+  root file's `ensemble_results` (Phase 1/2/3 + Phase 5b + post-5b
+  Phase 6 entries) AND the active shard's `ensemble_results`
+  (per-deliverable Phase 5 + intra-shard Phase 6). Merge the two
+  lists into a single chronologically ordered report so the user
+  does not lose the root-level history when resuming inside a
+  shard.
+
+Unlike `pending_ensemble`, these entries are **durable** archive
+data — Codex synthesis summaries that survived prior session
+boundaries — and MUST NOT be cleared or modified by `/resume`. Their
+content informs the user's mental model of what each phase ensemble
+contributed.
+
+For each entry, validate every echoed field before printing. An entry
+is **skipped from the resume report** (with a one-line stderr
+diagnostic naming the index and which field failed) if ANY of the
+following holds:
+
+- `phase` is not in the `ensemble_results.phase` subset for the
+  workflow type (per `continuity-protocol.md` § Workflow-type-specific
+  frontmatter `ensemble_results` schema): `brainstorm | explore |
+  plan | review | resolve` for `/start`; `investigate |
+  fix-and-verify` for `/fix`. The broader workflow-type Phase State
+  Enum (e.g., `/start`'s `implement` and `commit-complete`,
+  `/fix`'s `failing-test` and `commit-complete`) is INSUFFICIENT
+  here — those phases cannot legitimately produce persisted
+  ensemble results, so a row claiming them must be skipped.
+- `ensemble_type` is not in the relevant `/start` or `/fix` enum
+  subset (`brainstorm | explore | plan-verify | review` for
+  `/start`; `investigate | fix-verify` for `/fix`). `codex-now` and
+  `audit-scan` MUST never appear here per § Result Bookkeeping
+  exclusions.
+- `verdict` is not in `{pass, concerns, conflict}`.
+- `run_id` does not match the Run-id regex
+  (`^[0-9]{8}T[0-9]{6}Z-[0-9a-f]{6}$`) per § Run-id format.
+- `completed_at` fails ISO-8601 UTC parsing or is in the future.
+- `summary` contains backticks (U+0060) or control characters that
+  cause `sanitize()` to return `null`. (Pass `summary` through
+  `sanitizeField("ensemble_summary", ...)`; reject on null per the
+  SessionStart Backtick rule.) ALSO reject when the sanitized
+  `summary` contains LF (`\x0a`) or CR (`\x0d`) — `sanitize()`
+  intentionally preserves newlines as legitimate text, but the
+  resume report is line-oriented and a multi-line summary would
+  inject additional lines, defeating the one-line guard.
+- Optional `codex_session_id`, when present, contains backticks or
+  control characters.
+
+Skipping protects against prompt-injection from a hand-edited,
+legacy, or otherwise malformed workflow file at resume time. This
+mirrors the SessionStart row-rejection posture (`continuity-protocol.md`
+§Hook Responsibilities Backtick rule).
+
+For surviving entries, emit one line in the resume report:
+
+```
+ensemble_results: phase=<phase> type=<ensemble_type> run_id=<run_id> verdict=<verdict> completed_at=<ts>
+  summary: <sanitized summary, first 80 chars, ellipsis if longer>
+```
+
+When multiple entries share the same `(phase, ensemble_type)` (e.g.,
+multiple resolve-loop re-reviews), show them in `completed_at` order
+so the user can read the iteration history. Order is computed only
+across surviving entries; entries with invalid timestamps were
+already skipped above.
+
+Empty or absent `ensemble_results:` produces no output. This step is
+informational only — no state mutation. Skipping a malformed entry
+in the resume report does NOT modify the underlying `ensemble_results`
+list; the entry remains in the workflow file as-is.
+
 ## Step 6: Rehydrate and Resume
 
 For sharded roots the **scope of rehydration is the active shard**,

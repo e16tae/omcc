@@ -84,6 +84,10 @@ export const SANITIZE_FIELD_CAPS = {
   // command rejects (does not truncate) on overflow, so this cap also
   // serves as the maximum prompt-body length the user may submit.
   codex_question: 4000,
+  // ensemble_results[].summary cap. Result Bookkeeping rejects (does
+  // not truncate) the entire entry when sanitize() returns null, so
+  // the cap acts as the hard maximum sanitized summary length.
+  ensemble_summary: 400,
 };
 
 export function sanitizeField(name, value) {

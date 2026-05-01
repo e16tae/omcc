@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parent.parent
 SPEC = ROOT / "plugins" / "omcc-dev" / "continuity-protocol.md"
 UTILS = ROOT / "plugins" / "omcc-dev" / "hooks" / "_utils.mjs"
 ENSEMBLE = ROOT / "plugins" / "omcc-dev" / "ensemble-protocol.md"
+AFFINITY = ROOT / "plugins" / "omcc-dev" / "ensemble-affinity.md"
 
 
 def _read(path):
@@ -125,14 +126,14 @@ def test_shard_id_regex_matches_spec():
 
 def test_sanitize_field_caps_spec_matches_code():
     """The spec's SessionStart sanitization block cites SANITIZE_FIELD_CAPS
-    explicitly (phase=64, next_action=120, type=16, checkpoint_summary=200).
-    The table in _utils.mjs must match."""
+    explicitly (phase=64, next_action=120, type=16, checkpoint_summary=200,
+    ensemble_summary=400). The table in _utils.mjs must match."""
     spec = _read(SPEC)
     utils = _read(UTILS)
     spec_caps = dict(
         (name, int(value))
         for name, value in re.findall(
-            r"(phase|next_action|type|checkpoint_summary)=(\d+)", spec
+            r"(phase|next_action|type|checkpoint_summary|ensemble_summary)=(\d+)", spec
         )
     )
     m = re.search(
@@ -142,11 +143,17 @@ def test_sanitize_field_caps_spec_matches_code():
     code_caps = dict(
         (name, int(value))
         for name, value in re.findall(
-            r"(phase|next_action|type|checkpoint_summary)\s*:\s*(\d+)",
+            r"(phase|next_action|type|checkpoint_summary|ensemble_summary)\s*:\s*(\d+)",
             m.group(1),
         )
     )
-    for name in ("phase", "next_action", "type", "checkpoint_summary"):
+    for name in (
+        "phase",
+        "next_action",
+        "type",
+        "checkpoint_summary",
+        "ensemble_summary",
+    ):
         assert name in spec_caps, f"spec missing cap for {name}"
         assert name in code_caps, f"code missing cap for {name}"
         assert spec_caps[name] == code_caps[name], (
@@ -191,6 +198,109 @@ def test_ensemble_type_enum_matches_protocol_headings():
         f"ensemble_type drift: continuity-protocol enum {spec_types} != "
         f"ensemble-protocol headings {proto_types}"
     )
+
+
+def test_ensemble_affinity_enum_matches_spec():
+    """The `task_profile.ensemble_affinity` enum prose in
+    continuity-protocol.md must enumerate exactly the tier headings
+    used by ensemble-affinity.md's Evaluation Criteria section. Drift
+    between the persisted enum and the rule oracle would let a
+    workflow record an affinity value that no rule tier defines (or
+    vice versa list a tier in the rule oracle that no workflow can
+    legally hold).
+    """
+    spec = _read(SPEC)
+    affinity = _read(AFFINITY)
+    m = re.search(
+        r"ensemble_affinity:\s*([A-Z][A-Z\s|]+[A-Z])",
+        spec,
+    )
+    assert m, "could not find ensemble_affinity enum prose in continuity-protocol.md"
+    spec_tiers = {t.strip() for t in m.group(1).split("|") if t.strip()}
+    section = re.search(
+        r"\n## Evaluation Criteria\s*\n([\s\S]*?)(?=\n## )",
+        affinity,
+    )
+    assert section, "could not find Evaluation Criteria section in ensemble-affinity.md"
+    body = section.group(1)
+    headings = re.findall(r"^### ([A-Z]+)\s*$", body, re.MULTILINE)
+    affinity_tiers = set(headings)
+    assert spec_tiers == affinity_tiers, (
+        f"ensemble_affinity drift: continuity-protocol enum {spec_tiers} != "
+        f"ensemble-affinity headings {affinity_tiers}"
+    )
+
+
+def test_ensemble_results_schema_shape_in_spec():
+    """The continuity-protocol.md /start and /fix `ensemble_results`
+    schema blocks must declare the verdict enum (`pass | concerns |
+    conflict`) and the composite identity fields (`phase`,
+    `ensemble_type`, `run_id`). The /start block lists ensemble types
+    that fire automatically in /start phases (no `codex-now`); the
+    /fix block lists /fix-phase types.
+    """
+    spec = _read(SPEC)
+    # /start block
+    start_match = re.search(
+        r"\*\*`/start`\*\*[\s\S]*?ensemble_results:\s*([\s\S]*?)```",
+        spec,
+    )
+    assert start_match, "could not find /start ensemble_results block in spec"
+    start_block = start_match.group(1)
+    for required in (
+        "phase:",
+        "ensemble_type:",
+        "run_id:",
+        "verdict: pass | concerns | conflict",
+        "completed_at:",
+    ):
+        assert required in start_block, (
+            f"/start ensemble_results missing required field: {required}"
+        )
+    assert "codex-now" not in start_block, (
+        "/start ensemble_results must not list codex-now in ensemble_type"
+    )
+    # /fix block
+    fix_match = re.search(
+        r"\*\*`/fix`\*\*[\s\S]*?ensemble_results:\s*([\s\S]*?)```",
+        spec,
+    )
+    assert fix_match, "could not find /fix ensemble_results block in spec"
+    fix_block = fix_match.group(1)
+    for required in (
+        "phase:",
+        "ensemble_type:",
+        "run_id:",
+        "verdict: pass | concerns | conflict",
+        "completed_at:",
+    ):
+        assert required in fix_block, (
+            f"/fix ensemble_results missing required field: {required}"
+        )
+    assert "codex-now" not in fix_block, (
+        "/fix ensemble_results must not list codex-now in ensemble_type"
+    )
+
+
+def test_ensemble_results_codex_now_exclusion_in_protocol():
+    """ensemble-protocol.md § Result Bookkeeping must explicitly
+    exclude codex-now from ensemble_results persistence — codex-now
+    is user-initiated and its result stays in-conversation only."""
+    proto = _read(ENSEMBLE)
+    section = re.search(
+        r"### Result Bookkeeping[\s\S]*?(?=\n## |\n### )",
+        proto,
+    )
+    assert section, "could not find Result Bookkeeping section in ensemble-protocol.md"
+    body = section.group(0)
+    assert "codex-now" in body, (
+        "Result Bookkeeping must mention codex-now to clarify exclusion"
+    )
+    assert re.search(
+        r"NOT\s+(persisted|recorded)|exclud(es?|ing)",
+        body,
+        re.IGNORECASE,
+    ), "Result Bookkeeping must explicitly state codex-now exclusion"
 
 
 def test_sanitize_field_caps_includes_codex_question():

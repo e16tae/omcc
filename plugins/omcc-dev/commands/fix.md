@@ -106,6 +106,17 @@ Write state per `continuity-protocol.md` Phase-boundary Write Rules:
   this is a high-ROI resume anchor).
 - After root cause confirmed (skill Step 4): write `root_cause`,
   `fix_approach`.
+- After Synthesize for the Codex `investigate` ensemble (or
+  LOW-affinity full-strike fallback): result bookkeeping per
+  `ensemble-protocol.md` §Result Bookkeeping — write
+  `ensemble_results` entry (`phase: investigate`,
+  `ensemble_type: investigate`, `run_id` per
+  `continuity-protocol.md` §Run-id format, `verdict`, `summary`,
+  `completed_at`) in the same atomic mutation that removes the
+  matching `pending_ensemble` row. The pending-remove is deferred
+  to this Synthesize-time atomic mutation; do not remove at Collect
+  for in-scope ensembles. Skipped entirely when affinity is LOW and
+  the full-strike fallback never fires.
 
 Do not proceed to Phase 2 until root cause is confirmed.
 
@@ -148,10 +159,18 @@ advance `current_phase: "failing-test"` per `continuity-protocol.md`.
    - Launch Codex **fix-verify** ensemble point (background) with `--scope working-tree`
    - State bookkeeping per `ensemble-protocol.md` §State Bookkeeping
      (append `pending_ensemble` entry on launch with `ensemble_type:
-     fix-verify`; remove on collect)
+     fix-verify`; the matching pending-remove is **deferred** to the
+     Synthesize-time atomic mutation per §Result Bookkeeping below
+     — do not remove pending at Collect for in-scope ensembles)
    - Collect Codex review of the patch
    - Synthesize: merge Codex findings into fix verification
    - Report any additional concerns Codex found in the patch
+   - Result bookkeeping per `ensemble-protocol.md` §Result Bookkeeping:
+     write `ensemble_results` entry (`phase: fix-and-verify`,
+     `ensemble_type: fix-verify`, `run_id` per
+     `continuity-protocol.md` §Run-id format, `verdict`, `summary`,
+     `completed_at`) in the same atomic mutation that removes the
+     matching `pending_ensemble` row.
 5. Search for similar patterns: `Grep` for the same code pattern in other locations.
    Write `similar_pattern_grep` frontmatter (`pattern` + `matches` list) to
    state per `continuity-protocol.md` — this result is expensive to

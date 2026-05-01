@@ -32,13 +32,13 @@ Task Profile:
   Ensemble Affinity: [LOW / MEDIUM / HIGH] — per ensemble-affinity.md
 ```
 
-**Analysis dimensions:**
+**Analysis dimensions** (correspondence to persisted `task_profile` fields per `ensemble-affinity.md` § Notation):
 
-- **Scope**: Number of files changed/targeted, LOC, related directories and modules
-- **Layers**: UI / API / business logic / data / infrastructure / configuration
-- **Risk areas**: Security (auth, crypto, secrets) / Data (schema, migration) / Public interfaces (API, SDK) / Concurrency (shared resources, async) / Failure (external dependencies, partial failure)
-- **Domain complexity**: Level of domain knowledge and business rule complexity this change requires
-- **Ensemble Affinity**: Evaluate per `ensemble-affinity.md` criteria. Records whether Codex runs in parallel with Claude agents during this workflow
+- **Scope** (= field `scope`): Number of files changed/targeted, LOC, related directories and modules
+- **Layers** (= field `layers`): UI / API / business logic / data / infrastructure / configuration
+- **Risk areas** (= field `risks`): Security / Data / Public interfaces / Concurrency / Failure / Novelty / Precedent / Downstream blast radius. Sub-category definitions and archive-cited examples in `ensemble-affinity.md` § Sub-categories.
+- **Complexity** (= field `complexity`, low/medium/high rollup): Sub-inputs include Domain complexity (level of domain knowledge and business-rule complexity required), algorithmic/mathematical depth, and cross-service/cross-process coordination. See `ensemble-affinity.md` § Sub-categories.
+- **Ensemble Affinity** (= field `ensemble_affinity`, derived per `ensemble-affinity.md`): Records whether Codex runs in parallel with Claude agents during this workflow
 
 ### Step 2: Agent Composition
 
