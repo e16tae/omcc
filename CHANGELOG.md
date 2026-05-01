@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.10.0](https://github.com/e16tae/omcc/compare/v2.9.0...v2.10.0) (2026-05-01)
+
+
+### Features
+
+* **omcc-dev:** add cross-plugin handoff with artifact intake ([#122](https://github.com/e16tae/omcc/issues/122)) ([a22aa19](https://github.com/e16tae/omcc/commit/a22aa1974c2eb0c28e2ef67c05f78030ae5cf487))
+
 ## [2.9.0](https://github.com/e16tae/omcc/compare/v2.8.0...v2.9.0) (2026-05-01)
 
 
