@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.8.0](https://github.com/e16tae/omcc/compare/v2.7.0...v2.8.0) (2026-05-01)
+
+
+### Features
+
+* **omcc-dev:** promote synthesis taxonomy to base + extension framework ([#98](https://github.com/e16tae/omcc/issues/98)) ([#116](https://github.com/e16tae/omcc/issues/116)) ([e077c7f](https://github.com/e16tae/omcc/commit/e077c7f8ed398bfd4922425b8166ecf9440c20ca))
+
 ## [2.7.0](https://github.com/e16tae/omcc/compare/v2.6.0...v2.7.0) (2026-05-01)
 
 
